@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fede Life - Finanzas Personales</title>
+    <link rel="stylesheet" href="app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body class="body">
+    <nav class="navbar">
+        <ul>
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="finanzas.html" class="active">Finanzas</a></li>
+            <li><a href="ideas.html">Ideas</a></li>
+            <li><a href="tareas.html">Tareas</a></li>
+            <li><a href="bruce.html">Bruce</a></li>
+        </ul>
+    </nav>
+
+    <header style="background-color: #87ccd8;">
+        <h1><i class="fas fa-chart-line"></i> Finanzas Personales</h1>
+        <p class="textcenter">Controla y optimiza tu economía personal</p>
+    </header>
+
+    <section class="section">
+        <!-- Dashboard de Resumen -->
+        <div class="finance-dashboard">
+            <h2 class="dashboard-title">Resumen Financiero del Mes</h2>
+
+            <div class="summary-cards">
+                <div class="summary-card income">
+                    <div class="card-icon">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Ingresos</h3>
+                        <p class="amount" id="totalIncome">$0.00</p>
+                        <span class="period">Este mes</span>
+                    </div>
+                </div>
+
+                <div class="summary-card expense">
+                    <div class="card-icon">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Gastos</h3>
+                        <p class="amount" id="totalExpenses">$0.00</p>
+                        <span class="period">Este mes</span>
+                    </div>
+                </div>
+
+                <div class="summary-card balance">
+                    <div class="card-icon">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Balance</h3>
+                        <p class="amount" id="totalBalance">$0.00</p>
+                        <span class="period">Este mes</span>
+                    </div>
+                </div>
+
+                <div class="summary-card savings">
+                    <div class="card-icon">
+                        <i class="fas fa-piggy-bank"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Ahorros</h3>
+                        <p class="amount" id="totalSavings">$0.00</p>
+                        <span class="period">Total</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navegación por pestañas -->
+        <div class="finance-tabs">
+            <button class="tab-btn active" data-tab="transactions">
+                <i class="fas fa-exchange-alt"></i> Transacciones
+            </button>
+            <button class="tab-btn" data-tab="budget">
+                <i class="fas fa-chart-pie"></i> Presupuesto
+            </button>
+            <button class="tab-btn" data-tab="goals">
+                <i class="fas fa-target"></i> Metas
+            </button>
+            <button class="tab-btn" data-tab="reports">
+                <i class="fas fa-chart-bar"></i> Reportes
+            </button>
+            <button class="tab-btn" data-tab="categories">
+                <i class="fas fa-chart-bar"></i> Categorías
+            </button>
+        </div>
+
+        <!-- Pestaña de Transacciones -->
+        <div id="transactions" class="tab-content active">
+            <div class="transactions-section">
+                <div class="add-transaction-form">
+                    <h3><i class="fas fa-plus-circle"></i> Agregar Transacción</h3>
+                    <form id="transactionForm" class="transaction-form">
+                        <div class="form-row">
+                            <select id="transactionType" required>
+                                <option value="">Tipo de transacción</option>
+                                <option value="income">Ingreso</option>
+                                <option value="expense">Gasto</option>
+                            </select>
+                            <input type="number" id="transactionAmount" placeholder="Monto" step="0.01" required>
+                        </div>
+                        <div class="form-row">
+                            <input type="text" id="transactionDescription" placeholder="Descripción" required>
+                            <select id="transactionCategory" required>
+                                <option value="">Categoría</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <input type="date" id="transactionDate" required>
+                            <select id="paymentMethod">
+                                <option value="">Método de pago</option>
+                                <option value="cash">Efectivo</option>
+                                <option value="card">Tarjeta</option>
+                                <option value="transfer">Transferencia</option>
+                                <option value="check">Cheque</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="add-btn">
+                            <i class="fas fa-plus"></i> Agregar Transacción
+                        </button>
+                    </form>
+                </div>
+
+                <div class="transactions-list">
+                    <div class="transactions-header">
+                        <h3><i class="fas fa-list"></i> Historial de Transacciones</h3>
+                        <div class="filter-controls">
+                            <select id="filterType">
+                                <option value="">Todos los tipos</option>
+                                <option value="income">Ingresos</option>
+                                <option value="expense">Gastos</option>
+                            </select>
+                            <select id="filterCategory">
+                                <option value="">Todas las categorías</option>
+                            </select>
+                            <input type="month" id="filterMonth">
+                        </div>
+                    </div>
+                    <div id="transactionsList" class="transactions-container">
+                        <!-- Las transacciones se cargarán aquí -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña de Presupuesto -->
+        <div id="budget" class="tab-content">
+            <div class="budget-section">
+                <div class="budget-header">
+                    <h3><i class="fas fa-chart-pie"></i> Presupuesto Mensual</h3>
+                    <button id="addBudgetBtn" class="add-btn">
+                        <i class="fas fa-plus"></i> Agregar Categoría
+                    </button>
+                </div>
+                <div id="budgetList" class="budget-list">
+                    <!-- Las categorías de presupuesto se cargarán aquí -->
+                </div>
+            </div>
+        </div>
+        <!-- Pestaña de Categorías -->
+        <div id="categories" class="tab-content">
+            <div class="categories-section">
+                <div class="categories-header">
+                    <h3><i class="fas fa-tags"></i> Categorías</h3>
+                </div>
+
+                <div class="categories-container">
+                    <!-- Formulario para agregar categoría -->
+                    <div class="add-category-form">
+                        <h4><i class="fas fa-plus-circle"></i> Agregar Nueva Categoría</h4>
+                        <form id="categoryForm" class="category-form">
+                            <div class="form-row">
+                                <select id="categoryType" required>
+                                    <option value="">Tipo</option>
+                                    <option value="income">Ingreso</option>
+                                    <option value="expense">Gasto</option>
+                                </select>
+                                <input type="text" id="categoryName" placeholder="Nombre de la categoría" required>
+                            </div>
+                            <div class="form-row">
+                                <input type="color" id="categoryColor" value="#3498db" title="Color de la categoría">
+                                <input type="text" id="categoryDescription" placeholder="Descripción (opcional)">
+                            </div>
+                            <button type="submit" class="add-btn">
+                                <i class="fas fa-plus"></i> Agregar Categoría
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Lista de categorías existentes -->
+                    <div class="categories-display">
+                        <div class="categories-tabs">
+                            <button class="category-tab-btn active" data-type="income">
+                                <i class="fas fa-arrow-up"></i> Ingresos
+                            </button>
+                            <button class="category-tab-btn" data-type="expense">
+                                <i class="fas fa-arrow-down"></i> Gastos
+                            </button>
+                        </div>
+
+                        <div id="incomeCategories" class="category-list active">
+                            <h5>Categorías de Ingresos</h5>
+                            <div id="incomeCategoriesList" class="categories-grid">
+                                <!-- Las categorías de ingresos se cargarán aquí -->
+                            </div>
+                        </div>
+
+                        <div id="expenseCategories" class="category-list">
+                            <h5>Categorías de Gastos</h5>
+                            <div id="expenseCategoriesList" class="categories-grid">
+                                <!-- Las categorías de gastos se cargarán aquí -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña de Metas -->
+        <div id="goals" class="tab-content">
+            <div class="goals-section">
+                <div class="add-goal-form">
+                    <h3><i class="fas fa-target"></i> Nueva Meta de Ahorro</h3>
+                    <form id="goalForm" class="goal-form">
+                        <div class="form-row">
+                            <input type="text" id="goalName" placeholder="Nombre de la meta" required>
+                            <input type="number" id="goalAmount" placeholder="Monto objetivo" step="0.01" required>
+                        </div>
+                        <div class="form-row">
+                            <input type="date" id="goalDeadline" required>
+                            <input type="number" id="currentSaved" placeholder="Ya ahorrado" step="0.01" value="0">
+                        </div>
+                        <textarea id="goalDescription" placeholder="Descripción (opcional)"></textarea>
+                        <button type="submit" class="add-btn">
+                            <i class="fas fa-plus"></i> Crear Meta
+                        </button>
+                    </form>
+                </div>
+                <div id="goalsList" class="goals-list">
+                    <!-- Las metas se cargarán aquí -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña de Reportes -->
+        <div id="reports" class="tab-content">
+            <div class="reports-section">
+                <h3><i class="fas fa-chart-bar"></i> Reportes y Análisis</h3>
+                <div class="report-controls">
+                    <select id="reportPeriod">
+                        <option value="current-month">Mes actual</option>
+                        <option value="last-month">Mes anterior</option>
+                        <option value="last-3-months">Últimos 3 meses</option>
+                        <option value="last-6-months">Últimos 6 meses</option>
+                        <option value="current-year">Año actual</option>
+                    </select>
+                    <button id="generateReport" class="add-btn">
+                        <i class="fas fa-chart-line"></i> Generar Reporte
+                    </button>
+                </div>
+                <div id="reportResults" class="report-results">
+                    <!-- Los reportes se mostrarán aquí -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal para editar presupuesto -->
+    <div id="budgetModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Configurar Presupuesto</h2>
+            <form id="budgetForm" class="budget-form">
+                <div class="form-row">
+                    <input type="text" id="budgetCategory" placeholder="Categoría" required>
+                    <input type="number" id="budgetAmount" placeholder="Monto mensual" step="0.01" required>
+                </div>
+                <button type="submit" class="save-btn">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; Desde 1992 Fede Life. Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="finanzas.js"></script>
+</body>
+
+</html>

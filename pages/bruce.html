@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bruce - Fede Life</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <ul>
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="finanzas.html">Finanzas</a></li>
+            <li><a href="ideas.html">Ideas</a></li>
+            <li><a href="tareas.html">Tareas</a></li>
+            <li><a href="bruce.html">Bruce</a></li>
+        </ul>
+    </nav>
+    <header>
+        <h1>Preguntale a Bruce</h1>
+
+    </header>
+    <main>
+        <section class="chat-container">
+            <div id="chat-history" class="chat-history">
+                <div class="message ai-message">
+                    <div class="message-content">
+                        <strong>Bruce:</strong> ¡Hola! Soy Bruce, tu asistente IA. Puedes enviarme texto o imágenes y te
+                        responderé con información útil. ¿En qué puedo ayudarte hoy?
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-container">
+                <div class="input-area">
+                    <textarea id="user-input" placeholder="Escribe tu mensaje aquí..." rows="3"></textarea>
+                    <input type="file" id="image-input" accept="image/*" style="display: none;">
+                    <div class="image-preview" id="image-preview" style="display: none;">
+                        <img id="preview-img" src="" alt="Vista previa">
+                        <button id="remove-image" class="remove-btn">&times;</button>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button id="attach-image" class="attach-btn" title="Adjuntar imagen">📎</button>
+                    <button id="send-message" class="send-btn">Enviar</button>
+                </div>
+            </div>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; Desde 1992 Fede Life. Todos los derechos reservados, decía</p>
+    </footer>
+
+    <script>
+        class BruceAI {
+            constructor() {
+                this.chatHistory = document.getElementById('chat-history');
+                this.userInput = document.getElementById('user-input');
+                this.imageInput = document.getElementById('image-input');
+                this.imagePreview = document.getElementById('image-preview');
+                this.previewImg = document.getElementById('preview-img');
+                this.sendButton = document.getElementById('send-message');
+                this.attachButton = document.getElementById('attach-image');
+                this.removeImageButton = document.getElementById('remove-image');
+
+                this.currentImage = null;
+                this.currentCultivo = null;
+                this.cultivos = this.loadCultivos();
+
+                this.initializeEventListeners();
+                this.initializeCultivoSelector();
+                this.showWelcomeMessage();
+            }
+
+            initializeEventListeners() {
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                this.userInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+
+                this.attachButton.addEventListener('click', () => {
+                    this.imageInput.click();
+                });
+
+                this.imageInput.addEventListener('change', (e) => {
+                    this.handleImageUpload(e);
+                });
+
+                this.removeImageButton.addEventListener('click', () => {
+                    this.removeImage();
+                });
+            }
+
+            // Gestión de cultivos
+            loadCultivos() {
+                const saved = localStorage.getItem('bruce_cultivos');
+                return saved ? JSON.parse(saved) : {};
+            }
+
+            saveCultivos() {
+                localStorage.setItem('bruce_cultivos', JSON.stringify(this.cultivos));
+            }
+
+            initializeCultivoSelector() {
+                const selectorContainer = document.createElement('div');
+                selectorContainer.className = 'cultivo-selector';
+                selectorContainer.innerHTML = `
+                    <div class="cultivo-controls">
+                        <select id="cultivo-select" class="cultivo-dropdown">
+                            <option value="">Seleccionar cultivo...</option>
+                        </select>
+                        <button id="new-cultivo-btn" class="new-cultivo-btn">+ Nuevo Cultivo</button>
+                        <button id="edit-cultivo-btn" class="edit-cultivo-btn" style="display: none;">✏️ Editar</button>
+                        <button id="delete-cultivo-btn" class="delete-cultivo-btn" style="display: none;">🗑️</button>
+                    </div>
+                `;
+
+                this.chatHistory.parentNode.insertBefore(selectorContainer, this.chatHistory);
+
+                this.cultivoSelect = document.getElementById('cultivo-select');
+                this.newCultivoBtn = document.getElementById('new-cultivo-btn');
+                this.editCultivoBtn = document.getElementById('edit-cultivo-btn');
+                this.deleteCultivoBtn = document.getElementById('delete-cultivo-btn');
+
+                this.cultivoSelect.addEventListener('change', (e) => this.selectCultivo(e.target.value));
+                this.newCultivoBtn.addEventListener('click', () => this.createNewCultivo());
+                this.editCultivoBtn.addEventListener('click', () => this.editCultivo());
+                this.deleteCultivoBtn.addEventListener('click', () => this.deleteCultivo());
+
+                this.updateCultivoDropdown();
+            }
+
+            updateCultivoDropdown() {
+                const select = this.cultivoSelect;
+                select.innerHTML = '<option value="">Seleccionar cultivo...</option>';
+
+                Object.keys(this.cultivos).forEach(id => {
+                    const cultivo = this.cultivos[id];
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = `${cultivo.nombre} (${cultivo.variedad})`;
+                    select.appendChild(option);
+                });
+            }
+
+            selectCultivo(cultivoId) {
+                if (cultivoId) {
+                    this.currentCultivo = this.cultivos[cultivoId];
+                    this.editCultivoBtn.style.display = 'inline-block';
+                    this.deleteCultivoBtn.style.display = 'inline-block';
+                    this.loadCultivoChat();
+                } else {
+                    this.currentCultivo = null;
+                    this.editCultivoBtn.style.display = 'none';
+                    this.deleteCultivoBtn.style.display = 'none';
+                    this.showWelcomeMessage();
+                }
+            }
+
+            async createNewCultivo() {
+                const cultivoData = await this.promptCultivoData();
+                if (cultivoData) {
+                    const id = Date.now().toString();
+                    this.cultivos[id] = {
+                        id,
+                        ...cultivoData,
+                        chatHistory: [],
+                        fechaCreacion: new Date().toISOString()
+                    };
+                    this.saveCultivos();
+                    this.updateCultivoDropdown();
+                    this.cultivoSelect.value = id;
+                    this.selectCultivo(id);
+                }
+            }
+
+            async editCultivo() {
+                if (!this.currentCultivo) return;
+
+                const cultivoData = await this.promptCultivoData(this.currentCultivo);
+                if (cultivoData) {
+                    // Actualizar datos manteniendo ID y chat history
+                    this.cultivos[this.currentCultivo.id] = {
+                        ...this.currentCultivo,
+                        ...cultivoData
+                    };
+                    this.currentCultivo = this.cultivos[this.currentCultivo.id];
+                    this.saveCultivos();
+                    this.updateCultivoDropdown();
+                    this.loadCultivoChat();
+                }
+            }
+
+            deleteCultivo() {
+                if (this.currentCultivo && confirm(`¿Estás seguro de eliminar el cultivo "${this.currentCultivo.nombre}"?`)) {
+                    delete this.cultivos[this.currentCultivo.id];
+                    this.saveCultivos();
+                    this.updateCultivoDropdown();
+                    this.currentCultivo = null;
+                    this.editCultivoBtn.style.display = 'none';
+                    this.deleteCultivoBtn.style.display = 'none';
+                    this.showWelcomeMessage();
+                }
+            }
+
+            async promptCultivoData(existingData = {}) {
+                return new Promise((resolve) => {
+                    const modal = document.createElement('div');
+                    modal.className = 'cultivo-modal';
+                    modal.innerHTML = `
+                        <div class="modal-content">
+                            <h3>${existingData.id ? 'Editar' : 'Nuevo'} Cultivo de Cannabis Medicinal</h3>
+                            <form id="cultivo-form">
+                                <div class="form-group">
+                                    <label>Nombre del cultivo:</label>
+                                    <input type="text" id="nombre" value="${existingData.nombre || ''}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Variedad/Cepa:</label>
+                                    <input type="text" id="variedad" value="${existingData.variedad || ''}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tipo:</label>
+                                    <select id="tipo" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="indica" ${existingData.tipo === 'indica' ? 'selected' : ''}>Indica</option>
+                                        <option value="sativa" ${existingData.tipo === 'sativa' ? 'selected' : ''}>Sativa</option>
+                                        <option value="hibrida" ${existingData.tipo === 'hibrida' ? 'selected' : ''}>Híbrida</option>
+                                        <option value="autoflower" ${existingData.tipo === 'autoflower' ? 'selected' : ''}>Autofloreciente</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Método de cultivo:</label>
+                                    <select id="metodo" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="indoor" ${existingData.metodo === 'indoor' ? 'selected' : ''}>Indoor</option>
+                                        <option value="outdoor" ${existingData.metodo === 'outdoor' ? 'selected' : ''}>Outdoor</option>
+                                        <option value="greenhouse" ${existingData.metodo === 'greenhouse' ? 'selected' : ''}>Invernadero</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Medio de cultivo:</label>
+                                    <select id="medio" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="tierra" ${existingData.medio === 'tierra' ? 'selected' : ''}>Tierra</option>
+                                        <option value="coco" ${existingData.medio === 'coco' ? 'selected' : ''}>Fibra de coco</option>
+                                        <option value="hidroponico" ${existingData.medio === 'hidroponico' ? 'selected' : ''}>Hidropónico</option>
+                                        <option value="aeroponico" ${existingData.medio === 'aeroponico' ? 'selected' : ''}>Aeropónico</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Objetivo terapéutico:</label>
+                                    <input type="text" id="objetivo" value="${existingData.objetivo || ''}" placeholder="ej: dolor crónico, epilepsia, ansiedad...">
+                                </div>
+                                <div class="form-group">
+                                    <label>Espacio de cultivo (m²):</label>
+                                    <input type="number" id="espacio" value="${existingData.espacio || ''}" step="0.1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Tamaño de macetas (L):</label>
+                                    <input type="number" id="macetas" value="${existingData.macetas || ''}" step="0.5" placeholder="ej: 11, 20, 50...">
+                                </div>
+                                <div class="form-group">
+                                    <label>Sistema de iluminación:</label>
+                                    <select id="iluminacion">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="led" ${existingData.iluminacion === 'led' ? 'selected' : ''}>LED Full Spectrum</option>
+                                        <option value="hps" ${existingData.iluminacion === 'hps' ? 'selected' : ''}>HPS (Sodio)</option>
+                                        <option value="cmh" ${existingData.iluminacion === 'cmh' ? 'selected' : ''}>CMH/LEC</option>
+                                        <option value="fluorescente" ${existingData.iluminacion === 'fluorescente' ? 'selected' : ''}>Fluorescente</option>
+                                        <option value="solar" ${existingData.iluminacion === 'solar' ? 'selected' : ''}>Solar (Outdoor)</option>
+                                        <option value="mixto" ${existingData.iluminacion === 'mixto' ? 'selected' : ''}>Sistema Mixto</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Potencia lumínica (W):</label>
+                                    <input type="number" id="potencia" value="${existingData.potencia || ''}" placeholder="ej: 240, 600, 1000...">
+                                </div>
+                                <div class="form-group">
+                                    <label>Sistema de ventilación:</label>
+                                    <select id="ventilacion">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="basico" ${existingData.ventilacion === 'basico' ? 'selected' : ''}>Básico (Ventiladores)</option>
+                                        <option value="extraccion" ${existingData.ventilacion === 'extraccion' ? 'selected' : ''}>Extracción + Intracción</option>
+                                        <option value="completo" ${existingData.ventilacion === 'completo' ? 'selected' : ''}>Sistema Completo + Filtro</option>
+                                        <option value="pasivo" ${existingData.ventilacion === 'pasivo' ? 'selected' : ''}>Ventilación Pasiva</option>
+                                        <option value="climatizado" ${existingData.ventilacion === 'climatizado' ? 'selected' : ''}>Sistema Climatizado</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Control ambiental:</label>
+                                    <select id="control">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="manual" ${existingData.control === 'manual' ? 'selected' : ''}>Control Manual</option>
+                                        <option value="basico" ${existingData.control === 'basico' ? 'selected' : ''}>Termómetro + Higrómetro</option>
+                                        <option value="automatico" ${existingData.control === 'automatico' ? 'selected' : ''}>Sistema Automático</option>
+                                        <option value="inteligente" ${existingData.control === 'inteligente' ? 'selected' : ''}>Control Inteligente/App</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Número de plantas:</label>
+                                    <input type="number" id="plantas" value="${existingData.plantas || ''}" min="1" placeholder="ej: 1, 4, 9...">
+                                </div>
+                                <div class="form-group">
+                                    <label>Técnica de entrenamiento:</label>
+                                    <select id="entrenamiento">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="natural" ${existingData.entrenamiento === 'natural' ? 'selected' : ''}>Crecimiento Natural</option>
+                                        <option value="lst" ${existingData.entrenamiento === 'lst' ? 'selected' : ''}>LST (Low Stress Training)</option>
+                                        <option value="hst" ${existingData.entrenamiento === 'hst' ? 'selected' : ''}>HST (High Stress Training)</option>
+                                        <option value="scrog" ${existingData.entrenamiento === 'scrog' ? 'selected' : ''}>SCROG (Screen of Green)</option>
+                                        <option value="sog" ${existingData.entrenamiento === 'sog' ? 'selected' : ''}>SOG (Sea of Green)</option>
+                                        <option value="mainlining" ${existingData.entrenamiento === 'mainlining' ? 'selected' : ''}>Mainlining</option>
+                                        <option value="supercropping" ${existingData.entrenamiento === 'supercropping' ? 'selected' : ''}>Supercropping</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Origen de la genética:</label>
+                                    <input type="text" id="banco" value="${existingData.banco || ''}" placeholder="ej: Royal Queen Seeds, Barney's Farm...">
+                                </div>
+                                <div class="form-group">
+                                    <label>Notas adicionales:</label>
+                                    <textarea id="notas" rows="3" placeholder="Detalles específicos, objetivos, observaciones...">${existingData.notas || ''}</textarea>
+                                </div>
+                                <div class="form-buttons">
+                                    <button type="submit">${existingData.id ? 'Actualizar' : 'Crear'} Cultivo</button>
+                                    <button type="button" onclick="this.closest('.cultivo-modal').remove()">Cancelar</button>
+                                </div>
+                            </form>
+                        </div>
+                    `;
+
+                    document.body.appendChild(modal);
+
+                    document.getElementById('cultivo-form').addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.target);
+                        const cultivoData = {
+                            nombre: formData.get('nombre') || document.getElementById('nombre').value,
+                            variedad: formData.get('variedad') || document.getElementById('variedad').value,
+                            tipo: formData.get('tipo') || document.getElementById('tipo').value,
+                            metodo: formData.get('metodo') || document.getElementById('metodo').value,
+                            medio: formData.get('medio') || document.getElementById('medio').value,
+                            objetivo: formData.get('objetivo') || document.getElementById('objetivo').value,
+                            espacio: formData.get('espacio') || document.getElementById('espacio').value,
+                            macetas: formData.get('macetas') || document.getElementById('macetas').value,
+                            iluminacion: formData.get('iluminacion') || document.getElementById('iluminacion').value,
+                            potencia: formData.get('potencia') || document.getElementById('potencia').value,
+                            ventilacion: formData.get('ventilacion') || document.getElementById('ventilacion').value,
+                            control: formData.get('control') || document.getElementById('control').value,
+                            plantas: formData.get('plantas') || document.getElementById('plantas').value,
+                            entrenamiento: formData.get('entrenamiento') || document.getElementById('entrenamiento').value,
+                            banco: formData.get('banco') || document.getElementById('banco').value,
+                            notas: formData.get('notas') || document.getElementById('notas').value
+                        };
+                        modal.remove();
+                        resolve(cultivoData);
+                    });
+                });
+            }
+
+            handleImageUpload(event) {
+                const file = event.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.currentImage = e.target.result;
+                        this.previewImg.src = this.currentImage;
+                        this.imagePreview.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            removeImage() {
+                this.currentImage = null;
+                this.previewImg.src = '';
+                this.imagePreview.style.display = 'none';
+                this.imageInput.value = '';
+            }
+
+            async sendMessage() {
+                const message = this.userInput.value.trim();
+                if (!message && !this.currentImage) return;
+
+                if (!this.currentCultivo) {
+                    this.addMessage('Por favor selecciona o crea un cultivo antes de hacer consultas.', 'ai');
+                    return;
+                }
+
+                // Mostrar mensaje del usuario
+                this.addMessage(message, 'user', this.currentImage);
+
+                // Guardar en historial del cultivo
+                this.currentCultivo.chatHistory.push({
+                    type: 'user',
+                    content: message,
+                    image: this.currentImage,
+                    timestamp: new Date().toISOString()
+                });
+
+                // Limpiar input
+                this.userInput.value = '';
+                const imageToProcess = this.currentImage;
+                this.removeImage();
+
+                // Mostrar indicador de typing
+                this.showTypingIndicator();
+
+                try {
+                    // Procesar con IA especializada
+                    const response = await this.processWithCannabiAI(message, imageToProcess);
+                    this.removeTypingIndicator();
+                    this.addMessage(response, 'ai');
+
+                    // Guardar respuesta en historial
+                    this.currentCultivo.chatHistory.push({
+                        type: 'ai',
+                        content: response,
+                        timestamp: new Date().toISOString()
+                    });
+
+                    this.saveCultivos();
+                } catch (error) {
+                    this.removeTypingIndicator();
+                    this.addMessage('Lo siento, hubo un error procesando tu consulta. Por favor intenta de nuevo.', 'ai');
+                    console.error('Error:', error);
+                }
+            }
+
+            async processWithCannabiAI(text, image) {
+                await this.delay(1000 + Math.random() * 2000);
+
+                const cultivo = this.currentCultivo;
+                const context = this.buildCultivoContext(cultivo);
+
+                if (image && text) {
+                    return this.analyzeCannabiImageWithText(text, image, context);
+                } else if (image) {
+                    return this.analyzeCannabiImage(image, context);
+                } else {
+                    return this.processCannabiText(text, context);
+                }
+            }
+
+            buildCultivoContext(cultivo) {
+                return `
+Cultivo: ${cultivo.nombre}
+Variedad: ${cultivo.variedad} (${cultivo.tipo})
+Banco/Origen: ${cultivo.banco || 'No especificado'}
+Método: ${cultivo.metodo}
+Medio: ${cultivo.medio}
+Espacio: ${cultivo.espacio}m²
+Macetas: ${cultivo.macetas}L
+Plantas: ${cultivo.plantas || 'No especificado'}
+Iluminación: ${cultivo.iluminacion} (${cultivo.potencia}W)
+Ventilación: ${cultivo.ventilacion}
+Control: ${cultivo.control}
+Entrenamiento: ${cultivo.entrenamiento || 'Natural'}
+Objetivo terapéutico: ${cultivo.objetivo}
+Fecha de inicio: ${new Date(cultivo.fechaCreacion).toLocaleDateString()}
+Notas: ${cultivo.notas || 'Sin notas adicionales'}
+                `.trim();
+            }
+
+            processCannabiText(text, context) {
+                const lowerText = text.toLowerCase();
+
+                // Respuestas específicas sobre cultivo de cannabis medicinal
+                if (lowerText.includes('germina') || lowerText.includes('semilla')) {
+                    return `Para tu cultivo ${this.currentCultivo.nombre} (${this.currentCultivo.variedad}), te recomiendo:
+
+**Germinación de semillas:**
+- Método del papel húmedo: 24-72 horas en lugar oscuro a 22-25°C
+- Trasplante cuando la radícula mida 1-2cm
+- Para ${this.currentCultivo.tipo}: ${this.getVarietySpecificTips()}
+- Humedad: 70-80% durante germinación
+
+¿Necesitas detalles específicos sobre algún paso?`;
+                }
+
+                if (lowerText.includes('vegetativo') || lowerText.includes('crecimiento')) {
+                    return `**Fase vegetativa para ${this.currentCultivo.variedad}:**
+
+**Condiciones ambientales:**
+- Temperatura: 20-26°C
+- Humedad: 40-60%
+- Fotoperíodo: 18/6 horas (luz/oscuridad)
+- pH ${this.currentCultivo.medio}: ${this.getpHRange()}
+
+**Nutrición:**
+- NPK alto en Nitrógeno (ej: 20-10-10)
+- Riego: cuando los primeros 2cm de sustrato estén secos
+- EC: 0.8-1.2 para ${this.currentCultivo.medio}
+
+**Para tu objetivo de ${this.currentCultivo.objetivo}:** ${this.getTherapeuticTips()}`;
+                }
+
+                if (lowerText.includes('floracion') || lowerText.includes('cogollos')) {
+                    return `**Floración de ${this.currentCultivo.variedad}:**
+
+**Cambios necesarios:**
+- Fotoperíodo: 12/12 horas ${this.currentCultivo.tipo === 'autoflower' ? '(No necesario para autoflorecientes)' : ''}
+- Temperatura: 18-24°C
+- Humedad: 30-45% (prevenir moho)
+
+**Nutrición:**
+- NPK alto en Fósforo y Potasio (ej: 10-30-20)
+- Cal-Mag suplementario
+- Flush final: 1-2 semanas antes de cosecha
+
+**Señales de madurez:** Tricomas lechosos al 70-80% para efectos terapéuticos`;
+                }
+
+                if (lowerText.includes('problema') || lowerText.includes('enfermedad') || lowerText.includes('plaga')) {
+                    return `**Diagnóstico para ${this.currentCultivo.nombre}:**
+
+**Problemas comunes en ${this.currentCultivo.metodo}:**
+- **Nutritivos:** Deficiencias de N, P, K, Cal-Mag
+- **Ambientales:** Temperatura, humedad, ventilación
+- **Plagas:** Araña roja, trips, pulgones, mosca blanca
+- **Hongos:** Oídio, botrytis, fusarium
+
+**Describe los síntomas específicos** (color hojas, manchas, insectos visibles) y te daré un diagnóstico preciso con tratamiento orgánico adecuado para cannabis medicinal.
+
+¿Puedes enviar una foto del problema?`;
+                }
+
+                if (lowerText.includes('cosecha') || lowerText.includes('secar') || lowerText.includes('curado')) {
+                    return `**Cosecha y post-cosecha para ${this.currentCultivo.variedad}:**
+
+**Momento óptimo:**
+- Tricomas: 70% lechosos, 20% ámbar, 10% transparentes
+- Para ${this.currentCultivo.objetivo}: ${this.getHarvestTiming()}
+
+**Proceso:**
+1. **Corte:** Tallo principal en oscuridad
+2. **Secado:** 7-14 días, 18-21°C, 45-55% humedad
+3. **Manicurado:** En seco para mejor calidad
+4. **Curado:** Frascos herméticos, 60-65% humedad, 2-8 semanas
+
+**Control de calidad medicinal:** Tests de cannabinoides y terpenos recomendados`;
+                }
+
+                if (lowerText.includes('nutrientes') || lowerText.includes('fertilizante')) {
+                    return `**Plan nutricional para ${this.currentCultivo.variedad} en ${this.currentCultivo.medio}:**
+
+**Vegetativo (semanas 1-6):**
+- Base: NPK 20-10-10
+- Cal-Mag: 1-2ml/L
+- EC: 0.8-1.2 | pH: ${this.getpHRange()}
+
+**Pre-floración (semanas 7-8):**
+- Transición: NPK 15-15-15
+- Bloom booster inicio
+
+**Floración (semanas 9-16):**
+- Base: NPK 10-30-20
+- PK booster: semanas 10-14
+- Enzimas y melaza para microbiología
+
+**Flush final:** Solo agua pH ajustado últimas 1-2 semanas`;
+                }
+
+                if (lowerText.includes('iluminacion') || lowerText.includes('luz') || lowerText.includes('led') || lowerText.includes('watts')) {
+                    return `**Análisis de iluminación para tu setup:**
+
+**Tu configuración actual:**
+- Sistema: ${this.currentCultivo.iluminacion || 'No especificado'}
+- Potencia: ${this.currentCultivo.potencia || '?'}W
+- Espacio: ${this.currentCultivo.espacio}m²
+- Plantas: ${this.currentCultivo.plantas || '?'}
+
+**Recomendaciones específicas:**
+${this.getLightingAdvice()}
+
+**Optimización por fase:**
+- **Vegetativo:** 18/6 | PPFD 200-400 μmol/m²/s
+- **Floración:** 12/12 | PPFD 600-900 μmol/m²/s
+- **Distancia óptima:** ${this.getLightDistance()}
+
+¿Necesitas ayuda con algún ajuste específico?`;
+                }
+
+                if (lowerText.includes('ventilacion') || lowerText.includes('temperatura') || lowerText.includes('humedad') || lowerText.includes('aire')) {
+                    return `**Análisis ambiental para tu cultivo:**
+
+**Tu setup actual:**
+- Ventilación: ${this.currentCultivo.ventilacion || 'No especificado'}
+- Control: ${this.currentCultivo.control || 'No especificado'}
+- Espacio: ${this.currentCultivo.espacio}m²
+- Método: ${this.currentCultivo.metodo}
+
+**Parámetros ideales:**
+- **Vegetativo:** 22-26°C | 40-60% HR
+- **Floración:** 18-24°C | 30-45% HR
+- **Renovación de aire:** ${this.getAirflowAdvice()}
+
+**Recomendaciones específicas:**
+${this.getEnvironmentalAdvice()}`;
+                }
+
+                if (lowerText.includes('maceta') || lowerText.includes('trasplante') || lowerText.includes('sustrato') || lowerText.includes('raiz')) {
+                    return `**Análisis del sistema radicular:**
+
+**Tu configuración:**
+- Macetas: ${this.currentCultivo.macetas || '?'}L
+- Medio: ${this.currentCultivo.medio}
+- Plantas: ${this.currentCultivo.plantas || '?'}
+- Espacio por planta: ${this.getSpacePerPlant()}
+
+**Recomendaciones:**
+${this.getContainerAdvice()}
+
+**Cronograma de trasplantes:**
+- Semilla → 0.5L (germinación)
+- Plántula → 3-5L (vegetativo temprano)
+- Vegetativo → ${this.currentCultivo.macetas}L (final)
+- **Timing:** Cuando las raíces cubran 80% del sustrato`;
+                }
+
+                if (lowerText.includes('entrenamiento') || lowerText.includes('poda') || lowerText.includes('lst') || lowerText.includes('scrog')) {
+                    return `**Técnicas de entrenamiento para ${this.currentCultivo.variedad}:**
+
+**Tu método actual:** ${this.currentCultivo.entrenamiento || 'Natural'}
+
+**Recomendaciones específicas:**
+${this.getTrainingAdvice()}
+
+**Cronograma óptimo:**
+- **Semana 3-4:** Inicio de técnicas low-stress
+- **Semana 5-6:** Técnicas high-stress (si aplica)
+- **Pre-floración:** Últimos ajustes y defoliación
+
+**Para tu espacio (${this.currentCultivo.espacio}m²):** ${this.getSpaceOptimizationTips()}`;
+                }
+
+                // Respuesta general con contexto del cultivo
+                return `Como especialista en cannabis medicinal, analizo tu consulta sobre "${text}" para tu cultivo:
+
+${context}
+
+Para darte la respuesta más precisa, ¿podrías especificar:
+- ¿En qué fase está tu cultivo actualmente?
+- ¿Hay algún síntoma o problema específico?
+- ¿Buscas información preventiva o correctiva?
+
+Mi experiencia incluye cultivo medicinal de alta calidad, con enfoque en maximizar cannabinoides y terpenos para aplicaciones terapéuticas específicas.`;
+            }
+
+            getVarietySpecificTips() {
+                const tipo = this.currentCultivo.tipo;
+                switch (tipo) {
+                    case 'indica': return 'Las índicas germinan más lento pero son más resistentes.';
+                    case 'sativa': return 'Las sativas necesitan más cuidado en germinación, mayor temperatura.';
+                    case 'hibrida': return 'Comportamiento equilibrado, seguir protocolo estándar.';
+                    case 'autoflower': return 'Germinar directo en maceta final, no trasplantar.';
+                    default: return 'Seguir protocolo estándar de germinación.';
+                }
+            }
+
+            getpHRange() {
+                const medio = this.currentCultivo.medio;
+                switch (medio) {
+                    case 'tierra': return '6.0-6.8';
+                    case 'coco': return '5.5-6.2';
+                    case 'hidroponico': return '5.5-6.0';
+                    case 'aeroponico': return '5.5-6.0';
+                    default: return '6.0-6.5';
+                }
+            }
+
+            getTherapeuticTips() {
+                const objetivo = this.currentCultivo.objetivo?.toLowerCase() || '';
+                if (objetivo.includes('dolor')) return 'Enfocar en variedades altas en CBD y myrceno.';
+                if (objetivo.includes('ansiedad')) return 'Buscar equilibrio CBD:THC, terpenos calmantes.';
+                if (objetivo.includes('epilepsia')) return 'Maximizar CBD, minimizar THC, cosecha temprana.';
+                return 'Monitorear perfil de cannabinoides según objetivo terapéutico.';
+            }
+
+            getHarvestTiming() {
+                const objetivo = this.currentCultivo.objetivo?.toLowerCase() || '';
+                if (objetivo.includes('dolor')) return 'Mayor contenido ámbar para efectos sedantes.';
+                if (objetivo.includes('ansiedad')) return 'Balance lechoso-ámbar para equilibrio.';
+                if (objetivo.includes('epilepsia')) return 'Mayoría lechosos para máximo CBD.';
+                return 'Según perfil deseado de cannabinoides.';
+            }
+
+            analyzeCannabiImage(image, context) {
+                return `He analizado la imagen de tu cultivo ${this.currentCultivo.nombre}.
+
+**Análisis visual basado en:**
+${context}
+
+Puedo evaluar:
+- **Estado de las hojas:** Color, textura, posibles deficiencias
+- **Estructura de la planta:** Desarrollo, entrenudos
+- **Flores/cogollos:** Madurez, densidad, tricomas
+- **Problemas:** Plagas, enfermedades, estrés
+
+**Para un diagnóstico más preciso, describe:**
+- ¿Qué problema específico observas?
+- ¿Cuándo comenzaste a notarlo?
+- ¿Cambios recientes en nutrición/ambiente?
+
+Basándome en tu variedad ${this.currentCultivo.variedad} y método ${this.currentCultivo.metodo}, te daré recomendaciones específicas.`;
+            }
+
+            analyzeCannabiImageWithText(text, image, context) {
+                return `Perfecto, he analizado tu imagen junto con tu consulta: "${text}".
+
+**Cultivo analizado:**
+${context}
+
+**Análisis combinado:**
+Basándome en la imagen y tu descripción, puedo darte un diagnóstico más preciso para tu ${this.currentCultivo.variedad}.
+
+**Recomendaciones específicas:**
+- Evaluación visual confirmada con tu descripción
+- Protocolo de tratamiento adaptado a ${this.currentCultivo.metodo}
+- Considerando objetivo terapéutico: ${this.currentCultivo.objetivo}
+
+**Próximos pasos:**
+1. Monitoreo diario de la evolución
+2. Ajustes específicos según diagnóstico
+3. Seguimiento fotográfico para comparar progreso
+
+¿Necesitas el protocolo detallado de tratamiento?`;
+            }
+
+            showWelcomeMessage() {
+                this.chatHistory.innerHTML = `
+                    <div class="message ai-message">
+                        <div class="message-content">
+                            <strong>Bruce - Especialista en Cannabis Medicinal:</strong> 
+                            ¡Hola! Soy Bruce, tu consultor especializado en cultivo de cannabis medicinal de alta calidad.
+                            
+                            <br><br><strong>Mi experiencia incluye:</strong>
+                            • Cultivo medicinal indoor/outdoor/invernadero
+                            • Optimización de cannabinoides y terpenos
+                            • Diagnóstico y tratamiento de problemas
+                            • Protocolos de cosecha y curado medicinal
+                            • Variedades específicas para diferentes patologías
+                            
+                            <br><br><strong>Para comenzar:</strong>
+                            1. Crea un nuevo cultivo con las características específicas
+                            2. Selecciona el cultivo para consultas contextualizadas
+                            3. Haz tus preguntas o envía fotos para diagnóstico
+                            
+                            <br>Cada cultivo mantiene su propio historial y contexto profesional.
+                        </div>
+                    </div>
+                `;
+            }
+
+            loadCultivoChat() {
+                this.chatHistory.innerHTML = '';
+
+                // Mensaje de contexto del cultivo
+                this.addMessage(`Has seleccionado: **${this.currentCultivo.nombre}**
+
+**Detalles del cultivo:**
+• Variedad: ${this.currentCultivo.variedad} (${this.currentCultivo.tipo})
+• Banco: ${this.currentCultivo.banco || 'No especificado'}
+• Método: ${this.currentCultivo.metodo} | Medio: ${this.currentCultivo.medio}
+• Setup: ${this.currentCultivo.espacio}m² | ${this.currentCultivo.plantas || '?'} plantas en macetas de ${this.currentCultivo.macetas || '?'}L
+• Iluminación: ${this.currentCultivo.iluminacion || 'No especificado'} (${this.currentCultivo.potencia || '?'}W)
+• Ventilación: ${this.currentCultivo.ventilacion || 'No especificado'}
+• Control: ${this.currentCultivo.control || 'No especificado'}
+• Entrenamiento: ${this.currentCultivo.entrenamiento || 'Natural'}
+• Objetivo: ${this.currentCultivo.objetivo}
+${this.currentCultivo.notas ? `• Notas: ${this.currentCultivo.notas}` : ''}
+
+Historial de consultas restaurado. ¿En qué puedo ayudarte con este cultivo?`, 'ai');
+
+                // Cargar historial previo
+                if (this.currentCultivo.chatHistory) {
+                    this.currentCultivo.chatHistory.forEach(msg => {
+                        this.addMessage(msg.content, msg.type, msg.image);
+                    });
+                }
+            }
+
+            addMessage(content, sender, image = null) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}-message`;
+
+                let messageContent = `
+                    <div class="message-content">
+                        <strong>${sender === 'user' ? 'Tú' : 'Bruce'}:</strong> 
+                `;
+
+                if (image && sender === 'user') {
+                    messageContent += `
+                        <div class="message-image">
+                            <img src="${image}" alt="Imagen enviada" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin: 8px 0;">
+                        </div>
+                    `;
+                }
+
+                if (content) {
+                    messageContent += `<span>${content}</span>`;
+                }
+
+                messageContent += `
+                        <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+                    </div>
+                `;
+
+                messageDiv.innerHTML = messageContent;
+                this.chatHistory.appendChild(messageDiv);
+                this.scrollToBottom();
+            }
+
+            showTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'message ai-message typing-indicator';
+                typingDiv.id = 'typing-indicator';
+                typingDiv.innerHTML = `
+                    <div class="message-content">
+                        <strong>Bruce:</strong> 
+                        <span class="typing-dots">
+                            <span>.</span><span>.</span><span>.</span>
+                        </span>
+                    </div>
+                `;
+                this.chatHistory.appendChild(typingDiv);
+                this.scrollToBottom();
+            }
+
+            removeTypingIndicator() {
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+            }
+
+            scrollToBottom() {
+                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+            }
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            getLightingAdvice() {
+                const iluminacion = this.currentCultivo.iluminacion;
+                const potencia = parseInt(this.currentCultivo.potencia) || 0;
+                const espacio = parseFloat(this.currentCultivo.espacio) || 1;
+                const wattsPerM2 = potencia / espacio;
+
+                let advice = '';
+
+                if (iluminacion === 'led') {
+                    advice = `Excelente elección para eficiencia energética y control espectral.`;
+                    if (wattsPerM2 < 30) advice += ` Considera aumentar la potencia (actual: ${wattsPerM2.toFixed(1)}W/m²).`;
+                    else if (wattsPerM2 > 50) advice += ` Potencia adecuada (${wattsPerM2.toFixed(1)}W/m²), asegurar buena ventilación.`;
+                } else if (iluminacion === 'hps') {
+                    advice = `HPS genera mucho calor, excelente para floración.`;
+                    if (wattsPerM2 < 40) advice += ` Considera 400-600W/m² para HPS.`;
+                } else {
+                    advice = `Sistema ${iluminacion || 'no especificado'}. Verifica que cubra todo el espectro.`;
+                }
+
+                return advice;
+            }
+
+            getLightDistance() {
+                const iluminacion = this.currentCultivo.iluminacion;
+                switch (iluminacion) {
+                    case 'led': return '30-60cm (ajustar según respuesta de plantas)';
+                    case 'hps': return '60-100cm (por calor generado)';
+                    case 'cmh': return '40-80cm (balance calor/intensidad)';
+                    default: return '40-70cm (monitorear signos de estrés lumínico)';
+                }
+            }
+
+            getAirflowAdvice() {
+                const espacio = parseFloat(this.currentCultivo.espacio) || 1;
+                const volumen = espacio * 2.5; // Asumiendo 2.5m de altura
+                const renovacionPorMinuto = volumen * 1.5; // 1.5 veces por minuto
+                return `${renovacionPorMinuto.toFixed(0)} m³/min para tu espacio de ${volumen}m³`;
+            }
+
+            getEnvironmentalAdvice() {
+                const ventilacion = this.currentCultivo.ventilacion;
+                const control = this.currentCultivo.control;
+
+                let advice = '';
+                if (ventilacion === 'basico') {
+                    advice = 'Considera upgrade a extracción activa para mejor control.';
+                } else if (ventilacion === 'completo') {
+                    advice = 'Sistema óptimo. Mantén filtro de carbón limpio.';
+                }
+
+                if (control === 'manual') {
+                    advice += ' Monitoreo cada 4-6 horas recomendado.';
+                } else if (control === 'automatico') {
+                    advice += ' Verifica calibración de sensores mensualmente.';
+                }
+
+                return advice;
+            }
+
+            getSpacePerPlant() {
+                const espacio = parseFloat(this.currentCultivo.espacio) || 1;
+                const plantas = parseInt(this.currentCultivo.plantas) || 1;
+                const spacePer = (espacio / plantas);
+                return `${spacePer.toFixed(2)}m² por planta`;
+            }
+
+            getContainerAdvice() {
+                const macetas = parseInt(this.currentCultivo.macetas) || 0;
+                const medio = this.currentCultivo.medio;
+                const tipo = this.currentCultivo.tipo;
+
+                let advice = '';
+
+                if (tipo === 'autoflower' && macetas < 11) {
+                    advice = 'Para autos, min 11L recomendado (actual: ' + macetas + 'L). ';
+                } else if (tipo !== 'autoflower' && macetas < 20) {
+                    advice = 'Para fotoperíodos, considerar 20L+ (actual: ' + macetas + 'L). ';
+                }
+
+                if (medio === 'coco') {
+                    advice += 'Coco drena excelente, permite macetas más pequeñas.';
+                } else if (medio === 'tierra') {
+                    advice += 'Tierra retiene más agua, espaciar riegos.';
+                }
+
+                return advice;
+            }
+
+            getTrainingAdvice() {
+                const entrenamiento = this.currentCultivo.entrenamiento;
+                const tipo = this.currentCultivo.tipo;
+                const espacio = parseFloat(this.currentCultivo.espacio) || 1;
+
+                let advice = '';
+
+                if (entrenamiento === 'natural') {
+                    advice = `Para tu espacio, considera LST o SCROG para maximizar rendimiento.`;
+                } else if (entrenamiento === 'lst') {
+                    advice = `LST es ideal para principiantes. Comenzar en semana 3-4.`;
+                } else if (entrenamiento === 'scrog') {
+                    advice = `SCROG maximiza el espacio. Malla a 20-30cm del sustrato.`;
+                } else if (entrenamiento === 'sog') {
+                    advice = `SOG requiere muchas plantas pequeñas. Ideal para rotación rápida.`;
+                }
+
+                if (tipo === 'autoflower') {
+                    advice += ` ATENCIÓN: Solo LST suave para autos, evitar técnicas high-stress.`;
+                }
+
+                return advice;
+            }
+
+            getSpaceOptimizationTips() {
+                const espacio = parseFloat(this.currentCultivo.espacio) || 1;
+                const plantas = parseInt(this.currentCultivo.plantas) || 1;
+
+                if (espacio / plantas > 1) {
+                    return 'Espacio generoso, ideal para técnicas LST/SCROG.';
+                } else if (espacio / plantas < 0.5) {
+                    return 'Espacio limitado, considera SOG o plantas más pequeñas.';
+                } else {
+                    return 'Densidad equilibrada, cualquier técnica funcionará bien.';
+                }
+            }
+        }
+
+        // Inicializar Bruce AI cuando se carga la página
+        document.addEventListener('DOMContentLoaded', () => {
+            new BruceAI();
+        });
+    </script>
+</body>
+
+</html>

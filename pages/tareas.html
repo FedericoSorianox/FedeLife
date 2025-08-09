@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tareas - Fede Life</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+
+<body class="body">
+    <nav class="navbar">
+        <ul>
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="finanzas.html">Finanzas</a></li>
+            <li><a href="ideas.html">Ideas</a></li>
+            <li><a href="tareas.html">Tareas</a></li>
+            <li><a href="bruce.html">Bruce</a></li>
+        </ul>
+    </nav>
+    <header style="background-color: #87ccd8;">
+        <h1>Tareas</h1>
+        <p class="textcenter">Aquí puedes gestionar tus tareas de manera eficiente.</p>
+    </header>
+    <section class="section">
+        <h2 class="dashboard-title">Gestión de Tareas</h2>
+
+        <div class="add-task-container">
+            <input type="text" id="newTaskInput" placeholder="Escribe una nueva tarea..." maxlength="100">
+            <button id="addTaskBtn">Añadir Tarea</button>
+        </div>
+
+        <div class="kanban-board">
+            <div class="kanban-column" data-status="todo">
+                <h3 class="column-title">Por Hacer</h3>
+                <div class="task-list" id="todoList">
+                    <div class="task-item" draggable="true">
+                        <span class="task-text">Revisar documentación del proyecto</span>
+                        <button class="delete-task">×</button>
+                    </div>
+                    <div class="task-item" draggable="true">
+                        <span class="task-text">Preparar presentación para el cliente</span>
+                        <button class="delete-task">×</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kanban-column" data-status="doing">
+                <h3 class="column-title">Haciendo</h3>
+                <div class="task-list" id="doingList">
+                    <div class="task-item" draggable="true">
+                        <span class="task-text">Desarrollar nueva funcionalidad</span>
+                        <button class="delete-task">×</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kanban-column" data-status="done">
+                <h3 class="column-title">Hechas</h3>
+                <div class="task-list" id="doneList">
+                    <div class="task-item" draggable="true">
+                        <span class="task-text">Configurar base de datos</span>
+                        <button class="delete-task">×</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <footer class="footer">
+        <p>&copy; Desde 1992 Fede Life. Todos los derechos reservados.</p>
+    </footer>
+
+    <script>
+        // Variables globales
+        let draggedElement = null;
+
+        // Función para crear una nueva tarea
+        function createTask(text) {
+            const taskItem = document.createElement('div');
+            taskItem.className = 'task-item';
+            taskItem.draggable = true;
+            taskItem.innerHTML = `
+                <span class="task-text">${text}</span>
+                <button class="delete-task">×</button>
+            `;
+
+            // Agregar event listeners
+            addTaskEventListeners(taskItem);
+
+            return taskItem;
+        }
+
+        // Función para agregar event listeners a una tarea
+        function addTaskEventListeners(taskItem) {
+            // Drag events
+            taskItem.addEventListener('dragstart', handleDragStart);
+            taskItem.addEventListener('dragend', handleDragEnd);
+
+            // Delete button
+            const deleteBtn = taskItem.querySelector('.delete-task');
+            deleteBtn.addEventListener('click', () => {
+                taskItem.remove();
+            });
+        }
+
+        // Handlers para drag and drop
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.style.opacity = '0.5';
+        }
+
+        function handleDragEnd(e) {
+            this.style.opacity = '1';
+            draggedElement = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            if (draggedElement && this.classList.contains('task-list')) {
+                this.appendChild(draggedElement);
+            }
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function () {
+            // Agregar event listeners a tareas existentes
+            document.querySelectorAll('.task-item').forEach(addTaskEventListeners);
+
+            // Event listeners para las listas (drop zones)
+            document.querySelectorAll('.task-list').forEach(list => {
+                list.addEventListener('dragover', handleDragOver);
+                list.addEventListener('drop', handleDrop);
+            });
+
+            // Event listener para agregar nuevas tareas
+            const addTaskBtn = document.getElementById('addTaskBtn');
+            const newTaskInput = document.getElementById('newTaskInput');
+
+            addTaskBtn.addEventListener('click', function () {
+                const taskText = newTaskInput.value.trim();
+                if (taskText) {
+                    const newTask = createTask(taskText);
+                    document.getElementById('todoList').appendChild(newTask);
+                    newTaskInput.value = '';
+                }
+            });
+
+            // Permitir agregar tarea con Enter
+            newTaskInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    addTaskBtn.click();
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
