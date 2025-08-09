@@ -1,13 +1,29 @@
 // ===== SISTEMA DE FINANZAS PERSONALES =====
 
+// Gestor simple de almacenamiento en LocalStorage
+class StorageManager {
+    load(key, defaultValue) {
+        try {
+            return JSON.parse(localStorage.getItem(key)) || defaultValue;
+        } catch {
+            return defaultValue;
+        }
+    }
+
+    save(key, data) {
+        localStorage.setItem(key, JSON.stringify(data));
+    }
+}
+
 class FinanceManager {
     constructor() {
-        this.transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-        this.budgets = JSON.parse(localStorage.getItem('budgets')) || [];
-        this.goals = JSON.parse(localStorage.getItem('goals')) || [];
+        this.storage = new StorageManager();
+        this.transactions = this.storage.load('transactions', []);
+        this.budgets = this.storage.load('budgets', []);
+        this.goals = this.storage.load('goals', []);
 
         // Cargar categorías guardadas o usar las por defecto
-        this.categories = JSON.parse(localStorage.getItem('categories')) || {
+        this.categories = this.storage.load('categories', {
             income: [
                 { name: 'Salario', color: '#28a745', description: 'Sueldo mensual' },
                 { name: 'Freelance', color: '#17a2b8', description: 'Trabajos independientes' },
@@ -27,7 +43,7 @@ class FinanceManager {
                 { name: 'Tecnología', color: '#28a745', description: 'Dispositivos, software' },
                 { name: 'Otros gastos', color: '#ffc107', description: 'Gastos varios' }
             ]
-        };
+        });
 
         this.init();
     }
@@ -768,19 +784,19 @@ class FinanceManager {
 
     // Funciones de almacenamiento
     saveTransactions() {
-        localStorage.setItem('transactions', JSON.stringify(this.transactions));
+        this.storage.save('transactions', this.transactions);
     }
 
     saveBudgets() {
-        localStorage.setItem('budgets', JSON.stringify(this.budgets));
+        this.storage.save('budgets', this.budgets);
     }
 
     saveGoals() {
-        localStorage.setItem('goals', JSON.stringify(this.goals));
+        this.storage.save('goals', this.goals);
     }
 
     saveCategories() {
-        localStorage.setItem('categories', JSON.stringify(this.categories));
+        this.storage.save('categories', this.categories);
     }
 
     // ===== GESTIÓN DE CATEGORÍAS =====
