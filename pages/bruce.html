@@ -49,6 +49,34 @@
             </div>
         </section>
     </main>
+
+    <!-- Botones para abrir modales laterales -->
+    <button id="open-info" class="side-toggle left">ℹ️</button>
+    <button id="open-notes" class="side-toggle right">📝</button>
+
+    <!-- Modal lateral izquierdo: información del cultivo -->
+    <div id="cultivo-info" class="side-modal left">
+        <div class="side-header">
+            <span>Información del Cultivo</span>
+            <button class="close-btn" data-target="cultivo-info">&times;</button>
+        </div>
+        <div id="cultivo-info-content" class="side-content">
+            <p>Selecciona un cultivo para ver la información.</p>
+        </div>
+    </div>
+
+    <!-- Modal lateral derecho: notas del cultivo -->
+    <div id="cultivo-notes" class="side-modal right">
+        <div class="side-header">
+            <span>Notas del Cultivo</span>
+            <button class="close-btn" data-target="cultivo-notes">&times;</button>
+        </div>
+        <div class="side-content">
+            <textarea id="notes-area" placeholder="Escribe tus notas aquí..."></textarea>
+            <button id="save-notes" class="save-notes-btn">Guardar</button>
+        </div>
+    </div>
+
     <footer>
         <p>&copy; Desde 1992 Fede Life. Todos los derechos reservados, decía</p>
     </footer>
@@ -65,6 +93,14 @@
                 this.attachButton = document.getElementById('attach-image');
                 this.removeImageButton = document.getElementById('remove-image');
 
+                this.infoPanel = document.getElementById('cultivo-info');
+                this.notesPanel = document.getElementById('cultivo-notes');
+                this.openInfoBtn = document.getElementById('open-info');
+                this.openNotesBtn = document.getElementById('open-notes');
+                this.notesArea = document.getElementById('notes-area');
+                this.saveNotesBtn = document.getElementById('save-notes');
+                this.infoContent = document.getElementById('cultivo-info-content');
+
                 this.currentImage = null;
                 this.currentCultivo = null;
                 this.cultivos = this.loadCultivos();
@@ -72,6 +108,7 @@
                 this.initializeEventListeners();
                 this.initializeCultivoSelector();
                 this.showWelcomeMessage();
+                this.updateInfoPanel();
             }
 
             initializeEventListeners() {
@@ -94,6 +131,16 @@
                 this.removeImageButton.addEventListener('click', () => {
                     this.removeImage();
                 });
+
+                this.openInfoBtn.addEventListener('click', () => this.togglePanel(this.infoPanel, true));
+                this.openNotesBtn.addEventListener('click', () => this.togglePanel(this.notesPanel, true));
+                this.infoPanel
+                    .querySelector('.close-btn')
+                    .addEventListener('click', () => this.togglePanel(this.infoPanel, false));
+                this.notesPanel
+                    .querySelector('.close-btn')
+                    .addEventListener('click', () => this.togglePanel(this.notesPanel, false));
+                this.saveNotesBtn.addEventListener('click', () => this.saveNotes());
             }
 
             // Gestión de cultivos
@@ -154,11 +201,13 @@
                     this.editCultivoBtn.style.display = 'inline-block';
                     this.deleteCultivoBtn.style.display = 'inline-block';
                     this.loadCultivoChat();
+                    this.updateInfoPanel();
                 } else {
                     this.currentCultivo = null;
                     this.editCultivoBtn.style.display = 'none';
                     this.deleteCultivoBtn.style.display = 'none';
                     this.showWelcomeMessage();
+                    this.updateInfoPanel();
                 }
             }
 
@@ -193,6 +242,7 @@
                     this.saveCultivos();
                     this.updateCultivoDropdown();
                     this.loadCultivoChat();
+                    this.updateInfoPanel();
                 }
             }
 
@@ -205,6 +255,7 @@
                     this.editCultivoBtn.style.display = 'none';
                     this.deleteCultivoBtn.style.display = 'none';
                     this.showWelcomeMessage();
+                    this.updateInfoPanel();
                 }
             }
 
@@ -784,6 +835,47 @@ Historial de consultas restaurado. ¿En qué puedo ayudarte con este cultivo?`, 
                         this.addMessage(msg.content, msg.type, msg.image);
                     });
                 }
+            }
+
+            togglePanel(panel, open) {
+                if (typeof open === 'undefined') {
+                    open = !panel.classList.contains('open');
+                }
+                panel.classList.toggle('open', open);
+                if (panel === this.infoPanel) {
+                    this.openInfoBtn.style.display = open ? 'none' : 'block';
+                } else if (panel === this.notesPanel) {
+                    this.openNotesBtn.style.display = open ? 'none' : 'block';
+                }
+            }
+
+            updateInfoPanel() {
+                if (!this.currentCultivo) {
+                    this.infoContent.innerHTML = '<p>Selecciona un cultivo para ver la información.</p>';
+                    this.notesArea.value = '';
+                    return;
+                }
+
+                const c = this.currentCultivo;
+                this.infoContent.innerHTML = `
+                    <h3>${c.nombre}</h3>
+                    <p><strong>Variedad:</strong> ${c.variedad} (${c.tipo})</p>
+                    <p><strong>Banco:</strong> ${c.banco || 'No especificado'}</p>
+                    <p><strong>Método:</strong> ${c.metodo} | Medio: ${c.medio}</p>
+                    <p><strong>Setup:</strong> ${c.espacio}m² | ${c.plantas || '?'} plantas en macetas de ${c.macetas || '?'}L</p>
+                    <p><strong>Iluminación:</strong> ${c.iluminacion || 'No especificado'} (${c.potencia || '?'}W)</p>
+                    <p><strong>Ventilación:</strong> ${c.ventilacion || 'No especificado'}</p>
+                    <p><strong>Control:</strong> ${c.control || 'No especificado'}</p>
+                    <p><strong>Entrenamiento:</strong> ${c.entrenamiento || 'Natural'}</p>
+                    <p><strong>Objetivo:</strong> ${c.objetivo || ''}</p>
+                `;
+                this.notesArea.value = c.notas || '';
+            }
+
+            saveNotes() {
+                if (!this.currentCultivo) return;
+                this.currentCultivo.notas = this.notesArea.value;
+                this.saveCultivos();
             }
 
             addMessage(content, sender, image = null) {
