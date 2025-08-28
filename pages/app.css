@@ -55,37 +55,85 @@ section {
 nav {
     background-color: #87ccd8;
     padding: 10px;
-    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-nav ul {
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+}
+
+.nav-title {
+    color: white;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.nav-menu {
     list-style-type: none;
     margin: 0;
     padding: 0;
     display: flex;
     justify-content: center;
+    align-items: center;
 }
 
-nav li {
+.nav-menu li {
     margin: 0;
 }
 
-nav a {
+.nav-menu a {
     display: block;
     color: white;
     text-decoration: none;
     padding: 15px 20px;
     transition: background-color 0.3s ease;
     font-weight: 500;
+    border-radius: 6px;
 }
 
-nav a:hover {
-    background-color: #555;
+.nav-menu a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
-nav a:active,
-nav a.active {
-    background-color: #007bff;
+.nav-menu a:active,
+.nav-menu a.active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.nav-toggle {
+    display: none;
+    flex-direction: column;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+.nav-toggle span {
+    width: 25px;
+    height: 3px;
+    background-color: white;
+    margin: 3px 0;
+    transition: 0.3s;
+    border-radius: 2px;
+}
+
+.nav-toggle:hover span {
+    background-color: rgba(255, 255, 255, 0.8);
 }
 
 .dashboard-title {
@@ -918,6 +966,108 @@ nav a.active {
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
+/* Estilos para tarjetas clickeables */
+.summary-card[role="button"] {
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.summary-card[role="button"]:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.summary-card[role="button"]:active {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.summary-card[role="button"]:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+/* Efecto de ripple al hacer clic */
+.summary-card[role="button"]::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+    pointer-events: none;
+}
+
+.summary-card[role="button"]:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* Indicador de acción en tarjetas clickeables */
+.card-action-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    background: rgba(0, 123, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #007bff;
+    font-size: 12px;
+    opacity: 0.7;
+    transition: all 0.3s ease;
+}
+
+.summary-card[role="button"]:hover .card-action-indicator {
+    background: rgba(0, 123, 255, 0.2);
+    color: #0056b3;
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.summary-card[role="button"]:active .card-action-indicator {
+    transform: scale(0.9);
+}
+
+/* Efectos de resaltado para el formulario de transacciones */
+.transaction-form.highlight-income {
+    animation: highlightIncome 2s ease-in-out;
+}
+
+.transaction-form.highlight-expense {
+    animation: highlightExpense 2s ease-in-out;
+}
+
+@keyframes highlightIncome {
+    0%, 100% {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-color: #e1e5e9;
+    }
+    50% {
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+        border-color: #28a745;
+    }
+}
+
+@keyframes highlightExpense {
+    0%, 100% {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-color: #e1e5e9;
+    }
+    50% {
+        box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+        border-color: #dc3545;
+    }
+}
+
 .summary-card.income {
     border-left-color: #28a745;
 }
@@ -1388,6 +1538,98 @@ nav a.active {
     border-radius: 6px;
     font-size: 14px;
     outline: none;
+}
+
+/* Estilos para el filtro de meses mejorado */
+.month-filter-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.month-filter-header {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 2px solid #e1e5e9;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.month-filter-header:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.1);
+}
+
+.month-nav-btn {
+    background: #f8f9fa;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #666;
+    font-size: 14px;
+}
+
+.month-nav-btn:hover {
+    background: #e9ecef;
+    color: #007bff;
+}
+
+.month-nav-btn:active {
+    background: #dee2e6;
+}
+
+.month-display {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: white;
+    min-width: 120px;
+    justify-content: center;
+    gap: 8px;
+}
+
+#currentMonthDisplay {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.month-selector-btn {
+    background: none;
+    border: none;
+    color: #007bff;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.month-selector-btn:hover {
+    background: #e3f2fd;
+    transform: scale(1.1);
+}
+
+.clear-filters-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.clear-filters-btn:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+}
+
+.clear-filters-btn:active {
+    transform: translateY(0);
 }
 
 .transaction-item {
@@ -3064,5 +3306,476 @@ nav a.active {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* ==================== RESPONSIVE DESIGN PARA IPHONE Y MÓVILES ==================== */
+
+/* iPhone 16 Pro Max y dispositivos similares (430px y menos) */
+@media (max-width: 430px) {
+    /* Ajustes generales del body */
+    body {
+        font-size: 16px; /* Previene zoom en iOS */
+        -webkit-text-size-adjust: 100%;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Header optimizado para móvil */
+    header {
+        padding: 15px 20px;
+        margin-bottom: 15px;
+    }
+
+    header h1 {
+        font-size: 1.8em;
+        margin-bottom: 8px;
+    }
+
+    header p {
+        font-size: 0.9em;
+    }
+
+    /* Dashboard cards optimizadas */
+    .summary-cards {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        margin-top: 15px;
+        padding: 0 15px;
+    }
+
+    .summary-card {
+        padding: 20px 15px;
+        min-height: auto;
+    }
+
+    .card-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 20px;
+    }
+
+    .card-content h3 {
+        font-size: 13px;
+    }
+
+    .card-content .amount {
+        font-size: 20px;
+    }
+
+    .card-content .period {
+        font-size: 11px;
+    }
+
+    /* Indicador de acción más pequeño */
+    .card-action-indicator {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+        top: 8px;
+        right: 8px;
+    }
+
+    /* Gráficos optimizados */
+    .charts-section {
+        padding: 20px 15px;
+        margin-bottom: 20px;
+    }
+
+    .charts-title {
+        font-size: 1.4em;
+        margin-bottom: 20px;
+    }
+
+    .charts-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .chart-card {
+        padding: 15px;
+    }
+
+    .chart-card h3 {
+        font-size: 1.1em;
+        margin-bottom: 15px;
+    }
+
+    /* Controles de gráficos */
+    .chart-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .chart-period-selector {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .chart-period-selector label {
+        margin-bottom: 5px;
+    }
+
+    .chart-period-selector select {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px; /* Previene zoom en iOS */
+    }
+
+    .refresh-btn {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+    }
+
+    /* Pestañas de navegación optimizadas */
+    .finance-tabs {
+        flex-wrap: wrap;
+        gap: 5px;
+        padding: 8px;
+        margin: 0 15px 20px 15px;
+    }
+
+    .tab-btn {
+        flex: 1 1 calc(50% - 5px);
+        min-width: 120px;
+        padding: 12px 8px;
+        font-size: 13px;
+        gap: 5px;
+    }
+
+    .tab-btn i {
+        font-size: 12px;
+    }
+
+    /* Contenido de pestañas */
+    .tab-content {
+        padding: 0 15px;
+    }
+
+    /* Formularios optimizados */
+    .add-transaction-form {
+        padding: 20px 15px;
+        margin-bottom: 20px;
+    }
+
+    .add-transaction-form h3 {
+        font-size: 1.2em;
+        margin-bottom: 15px;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .form-row > * {
+        width: 100%;
+    }
+
+    /* Inputs optimizados para móvil */
+    .transaction-form input,
+    .transaction-form select,
+    .transaction-form textarea,
+    .goal-form input,
+    .goal-form textarea,
+    .category-form input,
+    .category-form select {
+        padding: 14px 12px;
+        font-size: 16px; /* Previene zoom en iOS */
+        border-radius: 8px;
+        border: 2px solid #e1e5e9;
+    }
+
+    .transaction-form input:focus,
+    .transaction-form select:focus,
+    .transaction-form textarea:focus,
+    .goal-form input:focus,
+    .goal-form textarea:focus,
+    .category-form input:focus,
+    .category-form select:focus {
+        border-color: #87ccd8;
+        box-shadow: 0 0 0 3px rgba(135, 204, 216, 0.1);
+    }
+
+    /* Botones optimizados */
+    .add-btn,
+    .save-btn,
+    .refresh-btn,
+    .process-btn,
+    .action-btn {
+        padding: 14px 20px;
+        font-size: 16px;
+        border-radius: 8px;
+        min-height: 48px; /* Tamaño mínimo para toque */
+    }
+
+    /* Filtros de transacciones */
+    .filter-controls {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .filter-controls select,
+    .filter-controls input {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+    }
+
+    /* Filtro de meses optimizado */
+    .month-filter-container {
+        width: 100%;
+    }
+
+    .month-filter-header {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .month-display {
+        flex: 1;
+        min-width: auto;
+        padding: 10px 8px;
+    }
+
+    #currentMonthDisplay {
+        font-size: 13px;
+    }
+
+    .month-nav-btn {
+        padding: 10px 8px;
+        font-size: 12px;
+    }
+
+    .clear-filters-btn {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    /* Lista de transacciones */
+    .transactions-container {
+        max-height: 400px;
+    }
+
+    .transaction-item {
+        padding: 12px;
+        margin-bottom: 8px;
+    }
+
+    .transaction-description {
+        font-size: 14px;
+    }
+
+    .transaction-details {
+        font-size: 11px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .transaction-amount {
+        font-size: 16px;
+        min-width: 80px;
+        padding: 6px 8px;
+    }
+
+    /* Chat con IA optimizado */
+    .ai-chat-section {
+        padding: 20px 15px;
+    }
+
+    .chat-container {
+        max-height: 400px;
+    }
+
+    .chat-messages {
+        max-height: 250px;
+    }
+
+    .chat-input-container {
+        padding: 15px;
+    }
+
+    .chat-input {
+        padding: 12px;
+        font-size: 16px;
+    }
+
+    .chat-suggestions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .suggestion-btn {
+        flex: 1 1 calc(50% - 4px);
+        padding: 10px 8px;
+        font-size: 12px;
+    }
+
+    /* Categorías optimizadas */
+    .categories-container {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .categories-tabs {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .category-tab-btn {
+        width: 100%;
+        padding: 12px;
+    }
+
+    .categories-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .category-item {
+        padding: 15px;
+    }
+
+    /* Presupuesto optimizado */
+    .budget-list {
+        gap: 15px;
+    }
+
+    .budget-item {
+        padding: 15px;
+    }
+
+    /* Metas optimizadas */
+    .goals-list {
+        gap: 15px;
+    }
+
+    .goal-item {
+        padding: 15px;
+    }
+
+    /* Modal optimizado */
+    .modal-content {
+        width: 95%;
+        max-width: 400px;
+        margin: 20px auto;
+        padding: 20px;
+    }
+
+    /* Notificaciones optimizadas */
+    .notification {
+        width: 90%;
+        max-width: 350px;
+        right: 5%;
+        top: 10px;
+    }
+
+    /* PDF Uploader optimizado */
+    .pdf-uploader-section {
+        padding: 20px 15px;
+    }
+
+    .pdf-uploader {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .pdf-input {
+        width: 100%;
+    }
+
+    .pdf-label {
+        width: 100%;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .process-btn {
+        width: 100%;
+    }
+
+    /* Extracted expenses optimizado */
+    .expenses-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .expenses-actions button {
+        width: 100%;
+    }
+
+    .expense-item {
+        padding: 12px;
+        margin-bottom: 8px;
+    }
+
+    /* Ajustes específicos para iPhone */
+    @supports (-webkit-touch-callout: none) {
+        /* Safari en iOS */
+        .summary-card[role="button"]:active {
+            -webkit-tap-highlight-color: rgba(0, 123, 255, 0.1);
+        }
+
+        /* Mejorar scrolling en iOS */
+        .transactions-container,
+        .chat-messages {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Ajustar inputs para iOS */
+        input[type="date"],
+        input[type="month"] {
+            min-height: 44px;
+        }
+    }
+}
+
+/* Dispositivos muy pequeños (menos de 375px) */
+@media (max-width: 375px) {
+    .summary-cards {
+        padding: 0 10px;
+    }
+
+    .tab-content {
+        padding: 0 10px;
+    }
+
+    .add-transaction-form {
+        padding: 15px 10px;
+    }
+
+    .finance-tabs {
+        margin: 0 10px 15px 10px;
+    }
+
+    .tab-btn {
+        font-size: 12px;
+        padding: 10px 6px;
+    }
+
+    .card-content .amount {
+        font-size: 18px;
+    }
+}
+
+/* Orientación landscape en móviles */
+@media (max-width: 430px) and (orientation: landscape) {
+    .summary-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .charts-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .finance-tabs {
+        flex-wrap: nowrap;
+    }
+
+    .tab-btn {
+        flex: 1;
+        min-width: auto;
     }
 }
