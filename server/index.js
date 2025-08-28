@@ -107,9 +107,7 @@ function setupSecurityMiddleware() {
     
     // CORS configurado para producción
     app.use(cors({
-        origin: process.env.NODE_ENV === 'production' 
-            ? [process.env.FRONTEND_URL, 'https://fede-life.vercel.app']
-            : ['http://localhost:5173', 'http://localhost:3000'],
+        origin: true, // Permitir todos los orígenes en desarrollo
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization']
@@ -138,8 +136,9 @@ function setupGeneralMiddleware() {
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     
-    // Servir archivos estáticos
+    // Servir archivos estáticos desde dist y dist/pages
     app.use(express.static(path.join(__dirname, '../dist')));
+    app.use('/pages', express.static(path.join(__dirname, '../dist/pages')));
     
     console.log('⚙️ Middleware general configurado');
 }
@@ -189,8 +188,8 @@ function setupSPARoute() {
             return res.status(404).json({ error: 'Endpoint no encontrado' });
         }
         
-        // Para rutas del frontend, servir el index.html
-        res.sendFile(path.join(__dirname, '../dist/index.html'));
+        // Para rutas del frontend, servir el finanzas.html como página principal
+        res.sendFile(path.join(__dirname, '../dist/pages/finanzas.html'));
     });
 }
 
