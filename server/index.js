@@ -36,6 +36,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/fede-life-finanzas';
 
+// Debug: Mostrar variables de entorno (sin mostrar valores sensibles)
+console.log('🔍 Variables de entorno:');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('PORT:', process.env.PORT);
+console.log('MONGODB_URI existe:', !!process.env.MONGODB_URI);
+console.log('MONGODB_URI comienza con:', process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 20) + '...' : 'No definida');
+
 // ==================== CONEXIÓN A MONGODB ====================
 
 /**
@@ -68,7 +75,8 @@ async function connectToMongoDB() {
         
     } catch (error) {
         console.error('❌ Error conectando a MongoDB:', error);
-        process.exit(1);
+        console.log('⚠️ Continuando sin MongoDB...');
+        // No salir del proceso, continuar sin base de datos
     }
 }
 
@@ -255,8 +263,12 @@ async function initializeServer() {
     try {
         console.log('🚀 Iniciando servidor Fede Life Finanzas...');
         
-        // Conectar a MongoDB
-        await connectToMongoDB();
+        // Conectar a MongoDB (opcional)
+        try {
+            await connectToMongoDB();
+        } catch (dbError) {
+            console.log('⚠️ MongoDB no disponible, continuando sin base de datos...');
+        }
         
         // Configurar middleware
         setupSecurityMiddleware();
@@ -273,7 +285,7 @@ async function initializeServer() {
         app.listen(PORT, () => {
             console.log(`✅ Servidor corriendo en puerto ${PORT}`);
             console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-            console.log(`📊 Base de datos: ${mongoose.connection.name}`);
+            console.log(`📊 Base de datos: ${mongoose.connection.readyState === 1 ? 'Conectada' : 'Desconectada'}`);
             console.log(`🔗 URL: http://localhost:${PORT}`);
             
             if (process.env.NODE_ENV === 'production') {
