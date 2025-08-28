@@ -7,6 +7,10 @@
     <title>Fede Life - Finanzas Personales</title>
     <link rel="stylesheet" href="app.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- PDF.js Library para procesamiento de PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Chart.js Library para gráficos interactivos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body class="body">
@@ -77,6 +81,52 @@
             </div>
         </div>
 
+        <!-- Gráficos Interactivos -->
+        <div class="charts-section">
+            <h2 class="charts-title">Análisis Visual de Finanzas</h2>
+            
+            <div class="charts-container">
+                <!-- Gráfico de Gastos por Categoría -->
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-pie"></i> Gastos por Categoría</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="expensesChart" width="400" height="400"></canvas>
+                    </div>
+                    <div class="chart-legend" id="expensesLegend">
+                        <!-- La leyenda se generará dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Gráfico de Ingresos por Categoría -->
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-pie"></i> Ingresos por Categoría</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="incomeChart" width="400" height="400"></canvas>
+                    </div>
+                    <div class="chart-legend" id="incomeLegend">
+                        <!-- La leyenda se generará dinámicamente -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controles de los gráficos -->
+            <div class="chart-controls">
+                <div class="chart-period-selector">
+                    <label for="chartPeriod">Período:</label>
+                    <select id="chartPeriod">
+                        <option value="current-month">Mes actual</option>
+                        <option value="last-month">Mes anterior</option>
+                        <option value="last-3-months">Últimos 3 meses</option>
+                        <option value="current-year">Año actual</option>
+                        <option value="all-time">Todo el tiempo</option>
+                    </select>
+                </div>
+                <button id="refreshCharts" class="refresh-btn">
+                    <i class="fas fa-sync-alt"></i> Actualizar Gráficos
+                </button>
+            </div>
+        </div>
+
         <!-- Navegación por pestañas -->
         <div class="finance-tabs">
             <button class="tab-btn active" data-tab="transactions">
@@ -130,6 +180,44 @@
                             <i class="fas fa-plus"></i> Agregar Transacción
                         </button>
                     </form>
+
+                    <!-- PDF Uploader Section -->
+                    <div class="pdf-uploader-section">
+                        <h4><i class="fas fa-file-pdf"></i> Subir PDF de Gastos</h4>
+                        <p class="uploader-description">Sube un PDF (estado de cuenta, recibos, etc.) y el sistema extraerá automáticamente los gastos usando IA</p>
+                        
+                        <div class="pdf-uploader">
+                            <input type="file" id="pdfFile" accept=".pdf" class="pdf-input">
+                            <label for="pdfFile" class="pdf-label">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span>Seleccionar archivo PDF</span>
+                            </label>
+                            <button type="button" id="processPdfBtn" class="process-btn" disabled>
+                                <i class="fas fa-magic"></i> Analizar con IA
+                            </button>
+                        </div>
+
+                        <div id="pdfProcessingStatus" class="processing-status" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>Procesando PDF y analizando gastos...</span>
+                        </div>
+
+                        <!-- Resultados del análisis -->
+                        <div id="extractedExpenses" class="extracted-expenses" style="display: none;">
+                            <h5><i class="fas fa-list-alt"></i> Gastos Encontrados</h5>
+                            <div class="expenses-actions">
+                                <button type="button" id="selectAllExpenses" class="action-btn">
+                                    <i class="fas fa-check-square"></i> Seleccionar Todos
+                                </button>
+                                <button type="button" id="addSelectedExpenses" class="add-btn" disabled>
+                                    <i class="fas fa-plus-circle"></i> Agregar Seleccionados
+                                </button>
+                            </div>
+                            <div id="expensesList" class="expenses-list">
+                                <!-- Los gastos extraídos se mostrarán aquí -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="transactions-list">
@@ -230,6 +318,50 @@
         <!-- Pestaña de Metas -->
         <div id="goals" class="tab-content">
             <div class="goals-section">
+                <!-- Chat con IA para consultas financieras -->
+                <div class="ai-chat-section">
+                    <h3><i class="fas fa-robot"></i> Asistente IA - Consultas Financieras</h3>
+                    <p class="chat-description">Haz preguntas sobre tus finanzas y recibe consejos personalizados basados en tus datos reales</p>
+                    
+                    <div class="chat-container">
+                        <div id="chatMessages" class="chat-messages">
+                            <!-- Los mensajes del chat se mostrarán aquí -->
+                            <div class="chat-message ai-message">
+                                <div class="message-avatar">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="message-content">
+                                    <p>¡Hola! Soy tu asistente financiero con IA. Puedo ayudarte a analizar tus gastos, crear metas de ahorro, y darte consejos personalizados basados en tus datos. ¿En qué puedo ayudarte hoy?</p>
+                                    <p><small>✅ <strong>Chat con IA activo:</strong> Puedes hacer preguntas sobre tus finanzas.</small></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chat-input-container">
+                            <div class="chat-input-wrapper">
+                                <input type="text" id="chatInput" placeholder="Escribe tu pregunta sobre finanzas..." class="chat-input">
+                                <button type="button" id="sendChatBtn" class="send-btn" disabled>
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div class="chat-suggestions">
+                                <button type="button" class="suggestion-btn" data-suggestion="¿Cuáles son mis mayores gastos este mes?">
+                                    <i class="fas fa-chart-pie"></i> Gastos del mes
+                                </button>
+                                <button type="button" class="suggestion-btn" data-suggestion="¿Cómo puedo ahorrar más dinero?">
+                                    <i class="fas fa-piggy-bank"></i> Consejos de ahorro
+                                </button>
+                                <button type="button" class="suggestion-btn" data-suggestion="¿Cuál es mi balance actual?">
+                                    <i class="fas fa-wallet"></i> Balance actual
+                                </button>
+                                <button type="button" class="suggestion-btn" data-suggestion="¿Qué meta de ahorro me recomiendas?">
+                                    <i class="fas fa-target"></i> Meta recomendada
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="add-goal-form">
                     <h3><i class="fas fa-target"></i> Nueva Meta de Ahorro</h3>
                     <form id="goalForm" class="goal-form">
@@ -295,7 +427,7 @@
         <p>&copy; Desde 1992 Fede Life. Todos los derechos reservados.</p>
     </footer>
 
-    <script src="finanzas.js"></script>
+    <script type="module" src="../funciones/finanzas.ts"></script>
 </body>
 
 </html>
