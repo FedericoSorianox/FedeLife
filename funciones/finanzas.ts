@@ -47,6 +47,7 @@ interface Transaction {
     date: Date;                    // Fecha de la transacción
     paymentMethod: PaymentMethod;  // Método de pago utilizado
     createdAt: Date;              // Fecha de creación del registro
+    currency?: string;             // Moneda (UYU, USD)
 }
 
 /**
@@ -98,6 +99,31 @@ interface FinancialSummary {
     totalExpenses: number; // Total de gastos
     balance: number;       // Balance (ingresos - gastos)
     totalSavings: number;  // Total ahorrado
+    monthlyBudget: number; // Presupuesto mensual
+    budgetUsed: number;    // Presupuesto utilizado
+    budgetRemaining: number; // Presupuesto restante
+    savingsRate: number;   // Porcentaje de ahorro
+}
+
+/**
+ * Interface para configuración de la aplicación
+ */
+interface AppConfig {
+    currency: string;      // Moneda principal
+    language: string;      // Idioma
+    theme: 'light' | 'dark'; // Tema visual
+    notifications: boolean; // Notificaciones activadas
+    autoBackup: boolean;   // Backup automático
+}
+
+/**
+ * Interface para respuesta de la API
+ */
+interface ApiResponse<T> {
+    success: boolean;
+    data?: T;
+    error?: string;
+    message?: string;
 }
 
 /**
@@ -139,37 +165,252 @@ interface LLMConfig {
     baseUrl: string;          // URL base de la API de Google
 }
 
-// ==================== CAPA DE PERSISTENCIA ====================
+/**
+ * Interface para datos de autenticación
+ */
+interface AuthData {
+    token: string;
+    user: {
+        id: string;
+        username: string;
+        email: string;
+    };
+}
+
+// ==================== CONFIGURACIÓN DE LA API ====================
 
 /**
- * Clase para manejo de almacenamiento local
- * Patrón Repository: Abstrae el acceso a datos
+ * Configuración de la API backend
  */
-class LocalStorageRepository {
+const API_CONFIG = {
+    BASE_URL: 'http://localhost:3000/api',
+    ENDPOINTS: {
+        AUTH: {
+            LOGIN: '/auth/login',
+            REGISTER: '/auth/register',
+            VERIFY: '/auth/verify'
+        },
+        TRANSACTIONS: '/transactions',
+        CATEGORIES: '/categories',
+        BUDGETS: '/budgets',
+        GOALS: '/goals',
+        REPORTS: '/reports'
+    },
+    HEADERS: {
+        'Content-Type': 'application/json'
+    }
+};
+
+// ==================== GESTOR DE AUTENTICACIÓN ====================
+
+/**
+ * Gestor de autenticación para el frontend
+ * Maneja tokens JWT y sesiones de usuario
+ */
+class AuthManager {
+    private static instance: AuthManager;
+    private authToken: string | null = null;
+    private user: any = null;
+
+    private constructor() {
+        this.loadAuthFromStorage();
+    }
+
+    public static getInstance(): AuthManager {
+        if (!AuthManager.instance) {
+            AuthManager.instance = new AuthManager();
+        }
+        return AuthManager.instance;
+    }
+
     /**
-     * Guarda datos en localStorage con manejo de errores
-     * @param key - Clave para almacenar
-     * @param data - Datos a almacenar
+     * Carga datos de autenticación desde localStorage
      */
-    public save<T>(key: string, data: T[]): void {
+    private loadAuthFromStorage(): void {
         try {
-            const jsonData = JSON.stringify(data);
-            localStorage.setItem(key, jsonData);
+            const authData = localStorage.getItem('auth_data');
+            if (authData) {
+                const parsed = JSON.parse(authData);
+                this.authToken = parsed.token;
+                this.user = parsed.user;
+            }
         } catch (error) {
-            console.error(`Error guardando ${key}:`, error);
-            throw new Error(`No se pudo guardar ${key}`);
+            console.error('Error cargando datos de autenticación:', error);
         }
     }
 
     /**
-     * Carga datos desde localStorage con validación
-     * @param key - Clave a buscar
-     * @returns Array de datos o array vacío si no existe
+     * Guarda datos de autenticación en localStorage
      */
-    public load<T>(key: string): T[] {
+    private saveAuthToStorage(): void {
         try {
-            const data = localStorage.getItem(key);
-            return data ? JSON.parse(data) : [];
+            const authData: AuthData = {
+                token: this.authToken!,
+                user: this.user
+            };
+            localStorage.setItem('auth_data', JSON.stringify(authData));
+        } catch (error) {
+            console.error('Error guardando datos de autenticación:', error);
+        }
+    }
+
+    /**
+     * Obtiene el token de autenticación
+     */
+    public getToken(): string | null {
+        return this.authToken;
+    }
+
+    /**
+     * Verifica si el usuario está autenticado
+     */
+    public isAuthenticated(): boolean {
+        return !!this.authToken;
+    }
+
+    /**
+     * Obtiene datos del usuario actual
+     */
+    public getUser(): any {
+        return this.user;
+    }
+
+    /**
+     * Inicia sesión con credenciales
+     */
+    public async login(username: string, password: string): Promise<boolean> {
+        try {
+            const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH.LOGIN}`, {
+                method: 'POST',
+                headers: API_CONFIG.HEADERS,
+                body: JSON.stringify({ username, password })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.authToken = data.token;
+                this.user = data.user;
+                this.saveAuthToStorage();
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error en login:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Registra un nuevo usuario
+     */
+    public async register(username: string, email: string, password: string): Promise<boolean> {
+        try {
+            const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH.REGISTER}`, {
+                method: 'POST',
+                headers: API_CONFIG.HEADERS,
+                body: JSON.stringify({ username, email, password })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.authToken = data.token;
+                this.user = data.user;
+                this.saveAuthToStorage();
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error en registro:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Cierra la sesión
+     */
+    public logout(): void {
+        this.authToken = null;
+        this.user = null;
+        localStorage.removeItem('auth_data');
+    }
+
+    /**
+     * Obtiene headers con token para llamadas a la API
+     */
+    public getAuthHeaders(): Record<string, string> {
+        return {
+            ...API_CONFIG.HEADERS,
+            'Authorization': `Bearer ${this.authToken}`
+        };
+    }
+}
+
+// ==================== REPOSITORIO HÍBRIDO ====================
+
+/**
+ * Repositorio híbrido que maneja tanto localStorage como backend
+ * Proporciona persistencia local y sincronización con base de datos
+ */
+class HybridRepository {
+    private authManager: AuthManager;
+
+    constructor() {
+        this.authManager = AuthManager.getInstance();
+    }
+
+    /**
+     * Guarda datos tanto en localStorage como en el backend
+     * @param key - Clave para almacenar
+     * @param data - Datos a almacenar
+     * @param endpoint - Endpoint del backend (opcional)
+     */
+    public async save<T>(key: string, data: T[], endpoint?: string): Promise<void> {
+        try {
+            // 1. Guardar en localStorage (caché local)
+            const jsonData = JSON.stringify(data);
+            localStorage.setItem(key, jsonData);
+
+            // 2. Si hay endpoint y usuario autenticado, guardar en backend
+            if (endpoint && this.authManager.isAuthenticated()) {
+                await this.syncToBackend(endpoint, data);
+            }
+        } catch (error) {
+            console.error(`Error guardando ${key}:`, error);
+            // Si falla el backend, al menos tenemos localStorage
+        }
+    }
+
+    /**
+     * Carga datos desde localStorage y sincroniza con backend si es necesario
+     * @param key - Clave a buscar
+     * @param endpoint - Endpoint del backend (opcional)
+     * @returns Array de datos
+     */
+    public async load<T>(key: string, endpoint?: string): Promise<T[]> {
+        try {
+            let data: T[] = [];
+
+            // 1. Intentar cargar desde localStorage
+            const localData = localStorage.getItem(key);
+            if (localData) {
+                data = JSON.parse(localData);
+            }
+
+            // 2. Si hay endpoint y usuario autenticado, sincronizar con backend
+            if (endpoint && this.authManager.isAuthenticated()) {
+                try {
+                    const backendData = await this.loadFromBackend<T>(endpoint);
+                    if (backendData.length > 0) {
+                        // Usar datos del backend y actualizar localStorage
+                        data = backendData;
+                        localStorage.setItem(key, JSON.stringify(data));
+                    }
+                } catch (error) {
+                    console.warn(`No se pudo cargar desde backend, usando localStorage:`, error);
+                }
+            }
+
+            return data;
         } catch (error) {
             console.error(`Error cargando ${key}:`, error);
             return [];
@@ -177,12 +418,17 @@ class LocalStorageRepository {
     }
 
     /**
-     * Elimina una clave específica del localStorage
+     * Elimina una clave específica del localStorage y backend
      * @param key - Clave a eliminar
+     * @param endpoint - Endpoint del backend (opcional)
      */
-    public remove(key: string): void {
+    public async remove(key: string, endpoint?: string): Promise<void> {
         try {
             localStorage.removeItem(key);
+
+            if (endpoint && this.authManager.isAuthenticated()) {
+                await this.deleteFromBackend(endpoint);
+            }
         } catch (error) {
             console.error(`Error eliminando ${key}:`, error);
         }
@@ -196,6 +442,84 @@ class LocalStorageRepository {
     public exists(key: string): boolean {
         return localStorage.getItem(key) !== null;
     }
+
+    /**
+     * Sincroniza datos con el backend
+     */
+    private async syncToBackend<T>(endpoint: string, data: T[]): Promise<void> {
+        try {
+            const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
+                method: 'POST',
+                headers: this.authManager.getAuthHeaders(),
+                body: JSON.stringify({ data })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error sincronizando con backend: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error sincronizando con backend:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Carga datos desde el backend
+     */
+    private async loadFromBackend<T>(endpoint: string): Promise<T[]> {
+        try {
+            const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
+                method: 'GET',
+                headers: this.authManager.getAuthHeaders()
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                return result.data || [];
+            }
+            return [];
+        } catch (error) {
+            console.error('Error cargando desde backend:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Elimina datos del backend
+     */
+    private async deleteFromBackend(endpoint: string): Promise<void> {
+        try {
+            const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
+                method: 'DELETE',
+                headers: this.authManager.getAuthHeaders()
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error eliminando del backend: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error eliminando del backend:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Sincroniza todos los datos con el backend
+     */
+    public async syncAll(): Promise<void> {
+        const keys = ['finance_transactions', 'finance_categories', 'finance_budgets', 'finance_goals'];
+        const endpoints = ['/transactions', '/categories', '/budgets', '/goals'];
+
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            const endpoint = endpoints[i];
+            
+            if (this.exists(key)) {
+                const data = JSON.parse(localStorage.getItem(key)!);
+                await this.save(key, data, endpoint);
+            }
+        }
+    }
 }
 
 // ==================== GESTOR DE CATEGORÍAS ====================
@@ -206,12 +530,19 @@ class LocalStorageRepository {
  */
 class CategoryManager {
     private readonly STORAGE_KEY = 'finance_categories';
-    private storage: LocalStorageRepository;
+    private storage: HybridRepository;
     private categories: Category[] = [];
 
-    constructor(storage: LocalStorageRepository) {
+    constructor(storage: HybridRepository) {
         this.storage = storage;
-        this.loadCategories();
+        this.initializeAsync();
+    }
+
+    /**
+     * Inicialización asíncrona
+     */
+    private async initializeAsync(): Promise<void> {
+        await this.loadCategories();
         this.initializeDefaultCategories();
     }
 
@@ -246,8 +577,8 @@ class CategoryManager {
     /**
      * Carga categorías desde el almacenamiento local
      */
-    private loadCategories(): void {
-        const data = this.storage.load<Category>(this.STORAGE_KEY);
+    private async loadCategories(): Promise<void> {
+        const data = await this.storage.load<Category>(this.STORAGE_KEY);
         // Convertir fechas de string a Date objects
         this.categories = data.map(cat => ({
             ...cat,
@@ -369,19 +700,26 @@ class CategoryManager {
  */
 class TransactionManager {
     private readonly STORAGE_KEY = 'finance_transactions';
-    private storage: LocalStorageRepository;
+    private storage: HybridRepository;
     private transactions: Transaction[] = [];
 
-    constructor(storage: LocalStorageRepository) {
+    constructor(storage: HybridRepository) {
         this.storage = storage;
-        this.loadTransactions();
+        this.initializeAsync();
+    }
+
+    /**
+     * Inicialización asíncrona
+     */
+    private async initializeAsync(): Promise<void> {
+        await this.loadTransactions();
     }
 
     /**
      * Carga transacciones desde el almacenamiento local
      */
-    private loadTransactions(): void {
-        const data = this.storage.load<Transaction>(this.STORAGE_KEY);
+    private async loadTransactions(): Promise<void> {
+        const data = await this.storage.load<Transaction>(this.STORAGE_KEY);
         // Convertir fechas de string a Date objects
         this.transactions = data.map(trans => ({
             ...trans,
@@ -593,7 +931,11 @@ class TransactionManager {
             totalIncome,
             totalExpenses,
             balance,
-            totalSavings
+            totalSavings,
+            monthlyBudget: 0, // TODO: Implementar cálculo de presupuesto mensual
+            budgetUsed: 0,    // TODO: Implementar cálculo de presupuesto usado
+            budgetRemaining: 0, // TODO: Implementar cálculo de presupuesto restante
+            savingsRate: totalIncome > 0 ? (totalSavings / totalIncome) * 100 : 0
         };
     }
 
@@ -652,19 +994,26 @@ class TransactionManager {
  */
 class BudgetManager {
     private readonly STORAGE_KEY = 'finance_budgets';
-    private storage: LocalStorageRepository;
+    private storage: HybridRepository;
     private budgets: Budget[] = [];
 
-    constructor(storage: LocalStorageRepository) {
+    constructor(storage: HybridRepository) {
         this.storage = storage;
-        this.loadBudgets();
+        this.initializeAsync();
+    }
+
+    /**
+     * Inicialización asíncrona
+     */
+    private async initializeAsync(): Promise<void> {
+        await this.loadBudgets();
     }
 
     /**
      * Carga presupuestos desde el almacenamiento local
      */
-    private loadBudgets(): void {
-        const data = this.storage.load<Budget>(this.STORAGE_KEY);
+    private async loadBudgets(): Promise<void> {
+        const data = await this.storage.load<Budget>(this.STORAGE_KEY);
         // Convertir fechas de string a Date objects
         this.budgets = data.map(budget => ({
             ...budget,
@@ -825,19 +1174,26 @@ class BudgetManager {
  */
 class GoalManager {
     private readonly STORAGE_KEY = 'finance_goals';
-    private storage: LocalStorageRepository;
+    private storage: HybridRepository;
     private goals: Goal[] = [];
 
-    constructor(storage: LocalStorageRepository) {
+    constructor(storage: HybridRepository) {
         this.storage = storage;
-        this.loadGoals();
+        this.initializeAsync();
+    }
+
+    /**
+     * Inicialización asíncrona
+     */
+    private async initializeAsync(): Promise<void> {
+        await this.loadGoals();
     }
 
     /**
      * Carga metas desde el almacenamiento local
      */
-    private loadGoals(): void {
-        const data = this.storage.load<Goal>(this.STORAGE_KEY);
+    private async loadGoals(): Promise<void> {
+        const data = await this.storage.load<Goal>(this.STORAGE_KEY);
         // Convertir fechas de string a Date objects
         this.goals = data.map(goal => ({
             ...goal,
@@ -1200,7 +1556,11 @@ class ReportManager {
             totalIncome,
             totalExpenses,
             balance,
-            totalSavings
+            totalSavings,
+            monthlyBudget: 0, // TODO: Implementar cálculo de presupuesto mensual
+            budgetUsed: 0,    // TODO: Implementar cálculo de presupuesto usado
+            budgetRemaining: 0, // TODO: Implementar cálculo de presupuesto restante
+            savingsRate: totalIncome > 0 ? (totalSavings / totalIncome) * 100 : 0
         };
     }
 
@@ -2459,7 +2819,7 @@ class ChatManager {
  */
 class FinanceController {
     // Managers de negocio
-    private storage: LocalStorageRepository;
+    private storage: HybridRepository;
     private categoryManager: CategoryManager;
     private transactionManager: TransactionManager;
     private budgetManager: BudgetManager;
@@ -2489,7 +2849,7 @@ class FinanceController {
 
     constructor() {
         // Inicializar capa de persistencia
-        this.storage = new LocalStorageRepository();
+        this.storage = new HybridRepository();
         
         // Inicializar managers de negocio
         this.categoryManager = new CategoryManager(this.storage);
@@ -2511,9 +2871,20 @@ class FinanceController {
 
         // Inicializar cuando el DOM esté listo
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.initialize());
+            document.addEventListener('DOMContentLoaded', () => this.initializeAsync());
         } else {
-            this.initialize();
+            this.initializeAsync();
+        }
+    }
+
+    /**
+     * Inicialización asíncrona
+     */
+    private async initializeAsync(): Promise<void> {
+        try {
+            await this.initialize();
+        } catch (error) {
+            console.error('❌ Error en inicialización asíncrona:', error);
         }
     }
 
@@ -2521,17 +2892,17 @@ class FinanceController {
      * Inicializa la aplicación
      * Configura elementos del DOM, event listeners y actualiza la UI inicial
      */
-    private initialize(): void {
+    private async initialize(): Promise<void> {
         try {
             this.initializeElements();
             this.setupEventListeners();
             this.setupTabNavigation();
-            this.populateCategories();
-            this.updateDashboard();
-            this.renderTransactions();
-            this.renderCategories();
-            this.renderBudgets();
-            this.renderGoals();
+            await this.populateCategories();
+            await this.updateDashboard();
+            await this.renderTransactions();
+            await this.renderCategories();
+            await this.renderBudgets();
+            await this.renderGoals();
             
             // Inicializar chat con IA si hay API Key guardada
             this.initializeChatIfPossible();

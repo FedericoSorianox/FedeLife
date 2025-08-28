@@ -3326,13 +3326,34 @@ nav {
         margin-bottom: 15px;
     }
 
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .header-text {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .header-auth {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
     header h1 {
         font-size: 1.8em;
         margin-bottom: 8px;
+        text-align: left;
     }
 
     header p {
         font-size: 0.9em;
+        text-align: left;
     }
 
     /* Dashboard cards optimizadas */

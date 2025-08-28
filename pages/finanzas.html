@@ -38,8 +38,20 @@
     </nav>
 
     <header style="background-color: #87ccd8;">
-        <h1><i class="fas fa-chart-line"></i> Finanzas Personales</h1>
-        <p class="textcenter">Controla y optimiza tu economía personal</p>
+        <div class="header-content">
+            <div class="header-text">
+                <h1><i class="fas fa-chart-line"></i> Finanzas Personales</h1>
+                <p class="textcenter">Controla y optimiza tu economía personal</p>
+            </div>
+            <div class="header-auth">
+                <button id="authButton" onclick="authUI.showLoginModal()" style="display: block;">
+                    🔐 Iniciar Sesión
+                </button>
+                <div id="userInfo" style="display: none;">
+                    <!-- Se llenará dinámicamente -->
+                </div>
+            </div>
+        </div>
     </header>
 
     <section class="section">
@@ -468,6 +480,7 @@
         <p>&copy; Desde 1992 Fede Life. Todos los derechos reservados.</p>
     </footer>
 
+    <script type="module" src="../funciones/auth_ui.ts"></script>
     <script type="module" src="../funciones/finanzas.ts"></script>
 </body>
 
