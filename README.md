@@ -41,7 +41,7 @@ Sistema completo de finanzas personales con IA integrada, autenticación y anál
      - `GOOGLE_AI_API_KEY`: Tu API key de Google AI Studio
      - `JWT_SECRET`: Un string aleatorio seguro
 
-5. **¡Listo!** Tu app estará en: `https://fede-life-finanzas.onrender.com`
+5. **¡Listo!** Tu app estará en: `https://fedelife-finanzas.onrender.com`
 
 ### Opción 2: Vercel + MongoDB Atlas
 
