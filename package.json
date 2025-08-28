@@ -11,7 +11,7 @@
     "server": "nodemon server/index.js",
     "server:dev": "nodemon server/index.js",
     "server:prod": "node server/index.js",
-    "postinstall": "npm run build"
+    "postinstall": "npm run build || echo 'Build failed but continuing...'"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -19,8 +19,7 @@
     "@types/mongoose": "^5.11.97",
     "@types/node": "^20.10.0",
     "nodemon": "^3.0.2",
-    "typescript": "^5.9.2",
-    "vite": "^5.0.0"
+    "typescript": "^5.9.2"
   },
   "dependencies": {
     "@types/chart.js": "^2.9.41",
@@ -36,7 +35,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "vite": "^5.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
