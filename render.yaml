@@ -4,7 +4,7 @@
 services:
   # Servicio web principal
   - type: web
-    name: fede-life-finanzas
+    name: fedelife-finanzas
     env: node
     plan: free
     buildCommand: npm install && npm run build
@@ -25,10 +25,10 @@ services:
       - key: GOOGLE_AI_API_KEY
         sync: false
       - key: FRONTEND_URL
-        value: https://fede-life-finanzas.onrender.com
+        value: https://fedelife-finanzas.onrender.com
 
 databases:
   # Base de datos MongoDB
   - name: fede-life-mongodb
-    databaseName: fede-life-finanzas
+    databaseName: fedelife_finanzas
     plan: free
