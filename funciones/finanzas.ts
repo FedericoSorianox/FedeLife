@@ -2560,7 +2560,8 @@ class FinanceController {
             'paymentMethod', 'transactionsList',
             
             // Filtros de transacciones
-            'filterType', 'filterCategory', 'filterMonth',
+            'filterType', 'filterCategory', 'filterMonth', 'prevMonthBtn', 
+            'nextMonthBtn', 'currentMonthDisplay', 'monthSelectorBtn', 'clearFiltersBtn',
             
             // Formulario de categorías
             'categoryForm', 'categoryType', 'categoryName', 'categoryColor', 
@@ -2621,9 +2622,27 @@ class FinanceController {
         this.elements.budgetForm?.addEventListener('submit', (e) => this.handleBudgetSubmit(e));
         
         // Filtros de transacciones - reiniciar paginación cuando cambien
-        ['filterType', 'filterCategory', 'filterMonth'].forEach(filterId => {
+        ['filterType', 'filterCategory'].forEach(filterId => {
             this.elements[filterId]?.addEventListener('change', () => this.refreshTransactions());
         });
+        
+        // Event listener especial para el filtro de mes
+        this.elements.filterMonth?.addEventListener('change', (e) => {
+            const target = e.target as HTMLInputElement;
+            this.updateMonthDisplay(target.value);
+            this.refreshTransactions();
+            this.updateDashboardForMonth(target.value);
+            this.updateChartsForPeriod(target.value); // Actualizar gráficos para el mes seleccionado
+        });
+        
+        // Event listeners para el filtro de meses mejorado
+        this.elements.prevMonthBtn?.addEventListener('click', () => this.navigateMonth(-1));
+        this.elements.nextMonthBtn?.addEventListener('click', () => this.navigateMonth(1));
+        this.elements.monthSelectorBtn?.addEventListener('click', () => this.openMonthSelector());
+        this.elements.clearFiltersBtn?.addEventListener('click', () => this.clearAllFilters());
+        
+        // Event listeners para tarjetas clickeables del dashboard
+        this.setupDashboardCardListeners();
         
         // Cambio de tipo de transacción para cargar categorías correspondientes
         this.elements.transactionType?.addEventListener('change', () => this.populateTransactionCategories());
@@ -2702,7 +2721,27 @@ class FinanceController {
         // Selector de período
         this.elements.chartPeriod?.addEventListener('change', (e) => {
             const target = e.target as HTMLSelectElement;
-            this.updateChartsForPeriod(target.value as any);
+            const selectedPeriod = target.value;
+            
+            // Si el período seleccionado es un mes específico, actualizar el filtro de meses
+            if (selectedPeriod.match(/^\d{4}-\d{2}$/)) {
+                if (this.elements.filterMonth) {
+                    (this.elements.filterMonth as HTMLInputElement).value = selectedPeriod;
+                    this.updateMonthDisplay(selectedPeriod);
+                    this.refreshTransactions();
+                    this.updateDashboardForMonth(selectedPeriod);
+                }
+            } else {
+                // Si es un período predefinido, limpiar el filtro de meses
+                if (this.elements.filterMonth) {
+                    (this.elements.filterMonth as HTMLInputElement).value = '';
+                    this.updateMonthDisplay('');
+                    this.refreshTransactions();
+                    this.updateDashboardForMonth();
+                }
+            }
+            
+            this.updateChartsForPeriod(selectedPeriod as any);
         });
 
         // Botón de actualizar gráficos
@@ -3145,8 +3184,46 @@ class FinanceController {
             const incomeData = this.getIncomeDataForPeriod(period);
             
             this.chartsManager.updateCharts(expensesData, incomeData, period as any);
+            
+            // Mostrar información del período en los gráficos
+            this.updateChartPeriodInfo(period);
         } catch (error) {
             console.error('❌ Error actualizando gráficos:', error);
+        }
+    }
+
+    /**
+     * Actualiza la información del período mostrada en los gráficos
+     * @param period - Período seleccionado
+     */
+    private updateChartPeriodInfo(period: string): void {
+        try {
+            // Buscar elementos donde mostrar la información del período
+            const chartTitles = document.querySelectorAll('.chart-card h3');
+            
+            chartTitles.forEach(title => {
+                const originalText = title.textContent || '';
+                const baseTitle = originalText.replace(/\s*\([^)]*\)\s*$/, ''); // Remover período anterior
+                
+                let periodText = '';
+                if (period.match(/^\d{4}-\d{2}$/)) {
+                    periodText = ` (${this.getMonthDisplayName(period)})`;
+                } else {
+                    const periodNames: {[key: string]: string} = {
+                        'current-month': ' (Mes actual)',
+                        'last-month': ' (Mes anterior)',
+                        'last-3-months': ' (Últimos 3 meses)',
+                        'current-year': ' (Año actual)',
+                        'all-time': ' (Todo el tiempo)'
+                    };
+                    periodText = periodNames[period] || '';
+                }
+                
+                title.textContent = baseTitle + periodText;
+            });
+            
+        } catch (error) {
+            console.error('Error actualizando información del período en gráficos:', error);
         }
     }
 
@@ -3239,10 +3316,18 @@ class FinanceController {
     /**
      * Filtra transacciones por período
      * @param transactions - Lista de transacciones
-     * @param period - Período seleccionado
+     * @param period - Período seleccionado (puede ser un mes específico YYYY-MM)
      * @returns Transacciones filtradas
      */
     private filterTransactionsByPeriod(transactions: Transaction[], period: string): Transaction[] {
+        // Si el período es un mes específico (formato YYYY-MM)
+        if (period.match(/^\d{4}-\d{2}$/)) {
+            const startDate = new Date(period + '-01');
+            const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0, 23, 59, 59);
+            return transactions.filter(t => t.date >= startDate && t.date <= endDate);
+        }
+
+        // Períodos predefinidos
         const now = new Date();
         const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -3564,6 +3649,330 @@ class FinanceController {
         if (monthFilter) filters.month = monthFilter;
 
         return filters;
+    }
+
+    /**
+     * Navega al mes anterior o siguiente
+     * @param direction - Dirección de navegación (-1 para anterior, 1 para siguiente)
+     */
+    private navigateMonth(direction: number): void {
+        const currentMonthInput = this.elements.filterMonth as HTMLInputElement;
+        if (!currentMonthInput || !currentMonthInput.value) {
+            // Si no hay mes seleccionado, usar el mes actual
+            const currentMonth = new Date().toISOString().substr(0, 7);
+            currentMonthInput.value = currentMonth;
+        }
+
+        const availableMonths = this.getAvailableMonths();
+        if (availableMonths.length === 0) {
+            this.showNotification('No hay transacciones disponibles', 'info');
+            return;
+        }
+
+        const currentMonth = currentMonthInput.value;
+        let currentIndex = availableMonths.indexOf(currentMonth);
+        
+        // Si el mes actual no está en la lista, usar el más reciente
+        if (currentIndex === -1) {
+            currentIndex = 0;
+        }
+
+        // Calcular nuevo índice
+        const newIndex = currentIndex + direction;
+        
+        // Verificar límites
+        if (newIndex < 0 || newIndex >= availableMonths.length) {
+            const directionText = direction > 0 ? 'siguiente' : 'anterior';
+            this.showNotification(`No hay más meses ${directionText} con transacciones`, 'info');
+            return;
+        }
+
+        const newMonth = availableMonths[newIndex];
+        currentMonthInput.value = newMonth;
+        
+        this.updateMonthDisplay(newMonth);
+        this.refreshTransactions();
+        this.updateDashboardForMonth(newMonth);
+        this.updateChartsForPeriod(newMonth); // Actualizar gráficos para el mes seleccionado
+        
+        // Mostrar notificación con información del mes
+        const transactionCount = this.transactionManager.getTransactions({ month: newMonth }).length;
+        this.showNotification(`Navegando a ${this.getMonthDisplayName(newMonth)} (${transactionCount} transacciones)`, 'info');
+    }
+
+    /**
+     * Abre el selector de mes nativo
+     */
+    private openMonthSelector(): void {
+        const monthInput = this.elements.filterMonth as HTMLInputElement;
+        if (monthInput) {
+            monthInput.click();
+        }
+    }
+
+    /**
+     * Limpia todos los filtros aplicados
+     */
+    private clearAllFilters(): void {
+        // Limpiar filtros
+        if (this.elements.filterType) {
+            (this.elements.filterType as HTMLSelectElement).value = '';
+        }
+        if (this.elements.filterCategory) {
+            (this.elements.filterCategory as HTMLSelectElement).value = '';
+        }
+        if (this.elements.filterMonth) {
+            (this.elements.filterMonth as HTMLInputElement).value = '';
+        }
+        
+        // Actualizar display del mes
+        this.updateMonthDisplay('');
+        
+        // Refrescar transacciones
+        this.refreshTransactions();
+        
+        // Actualizar gráficos para mostrar todos los datos
+        this.updateChartsForPeriod('all-time');
+        
+        this.showNotification('Filtros limpiados', 'info');
+    }
+
+    /**
+     * Actualiza el display visual del mes seleccionado
+     * @param monthString - Mes en formato YYYY-MM
+     */
+    private updateMonthDisplay(monthString: string): void {
+        const displayElement = this.elements.currentMonthDisplay as HTMLElement;
+        if (!displayElement) return;
+
+        if (!monthString) {
+            displayElement.textContent = 'Todos los meses';
+            return;
+        }
+
+        displayElement.textContent = this.getMonthDisplayName(monthString);
+    }
+
+    /**
+     * Obtiene todos los meses que tienen transacciones
+     * @returns Array de meses en formato YYYY-MM
+     */
+    private getAvailableMonths(): string[] {
+        const months = new Set<string>();
+        const transactions = this.transactionManager.getTransactions();
+        
+        transactions.forEach(trans => {
+            const month = trans.date.toISOString().substr(0, 7);
+            months.add(month);
+        });
+        
+        return Array.from(months).sort().reverse(); // Más recientes primero
+    }
+
+    /**
+     * Verifica si un mes tiene transacciones
+     * @param month - Mes en formato YYYY-MM
+     * @returns true si tiene transacciones
+     */
+    private hasTransactionsInMonth(month: string): boolean {
+        const transactions = this.transactionManager.getTransactions({ month });
+        return transactions.length > 0;
+    }
+
+    /**
+     * Obtiene el nombre formateado de un mes
+     * @param monthString - Mes en formato YYYY-MM
+     * @returns Nombre del mes en español
+     */
+    private getMonthDisplayName(monthString: string): string {
+        try {
+            const date = new Date(monthString + '-01');
+            const monthNames = [
+                'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+            ];
+            
+            const monthName = monthNames[date.getMonth()];
+            const year = date.getFullYear();
+            
+            return `${monthName} ${year}`;
+        } catch (error) {
+            console.error('Error formateando fecha:', error);
+            return monthString;
+        }
+    }
+
+    /**
+     * Actualiza el dashboard para mostrar datos de un mes específico
+     * @param monthString - Mes en formato YYYY-MM (opcional)
+     */
+    private updateDashboardForMonth(monthString?: string): void {
+        try {
+            const summary = this.transactionManager.getFinancialSummary(monthString);
+            
+            // Actualizar valores del dashboard
+            if (this.elements.totalIncome) {
+                (this.elements.totalIncome as HTMLElement).textContent = `$${summary.totalIncome.toFixed(2)}`;
+            }
+            if (this.elements.totalExpenses) {
+                (this.elements.totalExpenses as HTMLElement).textContent = `$${summary.totalExpenses.toFixed(2)}`;
+            }
+            if (this.elements.totalBalance) {
+                (this.elements.totalBalance as HTMLElement).textContent = `$${summary.balance.toFixed(2)}`;
+            }
+            
+            // Actualizar el texto del período en las tarjetas
+            const periodText = monthString ? this.getMonthDisplayName(monthString) : 'Este mes';
+            document.querySelectorAll('.period').forEach(element => {
+                (element as HTMLElement).textContent = periodText;
+            });
+            
+            // Sincronizar el selector de período de gráficos
+            this.syncChartPeriodSelector(monthString);
+            
+        } catch (error) {
+            console.error('Error actualizando dashboard para mes específico:', error);
+        }
+    }
+
+    /**
+     * Sincroniza el selector de período de gráficos con el filtro de meses
+     * @param monthString - Mes en formato YYYY-MM (opcional)
+     */
+    private syncChartPeriodSelector(monthString?: string): void {
+        const chartPeriodSelector = this.elements.chartPeriod as HTMLSelectElement;
+        if (!chartPeriodSelector) return;
+
+        if (monthString) {
+            // Si hay un mes específico seleccionado, actualizar el selector de gráficos
+            // Buscar una opción que coincida o crear una personalizada
+            const monthDisplayName = this.getMonthDisplayName(monthString);
+            
+            // Verificar si ya existe una opción para este mes
+            let optionExists = false;
+            for (let i = 0; i < chartPeriodSelector.options.length; i++) {
+                const option = chartPeriodSelector.options[i];
+                if (option.value === monthString || option.text === monthDisplayName) {
+                    optionExists = true;
+                    chartPeriodSelector.selectedIndex = i;
+                    break;
+                }
+            }
+            
+            // Si no existe, agregar una opción temporal
+            if (!optionExists) {
+                const newOption = document.createElement('option');
+                newOption.value = monthString;
+                newOption.text = monthDisplayName;
+                chartPeriodSelector.add(newOption);
+                chartPeriodSelector.selectedIndex = chartPeriodSelector.options.length - 1;
+            }
+        } else {
+            // Si no hay mes específico, volver al período por defecto
+            chartPeriodSelector.value = 'current-month';
+        }
+    }
+
+    /**
+     * Configura los event listeners para las tarjetas clickeables del dashboard
+     */
+    private setupDashboardCardListeners(): void {
+        // Tarjeta de ingresos
+        const incomeCard = document.getElementById('incomeCard');
+        if (incomeCard) {
+            incomeCard.addEventListener('click', () => this.handleDashboardCardClick('income'));
+            incomeCard.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.handleDashboardCardClick('income');
+                }
+            });
+        }
+
+        // Tarjeta de gastos
+        const expenseCard = document.getElementById('expenseCard');
+        if (expenseCard) {
+            expenseCard.addEventListener('click', () => this.handleDashboardCardClick('expense'));
+            expenseCard.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.handleDashboardCardClick('expense');
+                }
+            });
+        }
+    }
+
+    /**
+     * Maneja el clic en las tarjetas del dashboard
+     * @param transactionType - Tipo de transacción (income/expense)
+     */
+    private handleDashboardCardClick(transactionType: 'income' | 'expense'): void {
+        try {
+            // Cambiar a la pestaña de transacciones
+            this.switchTab('transactions');
+            
+            // Pre-seleccionar el tipo de transacción
+            if (this.elements.transactionType) {
+                (this.elements.transactionType as HTMLSelectElement).value = transactionType;
+                this.populateTransactionCategories(); // Cargar categorías correspondientes
+            }
+            
+            // Hacer scroll al formulario de transacciones
+            this.scrollToTransactionForm();
+            
+            // Mostrar notificación con información contextual
+            const typeText = transactionType === 'income' ? 'ingreso' : 'gasto';
+            const currentAmount = transactionType === 'income' 
+                ? (this.elements.totalIncome as HTMLElement)?.textContent || '$0.00'
+                : (this.elements.totalExpenses as HTMLElement)?.textContent || '$0.00';
+            
+            this.showNotification(`Preparado para agregar un ${typeText} (${currentAmount} actual)`, 'info');
+            
+            // Enfocar el campo de monto después de un pequeño delay
+            setTimeout(() => {
+                if (this.elements.transactionAmount) {
+                    (this.elements.transactionAmount as HTMLInputElement).focus();
+                }
+            }, 500);
+            
+            // Agregar efecto visual temporal al formulario
+            this.highlightTransactionForm(transactionType);
+            
+        } catch (error) {
+            console.error('Error manejando clic en tarjeta del dashboard:', error);
+            this.showNotification('Error al navegar al formulario', 'error');
+        }
+    }
+
+    /**
+     * Resalta visualmente el formulario de transacciones
+     * @param transactionType - Tipo de transacción seleccionado
+     */
+    private highlightTransactionForm(transactionType: 'income' | 'expense'): void {
+        const form = this.elements.transactionForm;
+        if (!form) return;
+
+        // Agregar clase de resaltado temporal
+        const highlightClass = transactionType === 'income' ? 'highlight-income' : 'highlight-expense';
+        form.classList.add(highlightClass);
+        
+        // Remover la clase después de 2 segundos
+        setTimeout(() => {
+            form.classList.remove(highlightClass);
+        }, 2000);
+    }
+
+    /**
+     * Hace scroll suave al formulario de transacciones
+     */
+    private scrollToTransactionForm(): void {
+        const transactionForm = this.elements.transactionForm;
+        if (transactionForm) {
+            transactionForm.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
     }
 
     /**
@@ -4893,6 +5302,7 @@ class FinanceController {
         if (this.elements.filterMonth) {
             const currentMonth = new Date().toISOString().substr(0, 7);
             (this.elements.filterMonth as HTMLInputElement).value = currentMonth;
+            this.updateMonthDisplay(currentMonth);
         }
     }
 
@@ -4972,6 +5382,84 @@ class FinanceController {
             info: '#3498db'
         };
         return colors[type] || '#3498db';
+    }
+
+    /**
+     * Configura la navegación móvil con menú hamburguesa
+     */
+    private setupMobileNavigation(): void {
+        const navToggle = document.getElementById('navToggle');
+        const navMenu = document.getElementById('navMenu');
+
+        if (navToggle && navMenu) {
+            navToggle.addEventListener('click', () => {
+                navToggle.classList.toggle('active');
+                navMenu.classList.toggle('active');
+            });
+
+            // Cerrar menú al hacer clic en un enlace
+            const navLinks = navMenu.querySelectorAll('a');
+            navLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    navToggle.classList.remove('active');
+                    navMenu.classList.remove('active');
+                });
+            });
+
+            // Cerrar menú al hacer clic fuera
+            document.addEventListener('click', (e) => {
+                if (!navToggle.contains(e.target as Node) && !navMenu.contains(e.target as Node)) {
+                    navToggle.classList.remove('active');
+                    navMenu.classList.remove('active');
+                }
+            });
+        }
+
+        // Optimizaciones para móviles
+        this.setupMobileOptimizations();
+    }
+
+    /**
+     * Configura optimizaciones específicas para dispositivos móviles
+     */
+    private setupMobileOptimizations(): void {
+        // Detectar si es un dispositivo móvil
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            // Prevenir zoom en inputs en iOS
+            const inputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="email"], textarea');
+            inputs.forEach(input => {
+                input.addEventListener('focus', () => {
+                    // Scroll suave al input cuando se enfoca
+                    setTimeout(() => {
+                        input.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }, 300);
+                });
+            });
+
+            // Mejorar experiencia de scroll en iOS
+            const scrollableElements = document.querySelectorAll('.transactions-container, .chat-messages, .categories-grid');
+            scrollableElements.forEach(element => {
+                element.setAttribute('style', '-webkit-overflow-scrolling: touch;');
+            });
+
+            // Ajustar viewport cuando aparece el teclado virtual
+            let initialViewport = window.visualViewport?.height || window.innerHeight;
+            window.visualViewport?.addEventListener('resize', () => {
+                const currentHeight = window.visualViewport?.height || window.innerHeight;
+                if (currentHeight < initialViewport * 0.8) {
+                    // Teclado virtual está abierto
+                    document.body.style.height = `${currentHeight}px`;
+                } else {
+                    // Teclado virtual está cerrado
+                    document.body.style.height = '100vh';
+                }
+            });
+        }
     }
 }
 

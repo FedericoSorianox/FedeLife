@@ -3,7 +3,10 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="format-detection" content="telephone=no">
     <title>Fede Life - Finanzas Personales</title>
     <link rel="stylesheet" href="app.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -15,13 +18,23 @@
 
 <body class="body">
     <nav class="navbar">
-        <ul>
-            <li><a href="index.html">Inicio</a></li>
-            <li><a href="finanzas.html" class="active">Finanzas</a></li>
-            <li><a href="ideas.html">Ideas</a></li>
-            <li><a href="tareas.html">Tareas</a></li>
-            <li><a href="bruce.html">Bruce</a></li>
-        </ul>
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="nav-title">Fede Life</span>
+            </div>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="finanzas.html" class="active">Finanzas</a></li>
+                <li><a href="ideas.html">Ideas</a></li>
+                <li><a href="tareas.html">Tareas</a></li>
+                <li><a href="bruce.html">Bruce</a></li>
+            </ul>
+        </div>
     </nav>
 
     <header style="background-color: #87ccd8;">
@@ -35,7 +48,7 @@
             <h2 class="dashboard-title">Resumen Financiero del Mes</h2>
 
             <div class="summary-cards">
-                <div class="summary-card income">
+                <div class="summary-card income" id="incomeCard" role="button" tabindex="0" title="Hacer clic para agregar un ingreso">
                     <div class="card-icon">
                         <i class="fas fa-arrow-up"></i>
                     </div>
@@ -44,9 +57,12 @@
                         <p class="amount" id="totalIncome">$0.00</p>
                         <span class="period">Este mes</span>
                     </div>
+                    <div class="card-action-indicator">
+                        <i class="fas fa-plus"></i>
+                    </div>
                 </div>
 
-                <div class="summary-card expense">
+                <div class="summary-card expense" id="expenseCard" role="button" tabindex="0" title="Hacer clic para agregar un gasto">
                     <div class="card-icon">
                         <i class="fas fa-arrow-down"></i>
                     </div>
@@ -54,6 +70,9 @@
                         <h3>Gastos</h3>
                         <p class="amount" id="totalExpenses">$0.00</p>
                         <span class="period">Este mes</span>
+                    </div>
+                    <div class="card-action-indicator">
+                        <i class="fas fa-plus"></i>
                     </div>
                 </div>
 
@@ -232,7 +251,29 @@
                             <select id="filterCategory">
                                 <option value="">Todas las categorías</option>
                             </select>
-                            <input type="month" id="filterMonth">
+                            
+                            <!-- Filtro por meses mejorado -->
+                            <div class="month-filter-container">
+                                <div class="month-filter-header">
+                                    <button type="button" id="prevMonthBtn" class="month-nav-btn" title="Mes anterior">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                    <div class="month-display">
+                                        <span id="currentMonthDisplay">Enero 2024</span>
+                                        <button type="button" id="monthSelectorBtn" class="month-selector-btn" title="Seleccionar mes">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </button>
+                                    </div>
+                                    <button type="button" id="nextMonthBtn" class="month-nav-btn" title="Mes siguiente">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                                <input type="month" id="filterMonth" style="display: none;">
+                            </div>
+                            
+                            <button type="button" id="clearFiltersBtn" class="clear-filters-btn" title="Limpiar filtros">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
                     </div>
                     <div id="transactionsList" class="transactions-container">
