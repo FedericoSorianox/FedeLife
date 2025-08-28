@@ -24,8 +24,6 @@ services:
         value: 7d
       - key: GOOGLE_AI_API_KEY
         sync: false
-      - key: FRONTEND_URL
-        value: https://fedelife-finanzas.onrender.com
 
 databases:
   # Base de datos MongoDB
