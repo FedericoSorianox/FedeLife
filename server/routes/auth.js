@@ -80,6 +80,63 @@ const validateLogin = (req, res, next) => {
  * GET /api/auth/mongo-debug
  * Endpoint específico para diagnosticar problemas de MongoDB
  */
+
+/**
+ * GET /api/auth/config-debug
+ * Endpoint para verificar la configuración de la base de datos
+ */
+router.get('/config-debug', async (req, res) => {
+    try {
+        console.log('🔍 Debug de configuración iniciado');
+        
+        const configInfo = {
+            timestamp: new Date().toISOString(),
+            database: {
+                type: 'MongoDB (esperado)',
+                uri_exists: !!process.env.MONGODB_URI,
+                uri_scheme: process.env.MONGODB_URI ? process.env.MONGODB_URI.split('://')[0] : 'No definida',
+                uri_length: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0,
+                uri_preview: process.env.MONGODB_URI ? 
+                    process.env.MONGODB_URI.substring(0, 50) + '...' : 'No definida'
+            },
+            environment: {
+                NODE_ENV: process.env.NODE_ENV,
+                PORT: process.env.PORT,
+                JWT_SECRET_EXISTS: !!process.env.JWT_SECRET
+            },
+            recommendations: []
+        };
+        
+        // Análisis y recomendaciones
+        if (!process.env.MONGODB_URI) {
+            configInfo.recommendations.push('❌ MONGODB_URI no está configurada');
+        } else if (!process.env.MONGODB_URI.startsWith('mongodb')) {
+            configInfo.recommendations.push('❌ MONGODB_URI no es una URI válida de MongoDB');
+            configInfo.recommendations.push('💡 Debería comenzar con "mongodb://" o "mongodb+srv://"');
+            configInfo.recommendations.push('🔧 Actualmente configurada como: ' + process.env.MONGODB_URI.split('://')[0]);
+        } else {
+            configInfo.recommendations.push('✅ MONGODB_URI parece ser válida');
+        }
+        
+        if (!process.env.JWT_SECRET) {
+            configInfo.recommendations.push('❌ JWT_SECRET no está configurada');
+        } else {
+            configInfo.recommendations.push('✅ JWT_SECRET está configurada');
+        }
+        
+        res.json({
+            success: true,
+            config: configInfo
+        });
+        
+    } catch (error) {
+        console.error('❌ Error en debug de configuración:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 router.get('/mongo-debug', async (req, res) => {
     try {
         console.log('🔍 Debug de MongoDB iniciado');
