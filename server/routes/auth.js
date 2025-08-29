@@ -71,11 +71,54 @@ const validateLogin = (req, res, next) => {
 // ==================== RUTAS ====================
 
 /**
+ * GET /api/auth/health
+ * Endpoint de diagnóstico para verificar el estado del sistema
+ */
+router.get('/health', async (req, res) => {
+    try {
+        console.log('🔍 Health check iniciado');
+        
+        // Verificar conexión a MongoDB
+        const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+        console.log('📊 Estado de MongoDB:', dbStatus);
+        
+        // Verificar variables de entorno
+        const envVars = {
+            JWT_SECRET: !!process.env.JWT_SECRET,
+            MONGODB_URI: !!process.env.MONGODB_URI,
+            NODE_ENV: process.env.NODE_ENV || 'development'
+        };
+        console.log('🔧 Variables de entorno:', envVars);
+        
+        res.json({
+            success: true,
+            timestamp: new Date().toISOString(),
+            database: {
+                status: dbStatus,
+                name: mongoose.connection.name
+            },
+            environment: envVars,
+            message: 'Sistema de autenticación funcionando'
+        });
+        
+    } catch (error) {
+        console.error('❌ Error en health check:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
+
+/**
  * POST /api/auth/register
  * Registra un nuevo usuario
  */
 router.post('/register', validateRegistration, async (req, res) => {
     try {
+        console.log('🔍 Registro iniciado con datos:', { username: req.body.username, email: req.body.email });
+        
         const { username, email, password, firstName, lastName, currency = 'UYU' } = req.body;
         
         // Verificar si el usuario ya existe
@@ -131,6 +174,7 @@ router.post('/register', validateRegistration, async (req, res) => {
         
     } catch (error) {
         console.error('❌ Error en registro:', error);
+        console.error('❌ Stack trace:', error.stack);
         
         if (error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
@@ -161,6 +205,8 @@ router.post('/register', validateRegistration, async (req, res) => {
  */
 router.post('/login', validateLogin, async (req, res) => {
     try {
+        console.log('🔍 Login iniciado con identifier:', req.body.identifier);
+        
         const { identifier, password } = req.body;
         
         // Buscar usuario por email o username
