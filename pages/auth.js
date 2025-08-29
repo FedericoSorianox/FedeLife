@@ -39,6 +39,7 @@ function logout() {
 function checkAuthStatus() {
     const authData = localStorage.getItem('auth_data');
     const authButton = document.getElementById('authButton');
+    const autoAuthButton = document.getElementById('autoAuthButton');
     const userInfo = document.getElementById('userInfo');
     const userName = document.getElementById('userName');
     
@@ -48,6 +49,7 @@ function checkAuthStatus() {
             if (parsed.token && parsed.user) {
                 // Usuario autenticado
                 if (authButton) authButton.style.display = 'none';
+                if (autoAuthButton) autoAuthButton.style.display = 'none';
                 if (userInfo) userInfo.style.display = 'flex';
                 if (userName) {
                     userName.textContent = parsed.user.firstName || parsed.user.username || 'Usuario';
@@ -61,6 +63,7 @@ function checkAuthStatus() {
     
     // Usuario no autenticado
     if (authButton) authButton.style.display = 'block';
+    if (autoAuthButton) autoAuthButton.style.display = 'block';
     if (userInfo) userInfo.style.display = 'none';
     return false;
 }
@@ -77,10 +80,8 @@ async function tryAutoLogin() {
             return true;
         }
 
-        // Solo en desarrollo
-        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-            return false;
-        }
+        // Permitir autenticación automática tanto en desarrollo como en producción
+        // En producción, esto creará un usuario de desarrollo para testing
 
         // Crear usuario de desarrollo automáticamente
         console.log(`👤 Creando usuario de desarrollo automático...`);
@@ -173,11 +174,26 @@ if (document.readyState === 'loading') {
     initAuth();
 }
 
-// Agregar event listener para el botón de logout
+// Agregar event listeners
 document.addEventListener('DOMContentLoaded', () => {
     const logoutBtn = document.getElementById('logoutBtn');
+    const autoAuthBtn = document.getElementById('autoAuthButton');
+    
     if (logoutBtn) {
         logoutBtn.addEventListener('click', logout);
+    }
+    
+    if (autoAuthBtn) {
+        autoAuthBtn.addEventListener('click', async () => {
+            console.log('🤖 Iniciando autenticación automática...');
+            const success = await tryAutoLogin();
+            if (success) {
+                checkAuthStatus();
+                alert('✅ Autenticación automática exitosa!');
+            } else {
+                alert('❌ No se pudo autenticar automáticamente. Ve a login.html para autenticarte manualmente.');
+            }
+        });
     }
 });
 

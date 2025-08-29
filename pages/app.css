@@ -3401,6 +3401,15 @@ nav {
         background: rgba(220, 53, 69, 1) !important;
     }
 
+    .auto-auth-btn {
+        background: rgba(40, 167, 69, 0.8) !important;
+        border-color: rgba(40, 167, 69, 0.9) !important;
+    }
+
+    .auto-auth-btn:hover {
+        background: rgba(40, 167, 69, 1) !important;
+    }
+
     #userInfo {
         display: flex;
         align-items: center;
