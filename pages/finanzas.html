@@ -47,6 +47,9 @@
                 <button id="authButton" onclick="authUI.showLoginModal()" style="display: block;">
                     🔐 Iniciar Sesión
                 </button>
+                <button id="autoAuthButton" style="display: none;" class="auto-auth-btn">
+                    🤖 Auto Login
+                </button>
                 <div id="userInfo" style="display: none;">
                     <span id="userName">Usuario</span>
                     <button id="logoutBtn" class="logout-btn">🚪 Cerrar Sesión</button>
@@ -504,7 +507,7 @@
 
     <script type="module" src="../funciones/auth_ui.ts"></script>
     <script type="module" src="../funciones/finanzas.ts"></script>
-    <script src="../funciones/auth.js"></script>
+    <script src="auth.js"></script>
 </body>
 
 </html>
