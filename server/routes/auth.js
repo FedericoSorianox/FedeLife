@@ -75,6 +75,76 @@ const validateLogin = (req, res, next) => {
  * GET /api/auth/health
  * Endpoint de diagnóstico para verificar el estado del sistema
  */
+
+/**
+ * GET /api/auth/mongo-debug
+ * Endpoint específico para diagnosticar problemas de MongoDB
+ */
+router.get('/mongo-debug', async (req, res) => {
+    try {
+        console.log('🔍 Debug de MongoDB iniciado');
+        
+        const debugInfo = {
+            timestamp: new Date().toISOString(),
+            mongoose: {
+                readyState: mongoose.connection.readyState,
+                name: mongoose.connection.name,
+                host: mongoose.connection.host,
+                port: mongoose.connection.port,
+                database: mongoose.connection.db ? mongoose.connection.db.databaseName : null
+            },
+            environment: {
+                NODE_ENV: process.env.NODE_ENV,
+                MONGODB_URI_EXISTS: !!process.env.MONGODB_URI,
+                MONGODB_URI_PREFIX: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 30) + '...' : 'No definida'
+            }
+        };
+        
+        // Intentar conectar si no está conectado
+        if (mongoose.connection.readyState !== 1 && process.env.MONGODB_URI) {
+            try {
+                console.log('🔄 Intentando conectar a MongoDB...');
+                await mongoose.connect(process.env.MONGODB_URI, {
+                    useNewUrlParser: true,
+                    useUnifiedTopology: true,
+                    serverSelectionTimeoutMS: 5000,
+                    socketTimeoutMS: 45000,
+                });
+                debugInfo.connectionAttempt = {
+                    status: 'success',
+                    message: 'Conexión exitosa'
+                };
+                console.log('✅ Conexión exitosa');
+            } catch (connectError) {
+                debugInfo.connectionAttempt = {
+                    status: 'error',
+                    error: connectError.message,
+                    code: connectError.code,
+                    name: connectError.name
+                };
+                console.error('❌ Error en intento de conexión:', connectError.message);
+            }
+        } else if (mongoose.connection.readyState === 1) {
+            debugInfo.connectionAttempt = {
+                status: 'already_connected',
+                message: 'Ya estaba conectado'
+            };
+        }
+        
+        res.json({
+            success: true,
+            debug: debugInfo
+        });
+        
+    } catch (error) {
+        console.error('❌ Error en debug de MongoDB:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
 router.get('/health', async (req, res) => {
     try {
         console.log('🔍 Health check iniciado');
