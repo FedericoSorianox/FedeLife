@@ -2957,7 +2957,8 @@ class FinanceController {
             'chatInput', 'sendChatBtn', 'chatMessages',
             
             // Gráficos
-            'chartPeriod', 'refreshCharts'
+            'chartPeriod', 'refreshCharts', 'chartPrevMonthBtn', 'chartNextMonthBtn', 
+            'chartCurrentMonthDisplay', 'chartMonthSelectorBtn', 'chartFilterMonth'
         ];
 
         elementIds.forEach(id => {
@@ -3113,6 +3114,18 @@ class FinanceController {
             }
             
             this.updateChartsForPeriod(selectedPeriod as any);
+        });
+
+        // Event listeners para el sistema de navegación de meses en charts
+        this.elements.chartPrevMonthBtn?.addEventListener('click', () => this.navigateChartMonth(-1));
+        this.elements.chartNextMonthBtn?.addEventListener('click', () => this.navigateChartMonth(1));
+        this.elements.chartMonthSelectorBtn?.addEventListener('click', () => this.openChartMonthSelector());
+        
+        // Event listener para el filtro de mes de charts
+        this.elements.chartFilterMonth?.addEventListener('change', (e) => {
+            const target = e.target as HTMLInputElement;
+            this.updateChartMonthDisplay(target.value);
+            this.updateChartsForPeriod(target.value);
         });
 
         // Botón de actualizar gráficos
@@ -3558,6 +3571,21 @@ class FinanceController {
             
             // Mostrar información del período en los gráficos
             this.updateChartPeriodInfo(period);
+            
+            // Actualizar el display del mes en el sistema de navegación de charts
+            if (period.match(/^\d{4}-\d{2}$/)) {
+                // Si es un mes específico, actualizar el display y el input
+                this.updateChartMonthDisplay(period);
+                if (this.elements.chartFilterMonth) {
+                    (this.elements.chartFilterMonth as HTMLInputElement).value = period;
+                }
+            } else {
+                // Si es un período predefinido, limpiar el display
+                this.updateChartMonthDisplay('');
+                if (this.elements.chartFilterMonth) {
+                    (this.elements.chartFilterMonth as HTMLInputElement).value = '';
+                }
+            }
         } catch (error) {
             console.error('❌ Error actualizando gráficos:', error);
         }
@@ -4238,10 +4266,95 @@ class FinanceController {
                 chartPeriodSelector.add(newOption);
                 chartPeriodSelector.selectedIndex = chartPeriodSelector.options.length - 1;
             }
+            
+            // Sincronizar también con el sistema de navegación de meses
+            this.updateChartMonthDisplay(monthString);
+            if (this.elements.chartFilterMonth) {
+                (this.elements.chartFilterMonth as HTMLInputElement).value = monthString;
+            }
         } else {
             // Si no hay mes específico, volver al período por defecto
             chartPeriodSelector.value = 'current-month';
+            
+            // Limpiar el sistema de navegación de meses
+            this.updateChartMonthDisplay('');
+            if (this.elements.chartFilterMonth) {
+                (this.elements.chartFilterMonth as HTMLInputElement).value = '';
+            }
         }
+    }
+
+    /**
+     * Navega al mes anterior o siguiente para los gráficos
+     * @param direction - Dirección de navegación (-1 para anterior, 1 para siguiente)
+     */
+    private navigateChartMonth(direction: number): void {
+        const currentMonthInput = this.elements.chartFilterMonth as HTMLInputElement;
+        if (!currentMonthInput || !currentMonthInput.value) {
+            // Si no hay mes seleccionado, usar el mes actual
+            const currentMonth = new Date().toISOString().substr(0, 7);
+            currentMonthInput.value = currentMonth;
+        }
+
+        const availableMonths = this.getAvailableMonths();
+        if (availableMonths.length === 0) {
+            this.showNotification('No hay transacciones disponibles para gráficos', 'info');
+            return;
+        }
+
+        const currentMonth = currentMonthInput.value;
+        let currentIndex = availableMonths.indexOf(currentMonth);
+        
+        // Si el mes actual no está en la lista, usar el más reciente
+        if (currentIndex === -1) {
+            currentIndex = 0;
+        }
+
+        // Calcular nuevo índice
+        const newIndex = currentIndex + direction;
+        
+        // Verificar límites
+        if (newIndex < 0 || newIndex >= availableMonths.length) {
+            const directionText = direction > 0 ? 'siguiente' : 'anterior';
+            this.showNotification(`No hay más meses ${directionText} con transacciones para gráficos`, 'info');
+            return;
+        }
+
+        const newMonth = availableMonths[newIndex];
+        currentMonthInput.value = newMonth;
+        
+        this.updateChartMonthDisplay(newMonth);
+        this.updateChartsForPeriod(newMonth);
+        
+        // Mostrar notificación con información del mes
+        const transactionCount = this.transactionManager.getTransactions({ month: newMonth }).length;
+        this.showNotification(`Gráficos actualizados para ${this.getMonthDisplayName(newMonth)} (${transactionCount} transacciones)`, 'info');
+    }
+
+    /**
+     * Abre el selector de mes nativo para los gráficos
+     */
+    private openChartMonthSelector(): void {
+        const monthInput = this.elements.chartFilterMonth as HTMLInputElement;
+        if (monthInput) {
+            monthInput.click();
+        }
+    }
+
+    /**
+     * Actualiza el display visual del mes seleccionado para los gráficos
+     * @param monthString - Mes en formato YYYY-MM
+     */
+    private updateChartMonthDisplay(monthString: string): void {
+        const displayElement = this.elements.chartCurrentMonthDisplay as HTMLElement;
+        if (!displayElement) return;
+
+        if (!monthString) {
+            displayElement.textContent = 'Mes actual';
+            return;
+        }
+
+        displayElement.textContent = this.getMonthDisplayName(monthString);
     }
 
     /**
