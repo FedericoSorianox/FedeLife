@@ -276,6 +276,14 @@ class AuthManager {
     }
 
     /**
+     * Establece el token de autenticación
+     */
+    public setToken(token: string): void {
+        this.authToken = token;
+        this.saveAuthToStorage();
+    }
+
+    /**
      * Verifica si el usuario está autenticado
      */
     public isAuthenticated(): boolean {
@@ -397,12 +405,86 @@ class HybridRepository {
                 }
                 if (!this.authManager.isAuthenticated()) {
                     console.log(`⚠️ Usuario no autenticado, solo guardando en localStorage`);
+                    
+                    // En desarrollo, intentar crear un usuario temporal para testing
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        console.log(`🛠️ Modo desarrollo detectado - Intentando autenticación automática`);
+                        await this.tryAutoLogin();
+                    }
                 }
             }
         } catch (error) {
             console.error(`❌ Error guardando ${key}:`, error);
             // Si falla el backend, al menos tenemos localStorage
             console.log(`🛡️ Datos guardados en localStorage como respaldo`);
+        }
+    }
+
+    /**
+     * Intenta autenticación automática en desarrollo
+     */
+    private async tryAutoLogin(): Promise<void> {
+        try {
+            // Verificar si ya hay un token guardado
+            const existingToken = localStorage.getItem('dev_auth_token');
+            if (existingToken) {
+                console.log(`🔑 Token de desarrollo encontrado, verificando...`);
+                this.authManager.setToken(existingToken);
+                return;
+            }
+
+            // Crear usuario de desarrollo automáticamente
+            console.log(`👤 Creando usuario de desarrollo automático...`);
+            
+            const response = await fetch(`${API_CONFIG.BASE_URL}/auth/register`, {
+                method: 'POST',
+                headers: API_CONFIG.HEADERS,
+                body: JSON.stringify({
+                    username: 'dev_user',
+                    email: 'dev@fedelife.com',
+                    password: 'dev123456',
+                    firstName: 'Desarrollo',
+                    lastName: 'Usuario',
+                    currency: 'UYU'
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const token = data.data.token;
+                
+                // Guardar token para futuras sesiones
+                localStorage.setItem('dev_auth_token', token);
+                this.authManager.setToken(token);
+                
+                console.log(`✅ Usuario de desarrollo creado y autenticado automáticamente`);
+            } else {
+                // Si el usuario ya existe, intentar login
+                console.log(`🔄 Usuario de desarrollo ya existe, intentando login...`);
+                
+                const loginResponse = await fetch(`${API_CONFIG.BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: API_CONFIG.HEADERS,
+                    body: JSON.stringify({
+                        identifier: 'dev@fedelife.com',
+                        password: 'dev123456'
+                    })
+                });
+
+                if (loginResponse.ok) {
+                    const loginData = await loginResponse.json();
+                    const token = loginData.data.token;
+                    
+                    localStorage.setItem('dev_auth_token', token);
+                    this.authManager.setToken(token);
+                    
+                    console.log(`✅ Login de desarrollo exitoso`);
+                } else {
+                    console.log(`❌ No se pudo autenticar automáticamente`);
+                }
+            }
+        } catch (error) {
+            console.log(`❌ Error en autenticación automática:`, error);
         }
     }
 
