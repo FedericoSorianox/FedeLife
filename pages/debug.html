@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Fede Life</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Debug - Fede Life</h1>
+        <p>Página de diagnóstico para identificar problemas con la API</p>
+    </div>
+
+    <div class="container">
+        <h2>🔍 Diagnóstico del Sistema</h2>
+        <button onclick="testServerHealth()">🏥 Verificar Salud del Servidor</button>
+        <button onclick="testAuthHealth()">🔐 Verificar Salud de Auth</button>
+        <button onclick="testMongoDB()">🗄️ Verificar MongoDB</button>
+        <button onclick="testRegister()">📝 Probar Registro</button>
+        <button onclick="testLogin()">🔑 Probar Login</button>
+        <button onclick="clearResults()">🗑️ Limpiar Resultados</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <div class="container">
+        <h2>📊 Información del Sistema</h2>
+        <div id="systemInfo"></div>
+    </div>
+
+    <script>
+        // Configuración de la API
+        const API_CONFIG = {
+            BASE_URL: (() => {
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    return 'http://localhost:3000/api';
+                }
+                return `${window.location.protocol}//${window.location.host}/api`;
+            })(),
+            HEADERS: {
+                'Content-Type': 'application/json'
+            }
+        };
+
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testServerHealth() {
+            try {
+                addResult('🏥 Probando salud del servidor...', 'info');
+                
+                const response = await fetch(`${API_CONFIG.BASE_URL}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Servidor funcionando - Base de datos: ${data.database.status}`, 'success');
+                    addResult(`📊 Información: ${JSON.stringify(data, null, 2)}`, 'info');
+                } else {
+                    addResult(`❌ Servidor con problemas - Status: ${response.status}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Error conectando al servidor: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAuthHealth() {
+            try {
+                addResult('🔐 Probando salud de autenticación...', 'info');
+                
+                const response = await fetch(`${API_CONFIG.BASE_URL}/auth/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Auth funcionando - Base de datos: ${data.database.status}`, 'success');
+                    addResult(`📊 Variables de entorno: ${JSON.stringify(data.environment, null, 2)}`, 'info');
+                } else {
+                    addResult(`❌ Auth con problemas - Status: ${response.status}`, 'error');
+                    addResult(`📊 Error: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Error conectando a auth: ${error.message}`, 'error');
+            }
+        }
+
+        async function testMongoDB() {
+            try {
+                addResult('🗄️ Probando conexión a MongoDB...', 'info');
+                
+                const response = await fetch(`${API_CONFIG.BASE_URL}/auth/health`);
+                const data = await response.json();
+                
+                if (response.ok && data.database.status === 'connected') {
+                    addResult(`✅ MongoDB conectado - Base de datos: ${data.database.name}`, 'success');
+                } else if (response.ok) {
+                    addResult(`❌ MongoDB desconectado - Estado: ${data.database.status}`, 'error');
+                } else {
+                    addResult(`❌ No se pudo verificar MongoDB - Status: ${response.status}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Error verificando MongoDB: ${error.message}`, 'error');
+            }
+        }
+
+        async function testRegister() {
+            try {
+                addResult('📝 Probando registro de usuario...', 'info');
+                
+                const response = await fetch(`${API_CONFIG.BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: API_CONFIG.HEADERS,
+                    body: JSON.stringify({
+                        username: 'test_user',
+                        email: 'test@fedelife.com',
+                        password: 'test123456',
+                        firstName: 'Test',
+                        lastName: 'User',
+                        currency: 'UYU'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Registro exitoso - Usuario creado`, 'success');
+                } else if (response.status === 409) {
+                    addResult(`ℹ️ Usuario ya existe (esperado)`, 'info');
+                } else {
+                    addResult(`❌ Error en registro - Status: ${response.status}`, 'error');
+                    addResult(`📊 Error: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Error en registro: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLogin() {
+            try {
+                addResult('🔑 Probando login de usuario...', 'info');
+                
+                const response = await fetch(`${API_CONFIG.BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: API_CONFIG.HEADERS,
+                    body: JSON.stringify({
+                        identifier: 'test@fedelife.com',
+                        password: 'test123456'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Login exitoso - Token generado`, 'success');
+                } else if (response.status === 401) {
+                    addResult(`ℹ️ Credenciales inválidas (esperado si no existe el usuario)`, 'info');
+                } else {
+                    addResult(`❌ Error en login - Status: ${response.status}`, 'error');
+                    addResult(`📊 Error: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Error en login: ${error.message}`, 'error');
+            }
+        }
+
+        // Mostrar información del sistema
+        function showSystemInfo() {
+            const systemInfo = document.getElementById('systemInfo');
+            systemInfo.innerHTML = `
+                <div class="test-section">
+                    <h3>🌐 Información del Cliente</h3>
+                    <p><strong>URL de la API:</strong> ${API_CONFIG.BASE_URL}</p>
+                    <p><strong>Hostname:</strong> ${window.location.hostname}</p>
+                    <p><strong>Protocolo:</strong> ${window.location.protocol}</p>
+                    <p><strong>Puerto:</strong> ${window.location.port}</p>
+                    <p><strong>User Agent:</strong> ${navigator.userAgent}</p>
+                </div>
+                
+                <div class="test-section">
+                    <h3>🔧 Estado de Autenticación</h3>
+                    <p><strong>Token guardado:</strong> ${localStorage.getItem('auth_data') ? 'Sí' : 'No'}</p>
+                    <p><strong>Token de desarrollo:</strong> ${localStorage.getItem('dev_auth_token') ? 'Sí' : 'No'}</p>
+                </div>
+            `;
+        }
+
+        // Auto-test al cargar
+        window.addEventListener('load', () => {
+            showSystemInfo();
+            addResult('🚀 Página de debug cargada - Listo para pruebas', 'info');
+        });
+    </script>
+</body>
+</html>
