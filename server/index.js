@@ -144,9 +144,22 @@ function setupGeneralMiddleware() {
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     
-    // Servir archivos estáticos desde dist y dist/pages
-    app.use(express.static(path.join(__dirname, '../dist')));
-    app.use('/pages', express.static(path.join(__dirname, '../dist/pages')));
+    // Configurar MIME types correctos
+    app.use((req, res, next) => {
+        if (req.path.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+        } else if (req.path.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        } else if (req.path.endsWith('.ts')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+        next();
+    });
+    
+    // Servir archivos estáticos desde pages y funciones
+    app.use(express.static(path.join(__dirname, '../pages')));
+    app.use('/pages', express.static(path.join(__dirname, '../pages')));
+    app.use('/funciones', express.static(path.join(__dirname, '../funciones')));
     
     console.log('⚙️ Middleware general configurado');
 }
@@ -189,12 +202,6 @@ function setupRoutes() {
  * Configura ruta para servir la aplicación frontend
  */
 function setupSPARoute() {
-    // Servir archivos estáticos desde la carpeta pages
-    app.use('/pages', express.static(path.join(__dirname, '../pages')));
-    
-    // Servir archivos estáticos desde la carpeta funciones
-    app.use('/funciones', express.static(path.join(__dirname, '../funciones')));
-    
     // Para todas las demás rutas que no sean API, servir el finanzas.html como página principal
     app.get('*', (req, res) => {
         // Si es una ruta de API, devolver 404
