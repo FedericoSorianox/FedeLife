@@ -1250,11 +1250,42 @@ nav {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .chart-period-selector label {
     font-weight: 500;
     color: #333;
+}
+
+/* Estilos específicos para el sistema de navegación de meses en charts */
+.chart-period-selector .month-filter-container {
+    margin-right: 10px;
+}
+
+.chart-period-selector .month-filter-header {
+    border-color: #87ccd8;
+}
+
+.chart-period-selector .month-filter-header:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 4px rgba(135, 204, 216, 0.2);
+}
+
+.chart-period-selector .month-nav-btn {
+    background: #f0f8ff;
+    color: #007bff;
+}
+
+.chart-period-selector .month-nav-btn:hover {
+    background: #e3f2fd;
+    color: #0056b3;
+}
+
+.chart-period-selector .month-display {
+    background: #f8f9fa;
+    border-left: 1px solid #e1e5e9;
+    border-right: 1px solid #e1e5e9;
 }
 
 .chart-period-selector select {

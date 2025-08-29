@@ -143,8 +143,29 @@
             <!-- Controles de los gráficos -->
             <div class="chart-controls">
                 <div class="chart-period-selector">
-                    <label for="chartPeriod">Período:</label>
-                    <select id="chartPeriod">
+                    <label>Período:</label>
+                    
+                    <!-- Sistema de navegación de meses para charts (igual que transacciones) -->
+                    <div class="month-filter-container">
+                        <div class="month-filter-header">
+                            <button type="button" id="chartPrevMonthBtn" class="month-nav-btn" title="Mes anterior">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div class="month-display">
+                                <span id="chartCurrentMonthDisplay">Mes actual</span>
+                                <button type="button" id="chartMonthSelectorBtn" class="month-selector-btn" title="Seleccionar mes">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </button>
+                            </div>
+                            <button type="button" id="chartNextMonthBtn" class="month-nav-btn" title="Mes siguiente">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <input type="month" id="chartFilterMonth" style="display: none;">
+                    </div>
+                    
+                    <!-- Opciones de período adicionales -->
+                    <select id="chartPeriod" style="margin-left: 10px;">
                         <option value="current-month">Mes actual</option>
                         <option value="last-month">Mes anterior</option>
                         <option value="last-3-months">Últimos 3 meses</option>
