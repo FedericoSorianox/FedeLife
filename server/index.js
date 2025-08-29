@@ -189,7 +189,13 @@ function setupRoutes() {
  * Configura ruta para servir la aplicación frontend
  */
 function setupSPARoute() {
-    // Para todas las rutas que no sean API, servir el index.html
+    // Servir archivos estáticos desde la carpeta pages
+    app.use('/pages', express.static(path.join(__dirname, '../pages')));
+    
+    // Servir archivos estáticos desde la carpeta funciones
+    app.use('/funciones', express.static(path.join(__dirname, '../funciones')));
+    
+    // Para todas las demás rutas que no sean API, servir el finanzas.html como página principal
     app.get('*', (req, res) => {
         // Si es una ruta de API, devolver 404
         if (req.path.startsWith('/api/')) {
@@ -197,7 +203,7 @@ function setupSPARoute() {
         }
         
         // Para rutas del frontend, servir el finanzas.html como página principal
-        res.sendFile(path.join(__dirname, '../dist/pages/finanzas.html'));
+        res.sendFile(path.join(__dirname, '../pages/finanzas.html'));
     });
 }
 

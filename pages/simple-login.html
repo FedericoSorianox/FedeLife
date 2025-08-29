@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Simple - Fede Life</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            color: #333;
+            margin: 0;
+            font-size: 24px;
+        }
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background: #5a6fd8;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .links a {
+            color: #667eea;
+            text-decoration: none;
+            margin: 0 10px;
+            font-weight: bold;
+        }
+        .links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>🏦 Fede Life Finanzas</h1>
+            <p>Autenticación Simple</p>
+        </div>
+        
+        <div id="status"></div>
+        
+        <button onclick="createAndLogin()" class="btn btn-success">
+            🚀 Crear Usuario y Autenticarse Automáticamente
+        </button>
+        
+        <button onclick="testConnection()" class="btn btn-warning">
+            🔧 Probar Conexión al Servidor
+        </button>
+        
+        <div class="links">
+            <a href="finanzas.html">🏠 Ir a Finanzas</a>
+            <a href="test-connection.html">🔧 Test Completo</a>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de la API
+        const API_CONFIG = {
+            BASE_URL: (() => {
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    return 'http://localhost:3000/api';
+                }
+                return `${window.location.protocol}//${window.location.host}/api`;
+            })(),
+            HEADERS: {
+                'Content-Type': 'application/json'
+            }
+        };
+
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        async function createAndLogin() {
+            try {
+                showStatus('🚀 Creando usuario y autenticando...', 'info');
+                
+                // Paso 1: Crear usuario
+                const registerResponse = await fetch(`${API_CONFIG.BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: API_CONFIG.HEADERS,
+                    body: JSON.stringify({
+                        username: 'dev_user',
+                        email: 'dev@fedelife.com',
+                        password: 'dev123456',
+                        firstName: 'Desarrollo',
+                        lastName: 'Usuario',
+                        currency: 'UYU'
+                    })
+                });
+
+                if (registerResponse.ok) {
+                    showStatus('✅ Usuario creado exitosamente', 'success');
+                } else if (registerResponse.status === 409) {
+                    showStatus('ℹ️ Usuario ya existe, procediendo con login...', 'info');
+                } else {
+                    const errorData = await registerResponse.json();
+                    showStatus(`❌ Error creando usuario: ${errorData.message || errorData.error}`, 'error');
+                    return;
+                }
+
+                // Paso 2: Login
+                showStatus('🔑 Iniciando sesión...', 'info');
+                
+                const loginResponse = await fetch(`${API_CONFIG.BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: API_CONFIG.HEADERS,
+                    body: JSON.stringify({
+                        identifier: 'dev@fedelife.com',
+                        password: 'dev123456'
+                    })
+                });
+
+                if (loginResponse.ok) {
+                    const loginData = await loginResponse.json();
+                    
+                    // Guardar token
+                    localStorage.setItem('auth_data', JSON.stringify({
+                        token: loginData.data.token,
+                        user: loginData.data.user
+                    }));
+                    
+                    showStatus('✅ ¡Autenticación exitosa! Redirigiendo...', 'success');
+                    
+                    // Redirigir después de 2 segundos
+                    setTimeout(() => {
+                        window.location.href = 'finanzas.html';
+                    }, 2000);
+                } else {
+                    const errorData = await loginResponse.json();
+                    showStatus(`❌ Error en login: ${errorData.message || errorData.error}`, 'error');
+                }
+                
+            } catch (error) {
+                showStatus(`❌ Error de conexión: ${error.message}`, 'error');
+            }
+        }
+
+        async function testConnection() {
+            try {
+                showStatus('🔧 Probando conexión al servidor...', 'info');
+                
+                const response = await fetch(`${API_CONFIG.BASE_URL}/health`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus(`✅ Servidor funcionando - Base de datos: ${data.database}`, 'success');
+                } else {
+                    showStatus(`⚠️ Servidor responde pero con error: ${response.status}`, 'warning');
+                }
+                
+            } catch (error) {
+                showStatus(`❌ No se puede conectar al servidor: ${error.message}`, 'error');
+            }
+        }
+
+        // Mostrar configuración al cargar
+        window.addEventListener('load', () => {
+            showStatus(`🔗 Conectando a: ${API_CONFIG.BASE_URL}`, 'info');
+        });
+    </script>
+</body>
+</html>
