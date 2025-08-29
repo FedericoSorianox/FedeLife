@@ -49,7 +49,7 @@
                 </button>
                 <div id="userInfo" style="display: none;">
                     <span id="userName">Usuario</span>
-                    <button onclick="logout()" class="logout-btn">🚪 Cerrar Sesión</button>
+                    <button id="logoutBtn" class="logout-btn">🚪 Cerrar Sesión</button>
                 </div>
             </div>
         </div>
@@ -504,43 +504,7 @@
 
     <script type="module" src="../funciones/auth_ui.ts"></script>
     <script type="module" src="../funciones/finanzas.ts"></script>
-    
-    <script>
-        // Función global para logout
-        function logout() {
-            // Limpiar datos de autenticación
-            localStorage.removeItem('auth_data');
-            localStorage.removeItem('dev_auth_token');
-            
-            // Mostrar mensaje
-            alert('✅ Sesión cerrada correctamente');
-            
-            // Redirigir a la página de login
-            window.location.href = 'login.html';
-        }
-        
-        // Verificar estado de autenticación al cargar
-        window.addEventListener('load', () => {
-            const authData = localStorage.getItem('auth_data');
-            const authButton = document.getElementById('authButton');
-            const userInfo = document.getElementById('userInfo');
-            const userName = document.getElementById('userName');
-            
-            if (authData) {
-                try {
-                    const parsed = JSON.parse(authData);
-                    if (parsed.token && parsed.user) {
-                        // Usuario autenticado
-                        authButton.style.display = 'none';
-                        userInfo.style.display = 'flex';
-                        userName.textContent = parsed.user.firstName || parsed.user.username || 'Usuario';
-                    }
-                } catch (error) {
-                    console.error('Error parsing auth data:', error);
-                }
-            }
-        });
-    </script>
+    <script src="../funciones/auth.js"></script>
 </body>
 
 </html>

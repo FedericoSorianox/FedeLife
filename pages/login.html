@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Fede Life Finanzas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            color: #333;
+            margin: 0;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background: #5a6fd8;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .links a {
+            color: #667eea;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>🏦 Fede Life Finanzas</h1>
+            <p>Inicia sesión para continuar</p>
+        </div>
+        
+        <div id="status"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="identifier">Email o Usuario:</label>
+                <input type="text" id="identifier" name="identifier" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="btn">🔑 Iniciar Sesión</button>
+        </form>
+        
+        <button id="createDevUser" class="btn btn-secondary">👤 Crear Usuario de Desarrollo</button>
+        
+        <div class="links">
+            <a href="finanzas.html">🏠 Ir a Finanzas</a>
+            <a href="../test-api-connection.html">🔧 Test API</a>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de la API
+        const API_CONFIG = {
+            BASE_URL: (() => {
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    return 'http://localhost:3000/api';
+                }
+                return `${window.location.protocol}//${window.location.host}/api`;
+            })(),
+            HEADERS: {
+                'Content-Type': 'application/json'
+            }
+        };
+
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function clearStatus() {
+            document.getElementById('status').innerHTML = '';
+        }
+
+        async function login(identifier, password) {
+            try {
+                showStatus('🔑 Iniciando sesión...', 'info');
+                
+                const response = await fetch(`${API_CONFIG.BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: API_CONFIG.HEADERS,
+                    body: JSON.stringify({ identifier, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Guardar token en localStorage
+                    localStorage.setItem('auth_data', JSON.stringify({
+                        token: data.data.token,
+                        user: data.data.user
+                    }));
+                    
+                    showStatus('✅ Login exitoso! Redirigiendo...', 'success');
+                    
+                    // Redirigir a la página de finanzas
+                    setTimeout(() => {
+                        window.location.href = 'finanzas.html';
+                    }, 1500);
+                } else {
+                    showStatus(`❌ Error: ${data.message || data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Error de conexión: ${error.message}`, 'error');
+            }
+        }
+
+        async function createDevUser() {
+            try {
+                showStatus('👤 Creando usuario de desarrollo...', 'info');
+                
+                const response = await fetch(`${API_CONFIG.BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: API_CONFIG.HEADERS,
+                    body: JSON.stringify({
+                        username: 'dev_user',
+                        email: 'dev@fedelife.com',
+                        password: 'dev123456',
+                        firstName: 'Desarrollo',
+                        lastName: 'Usuario',
+                        currency: 'UYU'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showStatus('✅ Usuario de desarrollo creado! Credenciales: dev@fedelife.com / dev123456', 'success');
+                    
+                    // Auto-login después de crear el usuario
+                    setTimeout(() => {
+                        login('dev@fedelife.com', 'dev123456');
+                    }, 2000);
+                } else {
+                    if (response.status === 409) {
+                        showStatus('ℹ️ Usuario de desarrollo ya existe. Intentando login...', 'info');
+                        setTimeout(() => {
+                            login('dev@fedelife.com', 'dev123456');
+                        }, 1000);
+                    } else {
+                        showStatus(`❌ Error: ${data.message || data.error}`, 'error');
+                    }
+                }
+            } catch (error) {
+                showStatus(`❌ Error de conexión: ${error.message}`, 'error');
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Manejar envío del formulario
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const identifier = document.getElementById('identifier').value;
+                const password = document.getElementById('password').value;
+                
+                if (!identifier || !password) {
+                    showStatus('❌ Por favor completa todos los campos', 'error');
+                    return;
+                }
+                
+                await login(identifier, password);
+            });
+
+            // Manejar botón de crear usuario de desarrollo
+            document.getElementById('createDevUser').addEventListener('click', createDevUser);
+
+            // Verificar si ya está logueado
+            const authData = localStorage.getItem('auth_data');
+            if (authData) {
+                try {
+                    const parsed = JSON.parse(authData);
+                    if (parsed.token) {
+                        showStatus('✅ Ya estás logueado! Redirigiendo...', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'finanzas.html';
+                        }, 1000);
+                    }
+                } catch (error) {
+                    // Token inválido, continuar con login
+                }
+            }
+            
+            showStatus(`🔗 Conectando a: ${API_CONFIG.BASE_URL}`, 'info');
+        });
+    </script>
+</body>
+</html>
