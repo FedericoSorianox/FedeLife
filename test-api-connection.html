@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Connection - Fede Life</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Test de Conexión API - Fede Life</h1>
+        
+        <div id="status"></div>
+        
+        <h2>Configuración Detectada</h2>
+        <div id="config"></div>
+        
+        <h2>Pruebas de Conexión</h2>
+        <button onclick="testConnection()">🔗 Probar Conexión</button>
+        <button onclick="testAuth()">🔑 Probar Autenticación</button>
+        <button onclick="testTransaction()">💰 Probar Transacción</button>
+        <button onclick="clearResults()">🗑️ Limpiar Resultados</button>
+        
+        <h2>Resultados</h2>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Configuración de la API (igual que en finanzas.ts)
+        const API_CONFIG = {
+            BASE_URL: (() => {
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    return 'http://localhost:3000/api';
+                }
+                return `${window.location.protocol}//${window.location.host}/api`;
+            })(),
+            ENDPOINTS: {
+                AUTH: {
+                    LOGIN: '/auth/login',
+                    REGISTER: '/auth/register',
+                    VERIFY: '/auth/verify'
+                },
+                TRANSACTIONS: '/transactions',
+                CATEGORIES: '/categories',
+                BUDGETS: '/budgets',
+                GOALS: '/goals',
+                REPORTS: '/reports'
+            },
+            HEADERS: {
+                'Content-Type': 'application/json'
+            }
+        };
+
+        // Mostrar configuración
+        document.getElementById('config').innerHTML = `
+            <div class="status info">
+                <strong>URL Base:</strong> ${API_CONFIG.BASE_URL}<br>
+                <strong>Hostname:</strong> ${window.location.hostname}<br>
+                <strong>Protocolo:</strong> ${window.location.protocol}<br>
+                <strong>Puerto:</strong> ${window.location.port}<br>
+                <strong>Entorno:</strong> ${window.location.hostname === 'localhost' ? 'DESARROLLO' : 'PRODUCCIÓN'}
+            </div>
+        `;
+
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testConnection() {
+            try {
+                addResult('🔗 Probando conexión básica...', 'info');
+                
+                const response = await fetch(`${API_CONFIG.BASE_URL}/transactions`, {
+                    method: 'GET',
+                    headers: API_CONFIG.HEADERS
+                });
+                
+                if (response.status === 401) {
+                    addResult('✅ Conexión exitosa - Servidor responde (401 esperado sin autenticación)', 'success');
+                } else if (response.ok) {
+                    addResult('✅ Conexión exitosa - Servidor responde correctamente', 'success');
+                } else {
+                    addResult(`⚠️ Conexión parcial - Status: ${response.status}`, 'warning');
+                }
+                
+                const text = await response.text();
+                addResult(`📡 Respuesta del servidor: ${text.substring(0, 200)}...`, 'info');
+                
+            } catch (error) {
+                addResult(`❌ Error de conexión: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAuth() {
+            try {
+                addResult('🔑 Probando endpoint de autenticación...', 'info');
+                
+                const response = await fetch(`${API_CONFIG.BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: API_CONFIG.HEADERS,
+                    body: JSON.stringify({
+                        username: 'test@test.com',
+                        password: 'test123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 401) {
+                    addResult('✅ Autenticación funciona - Credenciales inválidas rechazadas correctamente', 'success');
+                } else if (response.ok) {
+                    addResult('✅ Autenticación exitosa', 'success');
+                } else {
+                    addResult(`⚠️ Autenticación parcial - Status: ${response.status}`, 'warning');
+                }
+                
+                addResult(`📡 Respuesta: ${JSON.stringify(data, null, 2)}`, 'info');
+                
+            } catch (error) {
+                addResult(`❌ Error en autenticación: ${error.message}`, 'error');
+            }
+        }
+
+        async function testTransaction() {
+            try {
+                addResult('💰 Probando endpoint de transacciones...', 'info');
+                
+                const response = await fetch(`${API_CONFIG.BASE_URL}/transactions`, {
+                    method: 'POST',
+                    headers: API_CONFIG.HEADERS,
+                    body: JSON.stringify({
+                        type: 'expense',
+                        amount: 100,
+                        description: 'Test transaction',
+                        category: 'Test',
+                        date: new Date().toISOString(),
+                        paymentMethod: 'card'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 401) {
+                    addResult('✅ Endpoint de transacciones funciona - Autenticación requerida correctamente', 'success');
+                } else if (response.ok) {
+                    addResult('✅ Transacción creada exitosamente', 'success');
+                } else {
+                    addResult(`⚠️ Endpoint parcial - Status: ${response.status}`, 'warning');
+                }
+                
+                addResult(`📡 Respuesta: ${JSON.stringify(data, null, 2)}`, 'info');
+                
+            } catch (error) {
+                addResult(`❌ Error en transacciones: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-test al cargar
+        window.addEventListener('load', () => {
+            addResult('🚀 Página cargada - Listo para pruebas', 'info');
+        });
+    </script>
+</body>
+</html>
