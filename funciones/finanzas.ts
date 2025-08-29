@@ -181,9 +181,18 @@ interface AuthData {
 
 /**
  * Configuración de la API backend
+ * Detecta automáticamente si estamos en desarrollo o producción
  */
 const API_CONFIG = {
-    BASE_URL: 'http://localhost:3000/api',
+    // Detectar la URL base automáticamente
+    BASE_URL: (() => {
+        // Si estamos en localhost, usar localhost:3000
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return 'http://localhost:3000/api';
+        }
+        // En producción, usar la misma URL del frontend pero con /api
+        return `${window.location.protocol}//${window.location.host}/api`;
+    })(),
     ENDPOINTS: {
         AUTH: {
             LOGIN: '/auth/login',
@@ -200,6 +209,11 @@ const API_CONFIG = {
         'Content-Type': 'application/json'
     }
 };
+
+// Debug: Mostrar la URL de la API que se está usando
+console.log('🔗 URL de la API configurada:', API_CONFIG.BASE_URL);
+console.log('🌐 Hostname actual:', window.location.hostname);
+console.log('🔧 Entorno detectado:', window.location.hostname === 'localhost' ? 'DESARROLLO' : 'PRODUCCIÓN');
 
 // ==================== GESTOR DE AUTENTICACIÓN ====================
 
@@ -366,17 +380,29 @@ class HybridRepository {
      */
     public async save<T>(key: string, data: T[], endpoint?: string): Promise<void> {
         try {
+            console.log(`💾 Guardando ${data.length} elementos en ${key}`);
+            
             // 1. Guardar en localStorage (caché local)
             const jsonData = JSON.stringify(data);
             localStorage.setItem(key, jsonData);
+            console.log(`✅ Datos guardados en localStorage`);
 
             // 2. Si hay endpoint y usuario autenticado, guardar en backend
             if (endpoint && this.authManager.isAuthenticated()) {
+                console.log(`🔄 Intentando sincronizar con backend: ${endpoint}`);
                 await this.syncToBackend(endpoint, data);
+            } else {
+                if (!endpoint) {
+                    console.log(`⚠️ No hay endpoint configurado para ${key}`);
+                }
+                if (!this.authManager.isAuthenticated()) {
+                    console.log(`⚠️ Usuario no autenticado, solo guardando en localStorage`);
+                }
             }
         } catch (error) {
-            console.error(`Error guardando ${key}:`, error);
+            console.error(`❌ Error guardando ${key}:`, error);
             // Si falla el backend, al menos tenemos localStorage
+            console.log(`🛡️ Datos guardados en localStorage como respaldo`);
         }
     }
 
@@ -448,17 +474,32 @@ class HybridRepository {
      */
     private async syncToBackend<T>(endpoint: string, data: T[]): Promise<void> {
         try {
-            const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
+            console.log(`🔄 Sincronizando ${data.length} elementos con backend: ${API_CONFIG.BASE_URL}${endpoint}`);
+            
+            // Usar endpoint de sincronización específico
+            const syncEndpoint = endpoint === API_CONFIG.ENDPOINTS.TRANSACTIONS ? 
+                `${endpoint}/sync` : endpoint;
+            
+            const response = await fetch(`${API_CONFIG.BASE_URL}${syncEndpoint}`, {
                 method: 'POST',
                 headers: this.authManager.getAuthHeaders(),
                 body: JSON.stringify({ data })
             });
 
+            console.log(`📡 Respuesta del backend: ${response.status} ${response.statusText}`);
+
             if (!response.ok) {
-                throw new Error(`Error sincronizando con backend: ${response.status}`);
+                const errorText = await response.text();
+                console.error('❌ Error del servidor:', errorText);
+                throw new Error(`Error sincronizando con backend: ${response.status} - ${errorText}`);
             }
+
+            const result = await response.json();
+            console.log(`✅ Sincronización exitosa con backend:`, result);
         } catch (error) {
-            console.error('Error sincronizando con backend:', error);
+            console.error('❌ Error sincronizando con backend:', error);
+            console.error('🔗 URL intentada:', `${API_CONFIG.BASE_URL}${endpoint}`);
+            console.error('🔑 Usuario autenticado:', this.authManager.isAuthenticated());
             throw error;
         }
     }
@@ -729,10 +770,10 @@ class TransactionManager {
     }
 
     /**
-     * Guarda transacciones en el almacenamiento local
+     * Guarda transacciones en el almacenamiento local y backend
      */
-    private saveTransactions(): void {
-        this.storage.save(this.STORAGE_KEY, this.transactions);
+    private async saveTransactions(): Promise<void> {
+        await this.storage.save(this.STORAGE_KEY, this.transactions, API_CONFIG.ENDPOINTS.TRANSACTIONS);
     }
 
     /**
@@ -740,7 +781,7 @@ class TransactionManager {
      * @param transactionData - Datos de la transacción sin ID ni fecha de creación
      * @returns ID de la transacción creada
      */
-    public addTransaction(transactionData: Omit<Transaction, 'id' | 'createdAt'>): string {
+    public async addTransaction(transactionData: Omit<Transaction, 'id' | 'createdAt'>): Promise<string> {
         // Validaciones de negocio
         if (transactionData.amount <= 0) {
             throw new Error('El monto debe ser mayor a 0');
@@ -758,7 +799,7 @@ class TransactionManager {
         };
 
         this.transactions.push(newTransaction);
-        this.saveTransactions();
+        await this.saveTransactions();
         return newTransaction.id;
     }
 
@@ -3206,7 +3247,7 @@ class FinanceController {
             }
 
             // Crear transacción usando el manager
-            const transactionId = this.transactionManager.addTransaction({
+            const transactionId = await this.transactionManager.addTransaction({
                 type,
                 amount,
                 description,
@@ -6003,24 +6044,4 @@ if (!document.querySelector('#notificationStyles')) {
     document.head.appendChild(style);
 }
 
-// Log de inicialización exitosa
-console.log(`
-🏦 ===================================================
-   SISTEMA DE FINANZAS PERSONALES - FEDE LIFE
-   ===================================================
-   
-   ✅ Sistema inicializado correctamente
-   📊 Dashboard actualizado
-   🔧 Event listeners configurados
-   💾 Persistencia: localStorage
-   
-   Funcionalidades disponibles:
-   • Gestión de transacciones
-   • Categorías personalizadas
-   • Presupuestos mensuales
-   • Metas de ahorro
-   • Reportes y análisis
-   
-   ¡Listo para usar! 💰
-===================================================
-`);
+

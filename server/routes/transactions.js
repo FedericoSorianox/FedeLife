@@ -681,6 +681,88 @@ router.post('/bulk', authenticateToken, async (req, res) => {
     }
 });
 
+/**
+ * POST /api/transactions/sync
+ * Endpoint específico para sincronización desde el frontend
+ * Recibe datos en formato { data: [...] }
+ */
+router.post('/sync', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { data } = req.body;
+
+        console.log(`🔄 Sincronizando ${data?.length || 0} transacciones para usuario ${userId}`);
+
+        if (!Array.isArray(data)) {
+            return res.status(400).json({
+                error: 'Formato inválido',
+                message: 'Se requiere un array de datos en el campo "data"'
+            });
+        }
+
+        // Eliminar transacciones existentes del usuario (para sincronización completa)
+        await Transaction.deleteMany({ userId });
+        console.log(`🗑️ Transacciones existentes eliminadas para sincronización`);
+
+        // Crear nuevas transacciones
+        const createdTransactions = [];
+        const errors = [];
+
+        for (const transactionData of data) {
+            try {
+                // Validar datos básicos
+                if (!transactionData.type || !transactionData.amount || !transactionData.description) {
+                    errors.push({
+                        transaction: transactionData,
+                        error: 'Datos incompletos'
+                    });
+                    continue;
+                }
+
+                const transaction = new Transaction({
+                    userId,
+                    type: transactionData.type,
+                    amount: parseFloat(transactionData.amount),
+                    description: transactionData.description.trim(),
+                    category: transactionData.category || 'Sin categoría',
+                    date: new Date(transactionData.date || Date.now()),
+                    paymentMethod: transactionData.paymentMethod || 'card',
+                    currency: transactionData.currency || 'UYU',
+                    createdAt: new Date(transactionData.createdAt || Date.now())
+                });
+
+                await transaction.save();
+                createdTransactions.push(transaction);
+            } catch (error) {
+                console.error('❌ Error procesando transacción:', error);
+                errors.push({
+                    transaction: transactionData,
+                    error: error.message
+                });
+            }
+        }
+
+        console.log(`✅ Sincronización completada: ${createdTransactions.length} transacciones creadas, ${errors.length} errores`);
+
+        res.status(200).json({
+            success: true,
+            message: 'Sincronización completada',
+            data: {
+                synced: createdTransactions.length,
+                errors: errors.length,
+                errorDetails: errors
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error en sincronización:', error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            message: 'No se pudo completar la sincronización'
+        });
+    }
+});
+
 // ==================== EXPORTAR ROUTER ====================
 
 module.exports = router;
