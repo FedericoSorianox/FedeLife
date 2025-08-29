@@ -91,12 +91,45 @@ router.get('/health', async (req, res) => {
         };
         console.log('🔧 Variables de entorno:', envVars);
         
+        // Información detallada de MongoDB
+        const mongoInfo = {
+            readyState: mongoose.connection.readyState,
+            name: mongoose.connection.name,
+            host: mongoose.connection.host,
+            port: mongoose.connection.port,
+            database: mongoose.connection.db ? mongoose.connection.db.databaseName : null
+        };
+        
+        // Intentar conectar si no está conectado
+        let connectionAttempt = null;
+        if (dbStatus === 'disconnected' && process.env.MONGODB_URI) {
+            try {
+                console.log('🔄 Intentando conectar a MongoDB...');
+                await mongoose.connect(process.env.MONGODB_URI, {
+                    useNewUrlParser: true,
+                    useUnifiedTopology: true,
+                    serverSelectionTimeoutMS: 5000,
+                    socketTimeoutMS: 45000,
+                });
+                connectionAttempt = 'success';
+                console.log('✅ Conexión exitosa');
+            } catch (connectError) {
+                connectionAttempt = {
+                    error: connectError.message,
+                    code: connectError.code
+                };
+                console.error('❌ Error en intento de conexión:', connectError.message);
+            }
+        }
+        
         res.json({
             success: true,
             timestamp: new Date().toISOString(),
             database: {
                 status: dbStatus,
-                name: mongoose.connection.name
+                name: mongoose.connection.name,
+                details: mongoInfo,
+                connectionAttempt: connectionAttempt
             },
             environment: envVars,
             message: 'Sistema de autenticación funcionando'
