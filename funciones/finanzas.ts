@@ -406,10 +406,14 @@ class HybridRepository {
                 if (!this.authManager.isAuthenticated()) {
                     console.log(`⚠️ Usuario no autenticado, solo guardando en localStorage`);
                     
-                    // En desarrollo, intentar crear un usuario temporal para testing
-                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                        console.log(`🛠️ Modo desarrollo detectado - Intentando autenticación automática`);
-                        await this.tryAutoLogin();
+                    // Intentar autenticación automática (tanto en desarrollo como producción)
+                    console.log(`🛠️ Intentando autenticación automática...`);
+                    await this.tryAutoLogin();
+                    
+                    // Si después del intento sigue sin autenticar, mostrar instrucciones
+                    if (!this.authManager.isAuthenticated()) {
+                        console.log(`❌ No se pudo autenticar automáticamente`);
+                        console.log(`💡 Para guardar en la base de datos, ve a: ${window.location.origin}/pages/login.html`);
                     }
                 }
             }
