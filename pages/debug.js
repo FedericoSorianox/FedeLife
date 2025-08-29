@@ -73,13 +73,26 @@ async function testMongoDB() {
     try {
         addResult('🗄️ Probando conexión a MongoDB...', 'info');
         
-        const response = await fetch(`${API_CONFIG.BASE_URL}/auth/health`);
+        const response = await fetch(`${API_CONFIG.BASE_URL}/auth/mongo-debug`);
         const data = await response.json();
         
-        if (response.ok && data.database.status === 'connected') {
-            addResult(`✅ MongoDB conectado - Base de datos: ${data.database.name}`, 'success');
-        } else if (response.ok) {
-            addResult(`❌ MongoDB desconectado - Estado: ${data.database.status}`, 'error');
+        if (response.ok) {
+            addResult(`✅ Debug de MongoDB completado`, 'success');
+            addResult(`📊 Estado: ${data.debug.mongoose.readyState === 1 ? 'Conectado' : 'Desconectado'}`, 'info');
+            addResult(`📊 Host: ${data.debug.mongoose.host || 'N/A'}`, 'info');
+            addResult(`📊 Base de datos: ${data.debug.mongoose.database || 'N/A'}`, 'info');
+            
+            if (data.debug.connectionAttempt) {
+                if (data.debug.connectionAttempt.status === 'success') {
+                    addResult(`✅ Conexión exitosa`, 'success');
+                } else if (data.debug.connectionAttempt.status === 'error') {
+                    addResult(`❌ Error de conexión: ${data.debug.connectionAttempt.error}`, 'error');
+                    addResult(`📊 Código: ${data.debug.connectionAttempt.code}`, 'error');
+                }
+            }
+            
+            addResult(`📊 URI existe: ${data.debug.environment.MONGODB_URI_EXISTS}`, 'info');
+            addResult(`📊 URI: ${data.debug.environment.MONGODB_URI_PREFIX}`, 'info');
         } else {
             addResult(`❌ No se pudo verificar MongoDB - Status: ${response.status}`, 'error');
         }

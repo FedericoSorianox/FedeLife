@@ -42,6 +42,7 @@ console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT:', process.env.PORT);
 console.log('MONGODB_URI existe:', !!process.env.MONGODB_URI);
 console.log('MONGODB_URI comienza con:', process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 20) + '...' : 'No definida');
+console.log('🔄 Servidor reiniciado con diagnóstico mejorado - ' + new Date().toISOString());
 
 // ==================== CONEXIÓN A MONGODB ====================
 
