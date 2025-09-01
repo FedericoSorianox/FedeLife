@@ -10,7 +10,7 @@
 import { FinancialChat, formatChatMessage, generateMessageId, isValidChatMessage } from './financial_chat.js';
 
 // Importar configuraciones del sistema
-import { GOOGLE_AI_API_KEY, getApiKey } from './config.js';
+import { GOOGLE_AI_API_KEY, getApiKey } from './config-simple.js';
 
 // Importar gestor de gráficos
 import { ChartsManager } from './charts_manager.js';
@@ -69,67 +69,72 @@ const ReportPeriod = {
  * Interface para una categoría de transacciones
  * Organiza las transacciones por tipo (salario, comida, etc.)
  */
-interface Category {
-    id: string;           // ID único de la categoría
-    name: string;         // Nombre de la categoría
-    type: TransactionType; // Tipo: para ingresos o gastos
-    color: string;        // Color para identificación visual
-    description?: string; // Descripción opcional
-    createdAt: Date;      // Fecha de creación
-}
+/**
+ * @typedef {Object} Category
+ * @property {string} id - ID único de la categoría
+ * @property {string} name - Nombre de la categoría
+ * @property {string} type - Tipo: para ingresos o gastos
+ * @property {string} color - Color para identificación visual
+ * @property {string} [description] - Descripción opcional
+ * @property {Date} createdAt - Fecha de creación
+ */
 
 /**
  * Interface para presupuesto mensual por categoría
  * Define límites de gasto por categoría
  */
-interface Budget {
-    id: string;       // ID único del presupuesto
-    category: string; // Categoría asociada
-    amount: number;   // Monto límite del presupuesto
-    spent: number;    // Monto ya gastado
-    month: string;    // Mes del presupuesto (YYYY-MM)
-    createdAt: Date;  // Fecha de creación
-}
+/**
+ * @typedef {Object} Budget
+ * @property {string} id - ID único del presupuesto
+ * @property {string} category - Categoría asociada
+ * @property {number} amount - Monto límite del presupuesto
+ * @property {number} spent - Monto ya gastado
+ * @property {string} month - Mes del presupuesto (YYYY-MM)
+ * @property {Date} createdAt - Fecha de creación
+ */
 
 /**
  * Interface para metas de ahorro
  * Define objetivos financieros a alcanzar
  */
-interface Goal {
-    id: string;        // ID único de la meta
-    name: string;      // Nombre de la meta
-    amount: number;    // Monto objetivo
-    currentSaved: number; // Monto ya ahorrado
-    deadline: Date;    // Fecha límite
-    description?: string; // Descripción opcional
-    completed: boolean; // Estado de completitud
-    createdAt: Date;   // Fecha de creación
-}
+/**
+ * @typedef {Object} Goal
+ * @property {string} id - ID único de la meta
+ * @property {string} name - Nombre de la meta
+ * @property {number} amount - Monto objetivo
+ * @property {number} currentSaved - Monto ya ahorrado
+ * @property {Date} deadline - Fecha límite
+ * @property {string} [description] - Descripción opcional
+ * @property {boolean} completed - Estado de completitud
+ * @property {Date} createdAt - Fecha de creación
+ */
 
 /**
  * Interface para el resumen financiero del dashboard
  */
-interface FinancialSummary {
-    totalIncome: number;   // Total de ingresos
-    totalExpenses: number; // Total de gastos
-    balance: number;       // Balance (ingresos - gastos)
-    totalSavings: number;  // Total ahorrado
-    monthlyBudget: number; // Presupuesto mensual
-    budgetUsed: number;    // Presupuesto utilizado
-    budgetRemaining: number; // Presupuesto restante
-    savingsRate: number;   // Porcentaje de ahorro
-}
+/**
+ * @typedef {Object} FinancialSummary
+ * @property {number} totalIncome - Total de ingresos
+ * @property {number} totalExpenses - Total de gastos
+ * @property {number} balance - Balance (ingresos - gastos)
+ * @property {number} totalSavings - Total ahorrado
+ * @property {number} monthlyBudget - Presupuesto mensual
+ * @property {number} budgetUsed - Presupuesto utilizado
+ * @property {number} budgetRemaining - Presupuesto restante
+ * @property {number} savingsRate - Porcentaje de ahorro
+ */
 
 /**
  * Interface para configuración de la aplicación
  */
-interface AppConfig {
-    currency: string;      // Moneda principal
-    language: string;      // Idioma
-    theme: 'light' | 'dark'; // Tema visual
-    notifications: boolean; // Notificaciones activadas
-    autoBackup: boolean;   // Backup automático
-}
+/**
+ * @typedef {Object} AppConfig
+ * @property {string} currency - Moneda principal
+ * @property {string} language - Idioma
+ * @property {string} theme - Tema visual ('light' | 'dark')
+ * @property {boolean} notifications - Notificaciones activadas
+ * @property {boolean} autoBackup - Backup automático
+ */
 
 /**
  * Interface para respuesta de la API
