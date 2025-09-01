@@ -22,33 +22,48 @@ import { ChartsManager } from './charts_manager.js';
 /**
  * Tipo de transacción financiera
  */
-type TransactionType = 'income' | 'expense';
+const TransactionType = {
+    INCOME: 'income',
+    EXPENSE: 'expense'
+};
 
 /**
  * Métodos de pago disponibles
  */
-type PaymentMethod = 'cash' | 'card' | 'transfer' | 'check';
+const PaymentMethod = {
+    CASH: 'cash',
+    CARD: 'card',
+    TRANSFER: 'transfer',
+    CHECK: 'check'
+};
 
 /**
  * Períodos para reportes
  */
-type ReportPeriod = 'current-month' | 'last-month' | 'last-3-months' | 'last-6-months' | 'current-year';
+const ReportPeriod = {
+    CURRENT_MONTH: 'current-month',
+    LAST_MONTH: 'last-month',
+    LAST_3_MONTHS: 'last-3-months',
+    LAST_6_MONTHS: 'last-6-months',
+    CURRENT_YEAR: 'current-year'
+};
 
 /**
  * Interface para una transacción financiera
  * Representa cada movimiento de dinero (ingreso o gasto)
  */
-interface Transaction {
-    id: string;                    // ID único de la transacción
-    type: TransactionType;         // Tipo: ingreso o gasto
-    amount: number;                // Monto de la transacción
-    description: string;           // Descripción del movimiento
-    category: string;              // Categoría asociada
-    date: Date;                    // Fecha de la transacción
-    paymentMethod: PaymentMethod;  // Método de pago utilizado
-    createdAt: Date;              // Fecha de creación del registro
-    currency?: string;             // Moneda (UYU, USD)
-}
+/**
+ * @typedef {Object} Transaction
+ * @property {string} id - ID único de la transacción
+ * @property {string} type - Tipo: ingreso o gasto
+ * @property {number} amount - Monto de la transacción
+ * @property {string} description - Descripción del movimiento
+ * @property {string} category - Categoría asociada
+ * @property {Date} date - Fecha de la transacción
+ * @property {string} paymentMethod - Método de pago utilizado
+ * @property {Date} createdAt - Fecha de creación del registro
+ * @property {string} [currency] - Moneda (UYU, USD)
+ */
 
 /**
  * Interface para una categoría de transacciones

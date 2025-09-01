@@ -5,27 +5,28 @@
  * Autor: Senior Full Stack Developer
  */
 
-// ==================== INTERFACES ====================
+// ==================== TIPOS ====================
 
-interface AuthUI {
-    showLoginModal(): void;
-    showRegisterModal(): void;
-    hideModals(): void;
-    handleLogin(): Promise<void>;
-    handleRegister(): Promise<void>;
-    logout(): void;
-    isAuthenticated(): boolean;
-    getUser(): any;
-}
+/**
+ * @typedef {Object} AuthData
+ * @property {string} token - Token de autenticación
+ * @property {Object} user - Datos del usuario
+ * @property {string} user.id - ID del usuario
+ * @property {string} user.username - Nombre de usuario
+ * @property {string} user.email - Email del usuario
+ */
 
-interface AuthData {
-    token: string;
-    user: {
-        id: string;
-        username: string;
-        email: string;
-    };
-}
+/**
+ * @typedef {Object} AuthUI
+ * @property {function} showLoginModal - Muestra modal de login
+ * @property {function} showRegisterModal - Muestra modal de registro
+ * @property {function} hideModals - Oculta todos los modales
+ * @property {function} handleLogin - Maneja el proceso de login
+ * @property {function} handleRegister - Maneja el proceso de registro
+ * @property {function} logout - Cierra la sesión
+ * @property {function} isAuthenticated - Verifica si está autenticado
+ * @property {function} getUser - Obtiene datos del usuario
+ */
 
 // ==================== CLASE AUTH UI ====================
 
@@ -40,7 +41,7 @@ class SimpleAuthManager {
         this.loadAuthFromStorage();
     }
 
-    private loadAuthFromStorage(): void {
+    private loadAuthFromStorage() {
         try {
             const authData = localStorage.getItem('auth_data');
             if (authData) {
@@ -53,10 +54,10 @@ class SimpleAuthManager {
         }
     }
 
-    private saveAuthToStorage(): void {
+    private saveAuthToStorage() {
         try {
-            const authData: AuthData = {
-                token: this.authToken!,
+            const authData = {
+                token: this.authToken,
                 user: this.user
             };
             localStorage.setItem('auth_data', JSON.stringify(authData));
@@ -65,21 +66,22 @@ class SimpleAuthManager {
         }
     }
 
-    public getToken(): string | null {
+    public getToken() {
         return this.authToken;
     }
 
-    public isAuthenticated(): boolean {
+    public isAuthenticated() {
         return !!this.authToken;
     }
 
-    public getUser(): any {
+    public getUser() {
         return this.user;
     }
 
-    public async login(username: string, password: string): Promise<boolean> {
+    public async login(username, password) {
         try {
-            const response = await fetch('http://localhost:3000/api/auth/login', {
+            const apiUrl = (window as any).config ? (window as any).config.apiUrl : 'http://localhost:3000/api';
+            const response = await fetch(`${apiUrl}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ identifier: username, password })
@@ -99,9 +101,10 @@ class SimpleAuthManager {
         }
     }
 
-    public async register(username: string, email: string, password: string): Promise<boolean> {
+    public async register(username, email, password) {
         try {
-            const response = await fetch('http://localhost:3000/api/auth/register', {
+            const apiUrl = (window as any).config ? (window as any).config.apiUrl : 'http://localhost:3000/api';
+            const response = await fetch(`${apiUrl}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, email, password, firstName: username, lastName: 'User' })
@@ -121,7 +124,7 @@ class SimpleAuthManager {
         }
     }
 
-    public logout(): void {
+    public logout() {
         this.authToken = null;
         this.user = null;
         localStorage.removeItem('auth_data');
@@ -132,7 +135,7 @@ class SimpleAuthManager {
  * Gestor de interfaz de autenticación
  * Maneja modales de login/registro y estado de autenticación
  */
-class AuthUIManager implements AuthUI {
+class AuthUIManager {
     private authManager: SimpleAuthManager;
     private modals: {[key: string]: HTMLElement} = {};
 
@@ -145,7 +148,7 @@ class AuthUIManager implements AuthUI {
     /**
      * Crea los modales de autenticación en el DOM
      */
-    private createAuthModals(): void {
+    private createAuthModals() {
         // Crear modal de login
         const loginModal = document.createElement('div');
         loginModal.id = 'loginModal';
@@ -220,7 +223,7 @@ class AuthUIManager implements AuthUI {
     /**
      * Configura event listeners para los formularios de autenticación
      */
-    private setupAuthEventListeners(): void {
+    private setupAuthEventListeners() {
         // Login form
         const loginForm = document.getElementById('loginForm') as HTMLFormElement;
         if (loginForm) {
@@ -252,7 +255,7 @@ class AuthUIManager implements AuthUI {
     /**
      * Muestra el modal de login
      */
-    public showLoginModal(): void {
+    public showLoginModal() {
         this.hideModals();
         this.modals.login.style.display = 'flex';
         (document.getElementById('loginUsername') as HTMLInputElement)?.focus();
@@ -261,7 +264,7 @@ class AuthUIManager implements AuthUI {
     /**
      * Muestra el modal de registro
      */
-    public showRegisterModal(): void {
+    public showRegisterModal() {
         this.hideModals();
         this.modals.register.style.display = 'flex';
         (document.getElementById('registerUsername') as HTMLInputElement)?.focus();
@@ -270,7 +273,7 @@ class AuthUIManager implements AuthUI {
     /**
      * Oculta todos los modales
      */
-    public hideModals(): void {
+    public hideModals() {
         Object.values(this.modals).forEach(modal => {
             modal.style.display = 'none';
         });
@@ -279,7 +282,7 @@ class AuthUIManager implements AuthUI {
     /**
      * Maneja el proceso de login
      */
-    public async handleLogin(): Promise<void> {
+    public async handleLogin() {
         const username = (document.getElementById('loginUsername') as HTMLInputElement)?.value;
         const password = (document.getElementById('loginPassword') as HTMLInputElement)?.value;
 
@@ -311,7 +314,7 @@ class AuthUIManager implements AuthUI {
     /**
      * Maneja el proceso de registro
      */
-    public async handleRegister(): Promise<void> {
+    public async handleRegister() {
         const username = (document.getElementById('registerUsername') as HTMLInputElement)?.value;
         const email = (document.getElementById('registerEmail') as HTMLInputElement)?.value;
         const password = (document.getElementById('registerPassword') as HTMLInputElement)?.value;
@@ -350,7 +353,7 @@ class AuthUIManager implements AuthUI {
     /**
      * Cierra la sesión del usuario
      */
-    public logout(): void {
+    public logout() {
         this.authManager.logout();
         this.updateAuthUI();
         this.showAuthNotification('Sesión cerrada', 'info');
@@ -359,21 +362,21 @@ class AuthUIManager implements AuthUI {
     /**
      * Verifica si el usuario está autenticado
      */
-    public isAuthenticated(): boolean {
+    public isAuthenticated() {
         return this.authManager.isAuthenticated();
     }
 
     /**
      * Obtiene datos del usuario actual
      */
-    public getUser(): any {
+    public getUser() {
         return this.authManager.getUser();
     }
 
     /**
      * Actualiza la UI según el estado de autenticación
      */
-    private updateAuthUI(): void {
+    private updateAuthUI() {
         const authButton = document.getElementById('authButton');
         const userInfo = document.getElementById('userInfo');
 
@@ -396,7 +399,7 @@ class AuthUIManager implements AuthUI {
     /**
      * Muestra notificaciones de autenticación
      */
-    private showAuthNotification(message: string, type: 'success' | 'error' | 'info'): void {
+    private showAuthNotification(message, type) {
         // Usar el sistema de notificaciones existente si está disponible
         const financeApp = (window as any).financeApp;
         if (financeApp?.showNotification) {
@@ -420,7 +423,7 @@ class AuthUIManager implements AuthUI {
 /**
  * Agrega estilos CSS para los modales de autenticación
  */
-function addAuthStyles(): void {
+function addAuthStyles() {
     if (document.querySelector('#authStyles')) return;
 
     const style = document.createElement('style');
@@ -592,4 +595,6 @@ addAuthStyles();
 const authUI = new AuthUIManager();
 
 // Hacer disponible globalmente
-(window as any).authUI = authUI;
+if (typeof window !== 'undefined') {
+    window.authUI = authUI;
+}
