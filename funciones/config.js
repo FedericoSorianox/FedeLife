@@ -162,3 +162,24 @@ if (typeof module !== 'undefined' && module.exports) {
         updateConfig
     };
 }
+
+// Exportar para módulos ES6 (import/export)
+export {
+    config,
+    getApiUrl,
+    apiRequest,
+    checkApiHealth,
+    getConfig,
+    updateConfig
+};
+
+// Exportar variables específicas que necesita finanzas.ts
+export const GOOGLE_AI_API_KEY = process.env?.GOOGLE_AI_API_KEY || 'tu-api-key-de-google-ai-studio';
+
+/**
+ * Obtiene la API key de Google AI
+ * @returns {string} API key
+ */
+export function getApiKey() {
+    return GOOGLE_AI_API_KEY;
+}
