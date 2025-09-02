@@ -51,27 +51,75 @@ console.log('🔄 Servidor reiniciado con diagnóstico mejorado - ' + new Date()
  */
 async function connectToMongoDB() {
     try {
-        await mongoose.connect(MONGODB_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-            serverSelectionTimeoutMS: 5000,
-            socketTimeoutMS: 45000,
-        });
+        // Configuración optimizada para producción
+        const mongoOptions = {
+            maxPoolSize: process.env.NODE_ENV === 'production' ? 10 : 5, // Más conexiones en producción
+            serverSelectionTimeoutMS: 10000, // 10 segundos para selección de servidor
+            socketTimeoutMS: 45000, // 45 segundos para operaciones
+            // Configuración de retry
+            retryWrites: true,
+            w: 'majority',
+            // Configuración de heartbeat
+            heartbeatFrequencyMS: 10000,
+            // Configuración de timeouts
+            connectTimeoutMS: 10000,
+            // Configuración de pool
+            minPoolSize: 1,
+            maxIdleTimeMS: 30000,
+            // Configuración de compresión
+            compressors: ['zlib'],
+            zlibCompressionLevel: 6
+        };
+        
+        console.log('🔗 Intentando conectar a MongoDB...');
+        console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`📊 URI Preview: ${MONGODB_URI ? MONGODB_URI.substring(0, 50) + '...' : 'No definida'}`);
+        
+        await mongoose.connect(MONGODB_URI, mongoOptions);
         
         console.log('✅ Conectado a MongoDB exitosamente');
         console.log(`📊 Base de datos: ${mongoose.connection.name}`);
+        console.log(`🔗 Host: ${mongoose.connection.host}`);
+        console.log(`🚪 Puerto: ${mongoose.connection.port}`);
         
         // Configurar eventos de conexión
         mongoose.connection.on('error', (err) => {
             console.error('❌ Error de conexión MongoDB:', err);
+            console.error('❌ Código de error:', err.code);
+            console.error('❌ Nombre de error:', err.name);
         });
         
         mongoose.connection.on('disconnected', () => {
             console.log('⚠️ Desconectado de MongoDB');
+            console.log('🔄 Intentando reconectar en 5 segundos...');
+            
+            // Intentar reconectar automáticamente
+            setTimeout(() => {
+                if (mongoose.connection.readyState === 0) {
+                    connectToMongoDB();
+                }
+            }, 5000);
         });
         
         mongoose.connection.on('reconnected', () => {
-            console.log('🔄 Reconectado a MongoDB');
+            console.log('🔄 Reconectado a MongoDB exitosamente');
+        });
+        
+        mongoose.connection.on('connected', () => {
+            console.log('🔗 Conexión MongoDB establecida');
+        });
+        
+        // Configurar manejo de señales para cerrar conexión limpiamente
+        process.on('SIGINT', async () => {
+            await mongoose.connection.close();
+            console.log('✅ Conexión MongoDB cerrada por SIGINT');
+            process.exit(0);
+        });
+        
+        process.on('SIGTERM', async () => {
+            await mongoose.connection.close();
+            console.log('✅ Conexión MongoDB cerrada por SIGTERM');
+            process.exit(0);
         });
         
     } catch (error) {

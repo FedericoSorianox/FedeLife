@@ -57,16 +57,36 @@ const validateRegistration = (req, res, next) => {
  * Valida datos de login
  */
 const validateLogin = (req, res, next) => {
-    const { identifier, password } = req.body;
-    
-    if (!identifier || !password) {
+    try {
+        const { identifier, password } = req.body;
+        
+        // Verificar que los campos existan y no estén vacíos
+        if (!identifier || typeof identifier !== 'string' || identifier.trim().length === 0) {
+            return res.status(400).json({
+                error: 'Datos de login inválidos',
+                message: 'El email/usuario es requerido y debe ser una cadena válida'
+            });
+        }
+        
+        if (!password || typeof password !== 'string' || password.trim().length === 0) {
+            return res.status(400).json({
+                error: 'Datos de login inválidos',
+                message: 'La contraseña es requerida y debe ser una cadena válida'
+            });
+        }
+        
+        // Limpiar espacios en blanco
+        req.body.identifier = identifier.trim();
+        req.body.password = password.trim();
+        
+        next();
+    } catch (error) {
+        console.error('❌ Error en validación de login:', error);
         return res.status(400).json({
-            error: 'Datos de login requeridos',
-            message: 'Debes proporcionar email/usuario y contraseña'
+            error: 'Datos de login inválidos',
+            message: 'Los datos proporcionados no son válidos'
         });
     }
-    
-    next();
 };
 
 // ==================== RUTAS ====================
@@ -368,12 +388,22 @@ router.post('/login', validateLogin, async (req, res) => {
     try {
         console.log('🔍 Login iniciado con identifier:', req.body.identifier);
         
+        // Verificar conexión a MongoDB
+        if (mongoose.connection.readyState !== 1) {
+            console.error('❌ MongoDB no está conectado. Estado:', mongoose.connection.readyState);
+            return res.status(503).json({
+                error: 'Servicio no disponible',
+                message: 'La base de datos no está disponible en este momento'
+            });
+        }
+        
         const { identifier, password } = req.body;
         
         // Buscar usuario por email o username
         const user = await User.findByEmailOrUsername(identifier);
         
         if (!user) {
+            console.log(`❌ Usuario no encontrado: ${identifier}`);
             return res.status(401).json({
                 error: 'Credenciales inválidas',
                 message: 'Email/usuario o contraseña incorrectos'
@@ -382,6 +412,7 @@ router.post('/login', validateLogin, async (req, res) => {
         
         // Verificar si la cuenta está activa
         if (!user.isActive) {
+            console.log(`❌ Cuenta desactivada: ${user.username}`);
             return res.status(401).json({
                 error: 'Cuenta desactivada',
                 message: 'Tu cuenta ha sido desactivada. Contacta al administrador.'
@@ -392,6 +423,7 @@ router.post('/login', validateLogin, async (req, res) => {
         const isPasswordValid = await user.comparePassword(password);
         
         if (!isPasswordValid) {
+            console.log(`❌ Contraseña incorrecta para: ${user.username}`);
             return res.status(401).json({
                 error: 'Credenciales inválidas',
                 message: 'Email/usuario o contraseña incorrectos'
@@ -431,6 +463,23 @@ router.post('/login', validateLogin, async (req, res) => {
         
     } catch (error) {
         console.error('❌ Error en login:', error);
+        console.error('❌ Stack trace:', error.stack);
+        
+        // Manejar errores específicos de MongoDB
+        if (error.name === 'MongoError' || error.name === 'MongoServerError') {
+            return res.status(503).json({
+                error: 'Error de base de datos',
+                message: 'No se pudo conectar con la base de datos'
+            });
+        }
+        
+        // Manejar errores de validación
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({
+                error: 'Error de validación',
+                message: 'Los datos proporcionados no son válidos'
+            });
+        }
         
         res.status(500).json({
             error: 'Error interno del servidor',
