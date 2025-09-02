@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Producción - Fede Life Finanzas</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        .status.success {
+            background-color: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .status.warning {
+            background-color: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test de Producción - Fede Life Finanzas</h1>
+        
+        <div class="status info">
+            <strong>Estado:</strong> Verificando sistema en producción...
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Configuración del Sistema</h3>
+            <div id="configStatus">Verificando...</div>
+            <button onclick="testConfig()">Probar Configuración</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🔐 Sistema de Autenticación</h3>
+            <div id="authStatus">Verificando...</div>
+            <button onclick="testAuth()">Probar Autenticación</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🏦 Sistema de Finanzas</h3>
+            <div id="financeStatus">Verificando...</div>
+            <button onclick="testFinance()">Probar Finanzas</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🤖 Sistema de IA</h3>
+            <div id="aiStatus">Verificando...</div>
+            <button onclick="testAI()">Probar IA</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Sistema de Gráficos</h3>
+            <div id="chartsStatus">Verificando...</div>
+            <button onclick="testCharts()">Probar Gráficos</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Logs del Sistema</h3>
+            <div class="log" id="systemLogs">Iniciando sistema...</div>
+            <button onclick="clearLogs()">Limpiar Logs</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Función para agregar logs
+        function addLog(message, type = 'info') {
+            const logsContainer = document.getElementById('systemLogs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logEntry.style.color = type === 'error' ? '#dc3545' : 
+                                 type === 'warning' ? '#ffc107' : 
+                                 type === 'success' ? '#28a745' : '#6c757d';
+            logsContainer.appendChild(logEntry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        // Función para actualizar estado
+        function updateStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = message;
+                element.className = `status ${type}`;
+            }
+        }
+
+        // Test de configuración
+        window.testConfig = function() {
+            addLog('🔧 Probando configuración del sistema...', 'info');
+            
+            try {
+                if (window.config) {
+                    addLog(`✅ Configuración cargada: ${window.config.apiUrl}`, 'success');
+                    updateStatus('configStatus', 
+                        `<strong>✅ Configuración OK</strong><br>
+                         API URL: ${window.config.apiUrl}<br>
+                         Ambiente: ${window.config.environment}<br>
+                         Versión: ${window.config.version}`, 'success');
+                } else {
+                    addLog('❌ Configuración no disponible', 'error');
+                    updateStatus('configStatus', '<strong>❌ Error:</strong> Configuración no disponible', 'error');
+                }
+            } catch (error) {
+                addLog(`❌ Error en configuración: ${error.message}`, 'error');
+                updateStatus('configStatus', `<strong>❌ Error:</strong> ${error.message}`, 'error');
+            }
+        };
+
+        // Test de autenticación
+        window.testAuth = function() {
+            addLog('🔐 Probando sistema de autenticación...', 'info');
+            
+            try {
+                if (window.authUI) {
+                    addLog('✅ Sistema de autenticación disponible', 'success');
+                    updateStatus('authStatus', 
+                        `<strong>✅ Autenticación OK</strong><br>
+                         Estado: ${window.authUI.isAuthenticated() ? 'Autenticado' : 'No autenticado'}`, 'success');
+                } else {
+                    addLog('❌ Sistema de autenticación no disponible', 'error');
+                    updateStatus('authStatus', '<strong>❌ Error:</strong> Sistema de autenticación no disponible', 'error');
+                }
+            } catch (error) {
+                addLog(`❌ Error en autenticación: ${error.message}`, 'error');
+                updateStatus('authStatus', `<strong>❌ Error:</strong> ${error.message}`, 'error');
+            }
+        };
+
+        // Test de finanzas
+        window.testFinance = function() {
+            addLog('🏦 Probando sistema de finanzas...', 'info');
+            
+            try {
+                if (window.financeApp) {
+                    addLog('✅ Sistema de finanzas disponible', 'success');
+                    updateStatus('financeStatus', 
+                        `<strong>✅ Finanzas OK</strong><br>
+                         Estado: ${window.financeApp.isInitialized ? 'Inicializado' : 'No inicializado'}`, 'success');
+                } else {
+                    addLog('❌ Sistema de finanzas no disponible', 'error');
+                    updateStatus('financeStatus', '<strong>❌ Error:</strong> Sistema de finanzas no disponible', 'error');
+                }
+            } catch (error) {
+                addLog(`❌ Error en finanzas: ${error.message}`, 'error');
+                updateStatus('financeStatus', `<strong>❌ Error:</strong> ${error.message}`, 'error');
+            }
+        };
+
+        // Test de IA
+        window.testAI = function() {
+            addLog('🤖 Probando sistema de IA...', 'info');
+            
+            try {
+                if (window.googleAIAnalyzer) {
+                    addLog('✅ Sistema de IA disponible', 'success');
+                    const status = window.googleAIAnalyzer.getStatus();
+                    updateStatus('aiStatus', 
+                        `<strong>✅ IA OK</strong><br>
+                         Modelo: ${status.model}<br>
+                         Estado: ${status.isReady ? 'Listo' : 'No listo'}`, 'success');
+                } else {
+                    addLog('❌ Sistema de IA no disponible', 'error');
+                    updateStatus('aiStatus', '<strong>❌ Error:</strong> Sistema de IA no disponible', 'error');
+                }
+            } catch (error) {
+                addLog(`❌ Error en IA: ${error.message}`, 'error');
+                updateStatus('aiStatus', `<strong>❌ Error:</strong> ${error.message}`, 'error');
+            }
+        };
+
+        // Test de gráficos
+        window.testCharts = function() {
+            addLog('📊 Probando sistema de gráficos...', 'info');
+            
+            try {
+                if (window.chartsManager) {
+                    addLog('✅ Sistema de gráficos disponible', 'success');
+                    updateStatus('chartsStatus', 
+                        `<strong>✅ Gráficos OK</strong><br>
+                         Período actual: ${window.chartsManager.getCurrentPeriod()}`, 'success');
+                } else {
+                    addLog('❌ Sistema de gráficos no disponible', 'error');
+                    updateStatus('chartsStatus', '<strong>❌ Error:</strong> Sistema de gráficos no disponible', 'error');
+                }
+            } catch (error) {
+                addLog(`❌ Error en gráficos: ${error.message}`, 'error');
+                updateStatus('chartsStatus', `<strong>❌ Error:</strong> ${error.message}`, 'error');
+            }
+        };
+
+        // Limpiar logs
+        window.clearLogs = function() {
+            const logsContainer = document.getElementById('systemLogs');
+            logsContainer.innerHTML = 'Logs limpiados...';
+        };
+
+        // Inicialización automática
+        async function initializeTest() {
+            addLog('🚀 Iniciando test de producción...', 'info');
+            
+            // Esperar a que se carguen los módulos
+            setTimeout(() => {
+                addLog('⏳ Verificando módulos cargados...', 'info');
+                
+                // Ejecutar tests automáticamente
+                testConfig();
+                testAuth();
+                testFinance();
+                testAI();
+                testCharts();
+                
+                addLog('✅ Test de producción completado', 'success');
+            }, 2000);
+        }
+
+        // Inicializar cuando se carga la página
+        document.addEventListener('DOMContentLoaded', initializeTest);
+    </script>
+</body>
+</html>

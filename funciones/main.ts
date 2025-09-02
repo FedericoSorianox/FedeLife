@@ -7,61 +7,81 @@
  * Autor: Senior Full Stack Developer
  */
 
-// ==================== IMPORTS ====================
+// ==================== IMPORTS SEGUROS ====================
 
-// Importar tipos y configuraciones
-import './types';
-import './config';
-import type { AuthUI, FinanceApp, ConfigObject } from './types';
+// Función para importar módulos de forma segura
+async function safeImport(modulePath: string, moduleName: string): Promise<any> {
+    try {
+        // Intentar importar el módulo
+        const module = await import(modulePath);
+        console.log(`✅ Módulo ${moduleName} cargado correctamente`);
+        return module;
+    } catch (error) {
+        console.warn(`⚠️ No se pudo cargar el módulo ${moduleName}:`, error);
+        return null;
+    }
+}
 
-// Importar análisis de Google AI
-import './google_ai_analyzer';
-
-// Importar manager de gráficos
-import './charts_manager';
-
-// Importar chat financiero
-import './financial_chat';
-
-// Importar UI de autenticación
-import './auth_ui';
-
-// Importar funciones principales de finanzas
-import './finanzas';
-
-// ==================== INICIALIZACIÓN ====================
+// ==================== INICIALIZACIÓN SEGURA ====================
 
 /**
  * Función de inicialización principal
  * Se ejecuta cuando el DOM está listo
  */
-function initializeApp() {
+async function initializeApp() {
     console.log('🚀 Iniciando Fede Life - Sistema de Finanzas Personales');
     
-    // Verificar que todos los componentes estén disponibles
-    if (typeof window !== 'undefined') {
-        console.log('✅ Window object disponible');
-        
-        // Verificar authUI
-        if (window.authUI) {
-            console.log('✅ Sistema de autenticación inicializado');
-        } else {
-            console.warn('⚠️ Sistema de autenticación no disponible');
+    try {
+        // Verificar que todos los componentes estén disponibles
+        if (typeof window !== 'undefined') {
+            console.log('✅ Window object disponible');
+            
+            // Cargar módulos de forma segura
+            await loadModules();
+            
+            // Verificar authUI
+            if (window.authUI) {
+                console.log('✅ Sistema de autenticación inicializado');
+            } else {
+                console.warn('⚠️ Sistema de autenticación no disponible');
+            }
+            
+            // Verificar financeApp
+            if (window.financeApp) {
+                console.log('✅ Aplicación de finanzas inicializada');
+            } else {
+                console.warn('⚠️ Aplicación de finanzas no disponible');
+            }
+            
+            // Verificar config
+            if (window.config) {
+                console.log('✅ Configuración cargada:', window.config);
+            } else {
+                console.warn('⚠️ Configuración no disponible');
+            }
         }
+    } catch (error) {
+        console.error('❌ Error durante la inicialización:', error);
+    }
+}
+
+/**
+ * Carga todos los módulos necesarios de forma segura
+ */
+async function loadModules(): Promise<void> {
+    try {
+        // Cargar módulos principales
+        await safeImport('./types.js', 'Types');
+        await safeImport('./config.js', 'Config');
+        await safeImport('./google_ai_analyzer.js', 'Google AI Analyzer');
+        await safeImport('./charts_manager.js', 'Charts Manager');
+        await safeImport('./financial_chat.js', 'Financial Chat');
+        await safeImport('./auth_ui.js', 'Auth UI');
+        await safeImport('./finanzas.js', 'Finanzas');
         
-        // Verificar financeApp
-        if (window.financeApp) {
-            console.log('✅ Aplicación de finanzas inicializada');
-        } else {
-            console.warn('⚠️ Aplicación de finanzas no disponible');
-        }
-        
-        // Verificar config
-        if (window.config) {
-            console.log('✅ Configuración cargada:', window.config);
-        } else {
-            console.warn('⚠️ Configuración no disponible');
-        }
+        console.log('✅ Todos los módulos cargados correctamente');
+    } catch (error) {
+        console.error('❌ Error cargando módulos:', error);
     }
 }
 

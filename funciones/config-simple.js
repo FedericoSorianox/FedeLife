@@ -1,84 +1,71 @@
 /**
- * ⚙️ CONFIGURACIÓN SIMPLIFICADA - FEDE LIFE
+ * ⚙️ CONFIG SIMPLE - CONFIGURACIÓN SIMPLIFICADA PARA PRODUCCIÓN
  * 
- * Configuración básica para evitar errores de importación
- * Autor: Senior Full Stack Developer
+ * Archivo de configuración simplificado que funciona en producción
+ * Incluye solo las configuraciones esenciales
+ * Autor: Senior Backend Developer
  */
 
-// ==================== CONFIGURACIÓN BÁSICA ====================
+// ==================== API KEYS ====================
 
-const config = {
-    // Detectar ambiente automáticamente
-    isDevelopment: typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'),
-    isProduction: typeof window !== 'undefined' && window.location.hostname === 'fedelife-finanzas.onrender.com',
-    
-    // URLs de la API según ambiente
-    apiUrl: (() => {
-        if (typeof window === 'undefined') return 'http://localhost:3000/api';
-        
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            return 'http://localhost:3000/api';
-        } else if (window.location.hostname === 'fedelife-finanzas.onrender.com') {
-            return 'https://fedelife-finanzas.onrender.com/api';
-        } else {
-            return `${window.location.protocol}//${window.location.hostname}/api`;
-        }
-    })(),
-    
-    // Configuración de la aplicación
-    app: {
-        name: 'Fede Life',
-        version: '1.0.0',
-        currency: 'UYU',
-        language: 'es'
-    }
+/**
+ * API Key de Google AI Studio (Gemini)
+ * Clave gratuita para análisis de texto y chat con IA
+ */
+export const GOOGLE_AI_API_KEY = 'AIzaSyCSCVx7P1_nSmeWxPZAs9lKGKv_VdFeoJ8';
+
+// ==================== CONFIGURACIÓN GLOBAL ====================
+
+/**
+ * Configuración global del sistema
+ */
+export const GLOBAL_CONFIG = {
+    apiUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? 'http://localhost:3000/api' 
+        : 'https://fedelife-finanzas.onrender.com/api',
+    environment: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'development' : 'production',
+    version: '1.0.0',
+    buildDate: new Date().toISOString()
 };
 
 // ==================== FUNCIONES DE UTILIDAD ====================
 
 /**
- * Obtiene la URL completa de un endpoint
- * @param {string} endpoint - Endpoint de la API
- * @returns {string} URL completa
+ * Verifica si estamos en modo desarrollo
  */
-function getApiUrl(endpoint) {
-    return `${config.apiUrl}${endpoint}`;
+export function isDevelopment() {
+    return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 }
 
 /**
- * Obtiene la API key de Google AI
- * @returns {string} API key
+ * Obtiene la API Key según el entorno
  */
-function getApiKey() {
-    return 'tu-api-key-de-google-ai-studio';
+export function getApiKey() {
+    // En desarrollo, usar la key por defecto
+    if (isDevelopment()) {
+        return GOOGLE_AI_API_KEY;
+    }
+    
+    // En producción, intentar obtener del localStorage
+    try {
+        return localStorage.getItem('google_ai_key') || GOOGLE_AI_API_KEY;
+    } catch (error) {
+        console.warn('No se pudo acceder al localStorage:', error);
+        return GOOGLE_AI_API_KEY;
+    }
 }
 
-// ==================== EXPORTAR CONFIGURACIÓN ====================
+// ==================== INICIALIZACIÓN ====================
 
-// Exportar para módulos ES6 (import/export)
-export {
-    config,
-    getApiUrl,
+// Agregar configuración global al objeto window
+if (typeof window !== 'undefined') {
+    window.config = GLOBAL_CONFIG;
+}
+
+// Exportar todo como objeto por defecto para compatibilidad
+export default {
+    GOOGLE_AI_API_KEY,
+    GLOBAL_CONFIG,
+    isDevelopment,
     getApiKey
 };
-
-// Exportar variables específicas que necesita finanzas.ts
-export const GOOGLE_AI_API_KEY = 'tu-api-key-de-google-ai-studio';
-
-// Hacer disponible globalmente
-if (typeof window !== 'undefined') {
-    window.config = config;
-    window.getApiUrl = getApiUrl;
-    window.getApiKey = getApiKey;
-    window.GOOGLE_AI_API_KEY = GOOGLE_AI_API_KEY;
-}
-
-// Para módulos CommonJS
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        config,
-        getApiUrl,
-        getApiKey,
-        GOOGLE_AI_API_KEY
-    };
-}
