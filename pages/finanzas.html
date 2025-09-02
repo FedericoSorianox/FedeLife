@@ -463,6 +463,30 @@
             </div>
         </div>
 
+        <!-- Pestaña de Categorías -->
+        <div id="categories" class="tab-content">
+            <div class="categories-section">
+                <div class="categories-header">
+                    <h3><i class="fas fa-tags"></i> Gestión de Categorías</h3>
+                    <button id="addCategoryBtn" class="add-btn">
+                        <i class="fas fa-plus"></i> Agregar Categoría
+                    </button>
+                </div>
+                
+                <div class="categories-content">
+                    <!-- Categorías de Ingresos -->
+                    <div id="incomeCategories" class="category-section">
+                        <!-- Las categorías de ingresos se renderizarán aquí -->
+                    </div>
+                    
+                    <!-- Categorías de Gastos -->
+                    <div id="expenseCategories" class="category-section">
+                        <!-- Las categorías de gastos se renderizarán aquí -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Pestaña de Reportes -->
         <div id="reports" class="tab-content">
             <div class="reports-section">
@@ -470,8 +494,6 @@
                 <div class="report-controls">
                     <select id="reportPeriod">
                         <option value="current-month">Mes actual</option>
-                        <option value="last-month">Mes anterior</option>
-                        <option value="last-3-months">Últimos 3 meses</option>
                         <option value="last-6-months">Últimos 6 meses</option>
                         <option value="current-year">Año actual</option>
                     </select>
