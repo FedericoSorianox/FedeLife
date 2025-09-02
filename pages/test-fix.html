@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Fede Life Fix</title>
+</head>
+<body>
+    <h1>🧪 Test de Carga de Módulos</h1>
+    <div id="status">⏳ Cargando...</div>
+    <div id="logs"></div>
+
+    <script type="module">
+        // Función para mostrar logs
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            logEntry.style.cssText = `
+                padding: 5px;
+                margin: 2px 0;
+                border-left: 3px solid ${type === 'error' ? 'red' : type === 'success' ? 'green' : 'blue'};
+                background: #f5f5f5;
+                font-family: monospace;
+            `;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logsDiv.appendChild(logEntry);
+        }
+
+        // Función para importar módulos de forma segura
+        async function safeImport(modulePath, moduleName) {
+            try {
+                log(`📦 Intentando cargar: ${moduleName} desde ${modulePath}`);
+                const module = await import(modulePath);
+                log(`✅ Módulo ${moduleName} cargado correctamente`, 'success');
+                return module;
+            } catch (error) {
+                log(`❌ Error cargando ${moduleName}: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        // Función principal de prueba
+        async function testModules() {
+            try {
+                log('🚀 Iniciando prueba de carga de módulos...');
+                
+                // Cargar módulos principales
+                await safeImport('/funciones/types.js', 'Types');
+                await safeImport('/funciones/config-production.js', 'Config Production');
+                await safeImport('/funciones/google_ai_analyzer.js', 'Google AI Analyzer');
+                await safeImport('/funciones/charts_manager.js', 'Charts Manager');
+                await safeImport('/funciones/financial_chat.js', 'Financial Chat');
+                await safeImport('/funciones/auth_ui.js', 'Auth UI');
+                await safeImport('/funciones/finanzas.js', 'Finanzas');
+                
+                log('🎉 Prueba completada', 'success');
+                document.getElementById('status').textContent = '✅ Todos los módulos cargados correctamente';
+                document.getElementById('status').style.color = 'green';
+                
+            } catch (error) {
+                log(`❌ Error durante la prueba: ${error.message}`, 'error');
+                document.getElementById('status').textContent = '❌ Error durante la prueba';
+                document.getElementById('status').style.color = 'red';
+            }
+        }
+
+        // Ejecutar cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', testModules);
+        } else {
+            testModules();
+        }
+    </script>
+</body>
+</html>

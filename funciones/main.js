@@ -80,14 +80,18 @@ async function checkInitialConnectivity() {
     try {
         console.log('🔍 Verificando conectividad del sistema...');
         
-        // Verificar conexión a internet
-        const internetCheck = await fetch('https://www.google.com/favicon.ico', {
-            method: 'HEAD',
-            mode: 'no-cors'
-        });
-        
-        if (internetCheck) {
-            console.log('✅ Conexión a internet disponible');
+        // Verificar conexión a internet usando un endpoint permitido por CSP
+        try {
+            const internetCheck = await fetch('https://api.exchangerate.host/latest', {
+                method: 'HEAD',
+                mode: 'no-cors'
+            });
+            
+            if (internetCheck) {
+                console.log('✅ Conexión a internet disponible');
+            }
+        } catch (error) {
+            console.log('ℹ️ Verificación de internet no disponible, continuando...');
         }
         
         // Verificar configuración local
@@ -111,13 +115,13 @@ async function loadModules() {
         console.log('📦 Cargando módulos del sistema...');
         
         // Cargar módulos principales
-        await safeImport('./types.js', 'Types');
-        await safeImport('./config-production.js', 'Config Production');
-        await safeImport('./google_ai_analyzer.js', 'Google AI Analyzer');
-        await safeImport('./charts_manager.js', 'Charts Manager');
-        await safeImport('./financial_chat.js', 'Financial Chat');
-        await safeImport('./auth_ui.js', 'Auth UI');
-        await safeImport('./finanzas.js', 'Finanzas');
+        await safeImport('/funciones/types.js', 'Types');
+        await safeImport('/funciones/config-production.js', 'Config Production');
+        await safeImport('/funciones/google_ai_analyzer.js', 'Google AI Analyzer');
+        await safeImport('/funciones/charts_manager.js', 'Charts Manager');
+        await safeImport('/funciones/financial_chat.js', 'Financial Chat');
+        await safeImport('/funciones/auth_ui.js', 'Auth UI');
+        await safeImport('/funciones/finanzas.js', 'Finanzas');
         
         console.log('✅ Todos los módulos cargados correctamente');
     } catch (error) {
