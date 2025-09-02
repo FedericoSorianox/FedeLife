@@ -76,8 +76,20 @@ async function connectToMongoDB() {
         
     } catch (error) {
         console.error('❌ Error conectando a MongoDB:', error);
-        console.log('⚠️ Continuando sin MongoDB...');
+        console.log('❌ Código de error:', error.code);
+        console.log('❌ Nombre de error:', error.name);
+        
+        // En producción, registrar el error pero no salir
+        if (process.env.NODE_ENV === 'production') {
+            console.log('🚨 Error crítico en producción. Continuando sin MongoDB...');
+            console.log('📝 La aplicación funcionará en modo limitado.');
+            console.log('🔧 Para resolver: Verificar configuración de MongoDB Atlas y IP whitelist');
+        } else {
+            console.log('⚠️ Continuando sin MongoDB en desarrollo...');
+        }
+        
         // No salir del proceso, continuar sin base de datos
+        // El servidor puede funcionar para servir archivos estáticos
     }
 }
 
@@ -171,6 +183,27 @@ function setupGeneralMiddleware() {
  * Configura todas las rutas de la API
  */
 function setupRoutes() {
+    // Middleware para verificar estado de la base de datos en rutas que requieren BD
+    app.use('/api/', (req, res, next) => {
+        // Excluir rutas que no requieren base de datos
+        const nonDbRoutes = ['/api/health', '/api/auth/status'];
+        if (nonDbRoutes.some(route => req.path.startsWith(route))) {
+            return next();
+        }
+        
+        // Si la base de datos no está conectada, devolver error informativo
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                error: 'Servicio de base de datos no disponible',
+                message: 'La aplicación está funcionando en modo limitado. Algunos servicios no están disponibles.',
+                timestamp: new Date().toISOString(),
+                code: 'DB_UNAVAILABLE'
+            });
+        }
+        
+        next();
+    });
+    
     // Rutas públicas
     app.use('/api/auth', authRoutes);
     
@@ -185,12 +218,28 @@ function setupRoutes() {
     
     // Ruta de health check
     app.get('/api/health', (req, res) => {
+        const dbStatus = mongoose.connection.readyState;
+        const dbStatusText = {
+            0: 'disconnected',
+            1: 'connected',
+            2: 'connecting', 
+            3: 'disconnecting'
+        };
+        
         res.json({
-            status: 'OK',
+            status: dbStatus === 1 ? 'OK' : 'DEGRADED',
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
             environment: process.env.NODE_ENV || 'development',
-            database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+            database: {
+                status: dbStatusText[dbStatus] || 'unknown',
+                readyState: dbStatus
+            },
+            services: {
+                webServer: 'OK',
+                database: dbStatus === 1 ? 'OK' : 'UNAVAILABLE',
+                staticFiles: 'OK'
+            }
         });
     });
     
@@ -278,11 +327,8 @@ async function initializeServer() {
         console.log('🚀 Iniciando servidor Fede Life Finanzas...');
         
         // Conectar a MongoDB (opcional)
-        try {
-            await connectToMongoDB();
-        } catch (dbError) {
-            console.log('⚠️ MongoDB no disponible, continuando sin base de datos...');
-        }
+        console.log('🔄 Intentando conectar a MongoDB...');
+        await connectToMongoDB(); // No usar try/catch aquí, el error se maneja dentro de connectToMongoDB()
         
         // Configurar middleware
         setupSecurityMiddleware();
@@ -308,8 +354,27 @@ async function initializeServer() {
         });
         
     } catch (error) {
-        console.error('❌ Error iniciando servidor:', error);
-        process.exit(1);
+        console.error('❌ Error crítico iniciando servidor:', error);
+        
+        if (process.env.NODE_ENV === 'production') {
+            console.log('🚨 Error crítico en producción. Intentando continuar...');
+            console.log('📝 Algunos servicios pueden no estar disponibles.');
+        } else {
+            console.log('⚠️ Error en desarrollo. Revisar configuración.');
+        }
+        
+        // En lugar de salir, intentar al menos servir archivos estáticos
+        try {
+            app.listen(PORT, () => {
+                console.log(`⚠️ Servidor iniciado en modo limitado en puerto ${PORT}`);
+                console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+                console.log(`📊 Base de datos: Desconectada`);
+            });
+        } catch (finalError) {
+            console.error('❌ Error final:', finalError);
+            // Solo ahora salir si realmente no podemos hacer nada
+            process.exit(1);
+        }
     }
 }
 
