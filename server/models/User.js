@@ -117,10 +117,12 @@ const userSchema = new mongoose.Schema({
 
 // ==================== ÍNDICES ====================
 
-// Índices para optimizar consultas
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
+// Los índices de email y username ya se crean automáticamente por unique: true
+// Solo agregamos índices adicionales que no están definidos en el esquema
 userSchema.index({ isActive: 1 });
+
+// Índice compuesto para búsquedas optimizadas
+userSchema.index({ isActive: 1, createdAt: -1 });
 
 // ==================== VIRTUALS ====================
 

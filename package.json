@@ -11,6 +11,8 @@
     "server": "nodemon server/index.js",
     "server:dev": "nodemon server/index.js",
     "server:prod": "node server/index.js",
+    "diagnose": "node scripts/diagnose-mongodb.js",
+    "diagnose:mongodb": "node scripts/diagnose-mongodb.js",
     "postinstall": "npm run build || echo 'Build failed but continuing...'"
   },
   "devDependencies": {
