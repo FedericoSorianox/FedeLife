@@ -73,3 +73,64 @@ export interface LogEntry {
     context?: Record<string, any>;
     module?: string;
 }
+
+// ==================== EXTENSIONES DE WINDOW ====================
+
+/**
+ * Interface para el objeto de configuración global
+ */
+export interface ConfigObject {
+    apiUrl: string;
+    environment: string;
+    // Agregar más propiedades según sea necesario
+    [key: string]: any;
+}
+
+/**
+ * Interface para el sistema de autenticación
+ */
+export interface AuthUI {
+    showLoginModal(): void;
+    showRegisterModal(): void;
+    hideModals(): void;
+    handleLogin(): Promise<void>;
+    handleRegister(): Promise<void>;
+    logout(): void;
+    isAuthenticated(): boolean;
+    getUser(): any;
+}
+
+/**
+ * Interface para la aplicación de finanzas
+ */
+export interface FinanceApp {
+    // Métodos principales de la aplicación
+    storage: {
+        syncAll(): Promise<void>;
+        // Agregar más métodos según sea necesario
+    };
+    showNotification(message: string, type: string): void;
+    editTransaction(id: string): void;
+    deleteTransaction(id: string): void;
+    editCategory(id: string): void;
+    deleteCategory(id: string): void;
+    editBudget(id: string): void;
+    deleteBudget(id: string): void;
+    updateGoalProgress(id: string): void;
+    editGoal(id: string): void;
+    deleteGoal(id: string): void;
+    // Agregar más métodos según sea necesario
+    [key: string]: any;
+}
+
+/**
+ * Extensión de la interface Window para incluir propiedades personalizadas
+ * Esto permite que TypeScript reconozca las propiedades agregadas globalmente
+ */
+declare global {
+    interface Window {
+        authUI?: AuthUI;
+        financeApp?: FinanceApp;
+        config?: ConfigObject;
+    }
+}
