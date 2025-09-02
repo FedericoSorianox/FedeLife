@@ -15,18 +15,24 @@ services:
       - key: PORT
         value: 10000
       - key: MONGODB_URI
-        fromDatabase:
-          name: fede-life-mongodb
-          property: connectionString
+        value: mongodb+srv://fededanguard_db_user:CbBwcPzT5UatJlkT@cluster0.ew9wkss.mongodb.net/fede-life-finanzas?retryWrites=true&w=majority&appName=Cluster0
       - key: JWT_SECRET
-        generateValue: true
+        value: fede-life-super-secret-key-2024-production
       - key: JWT_EXPIRES_IN
         value: 7d
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 50
+      - key: LOG_LEVEL
+        value: error
       - key: GOOGLE_AI_API_KEY
-        sync: false
+        value: tu-api-key-de-google-ai-studio
+      - key: FRONTEND_URL
+        value: https://fedelife-finanzas.onrender.com
 
-databases:
-  # Base de datos MongoDB
-  - name: fede-life-mongodb
-    databaseName: fedelife_finanzas
-    plan: free
+# Nota: Usando MongoDB Atlas en lugar de base de datos de Render
+# databases:
+#   - name: fede-life-mongodb
+#     databaseName: fedelife_finanzas
+#     plan: free
