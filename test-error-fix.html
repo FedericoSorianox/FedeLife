@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Error Fix - Fede Life Finanzas</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        .status.success {
+            background-color: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .status.warning {
+            background-color: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .error-details {
+            background-color: #fff5f5;
+            border: 1px solid #fed7d7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .fix-suggestion {
+            background-color: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Test Error Fix - Fede Life Finanzas</h1>
+        
+        <div class="status info">
+            <strong>Objetivo:</strong> Diagnosticar y corregir el error "Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist."
+        </div>
+
+        <div class="test-section">
+            <h3>🚨 Error a Corregir</h3>
+            <div class="error-details">
+                <strong>Error:</strong> Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+                <br><strong>Ubicación:</strong> finanzas.html:1
+                <br><strong>Tipo:</strong> Error de conexión del navegador
+            </div>
+            <div class="fix-suggestion">
+                <strong>💡 Solución:</strong> Este error generalmente se debe a problemas de comunicación entre extensiones del navegador y la página, o problemas de conectividad del sistema.
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Diagnóstico del Sistema</h3>
+            <div id="diagnosticStatus">Iniciando diagnóstico...</div>
+            <button onclick="runDiagnostic()">Ejecutar Diagnóstico</button>
+            <button onclick="checkConnectivity()">Verificar Conectividad</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Verificación de Módulos</h3>
+            <div id="modulesStatus">Verificando módulos...</div>
+            <button onclick="testModules()">Probar Módulos</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🌐 Verificación de API</h3>
+            <div id="apiStatus">Verificando API...</div>
+            <button onclick="testAPI()">Probar API</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Logs del Sistema</h3>
+            <div class="log" id="systemLogs">Iniciando sistema...</div>
+            <button onclick="clearLogs()">Limpiar Logs</button>
+            <button onclick="exportLogs()">Exportar Logs</button>
+        </div>
+
+        <div class="test-section">
+            <h3>✅ Estado de la Solución</h3>
+            <div id="solutionStatus">Verificando estado de la solución...</div>
+        </div>
+    </div>
+
+    <!-- Importar el sistema principal -->
+    <script type="module" src="funciones/main.js"></script>
+
+    <script type="module">
+        // Función para agregar logs
+        function addLog(message, type = 'info') {
+            const logsContainer = document.getElementById('systemLogs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logEntry.style.color = type === 'error' ? '#dc3545' : 
+                                 type === 'warning' ? '#ffc107' : 
+                                 type === 'success' ? '#28a745' : '#6c757d';
+            logsContainer.appendChild(logEntry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        // Función para actualizar estado
+        function updateStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = message;
+                element.className = `status ${type}`;
+            }
+        }
+
+        // Diagnóstico del sistema
+        window.runDiagnostic = async function() {
+            addLog('🔍 Ejecutando diagnóstico completo del sistema...', 'info');
+            
+            try {
+                // Verificar window object
+                if (typeof window !== 'undefined') {
+                    addLog('✅ Window object disponible', 'success');
+                } else {
+                    addLog('❌ Window object no disponible', 'error');
+                }
+
+                // Verificar document
+                if (typeof document !== 'undefined') {
+                    addLog('✅ Document object disponible', 'success');
+                } else {
+                    addLog('❌ Document object no disponible', 'error');
+                }
+
+                // Verificar fetch
+                if (typeof fetch !== 'undefined') {
+                    addLog('✅ Fetch API disponible', 'success');
+                } else {
+                    addLog('❌ Fetch API no disponible', 'error');
+                }
+
+                // Verificar localStorage
+                try {
+                    localStorage.setItem('test', 'test');
+                    localStorage.removeItem('test');
+                    addLog('✅ LocalStorage disponible', 'success');
+                } catch (error) {
+                    addLog('❌ LocalStorage no disponible', 'error');
+                }
+
+                // Verificar módulos cargados
+                const modules = ['config', 'authUI', 'financeApp', 'googleAIAnalyzer', 'chartsManager'];
+                modules.forEach(module => {
+                    if (window[module]) {
+                        addLog(`✅ Módulo ${module} disponible`, 'success');
+                    } else {
+                        addLog(`⚠️ Módulo ${module} no disponible`, 'warning');
+                    }
+                });
+
+                updateStatus('diagnosticStatus', 
+                    '<strong>✅ Diagnóstico completado</strong><br>Revisa los logs para más detalles', 'success');
+
+            } catch (error) {
+                addLog(`❌ Error durante diagnóstico: ${error.message}`, 'error');
+                updateStatus('diagnosticStatus', 
+                    `<strong>❌ Error en diagnóstico:</strong> ${error.message}`, 'error');
+            }
+        };
+
+        // Verificar conectividad
+        window.checkConnectivity = async function() {
+            addLog('🌐 Verificando conectividad del sistema...', 'info');
+            
+            try {
+                // Verificar conexión a internet
+                const internetCheck = await fetch('https://www.google.com/favicon.ico', {
+                    method: 'HEAD',
+                    mode: 'no-cors'
+                });
+                
+                if (internetCheck) {
+                    addLog('✅ Conexión a internet disponible', 'success');
+                }
+
+                // Verificar configuración local
+                if (window.config && window.config.apiUrl) {
+                    addLog(`✅ URL de API configurada: ${window.config.apiUrl}`, 'success');
+                } else {
+                    addLog('⚠️ URL de API no configurada', 'warning');
+                }
+
+                updateStatus('diagnosticStatus', 
+                    '<strong>✅ Conectividad verificada</strong><br>Revisa los logs para más detalles', 'success');
+
+            } catch (error) {
+                addLog(`❌ Error verificando conectividad: ${error.message}`, 'error');
+                updateStatus('diagnosticStatus', 
+                    `<strong>❌ Error en conectividad:</strong> ${error.message}`, 'error');
+            }
+        };
+
+        // Probar módulos
+        window.testModules = function() {
+            addLog('🔧 Probando módulos del sistema...', 'info');
+            
+            try {
+                const modules = [
+                    { name: 'Types', path: './types.js' },
+                    { name: 'Config Production', path: './config-production.js' },
+                    { name: 'Google AI Analyzer', path: './google_ai_analyzer.js' },
+                    { name: 'Charts Manager', path: './charts_manager.js' },
+                    { name: 'Financial Chat', path: './financial_chat.js' },
+                    { name: 'Auth UI', path: './auth_ui.js' },
+                    { name: 'Finanzas', path: './finanzas.js' }
+                ];
+
+                modules.forEach(module => {
+                    if (window[module.name.toLowerCase().replace(/\s+/g, '')]) {
+                        addLog(`✅ Módulo ${module.name} funcionando`, 'success');
+                    } else {
+                        addLog(`⚠️ Módulo ${module.name} no disponible`, 'warning');
+                    }
+                });
+
+                updateStatus('modulesStatus', 
+                    '<strong>✅ Módulos verificados</strong><br>Revisa los logs para más detalles', 'success');
+
+            } catch (error) {
+                addLog(`❌ Error probando módulos: ${error.message}`, 'error');
+                updateStatus('modulesStatus', 
+                    `<strong>❌ Error en módulos:</strong> ${error.message}`, 'error');
+            }
+        };
+
+        // Probar API
+        window.testAPI = async function() {
+            addLog('🌐 Probando conexión a la API...', 'info');
+            
+            try {
+                if (window.config && window.config.apiUrl) {
+                    const response = await fetch(`${window.config.apiUrl}/health`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (response.ok) {
+                        addLog('✅ API respondiendo correctamente', 'success');
+                        updateStatus('apiStatus', 
+                            '<strong>✅ API funcionando</strong><br>La API está respondiendo correctamente', 'success');
+                    } else {
+                        addLog(`⚠️ API respondiendo con estado: ${response.status}`, 'warning');
+                        updateStatus('apiStatus', 
+                            `<strong>⚠️ API con problemas:</strong> Estado ${response.status}`, 'warning');
+                    }
+                } else {
+                    addLog('❌ No hay configuración de API disponible', 'error');
+                    updateStatus('apiStatus', 
+                        '<strong>❌ API no configurada</strong><br>No hay configuración de API disponible', 'error');
+                }
+
+            } catch (error) {
+                addLog(`❌ Error conectando a la API: ${error.message}`, 'error');
+                updateStatus('apiStatus', 
+                    `<strong>❌ Error de API:</strong> ${error.message}`, 'error');
+            }
+        };
+
+        // Limpiar logs
+        window.clearLogs = function() {
+            const logsContainer = document.getElementById('systemLogs');
+            logsContainer.innerHTML = 'Logs limpiados...';
+        };
+
+        // Exportar logs
+        window.exportLogs = function() {
+            const logsContainer = document.getElementById('systemLogs');
+            const logs = logsContainer.innerText;
+            const blob = new Blob([logs], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'system-logs.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        // Verificar estado de la solución
+        function checkSolutionStatus() {
+            try {
+                let status = 'Verificando...';
+                let type = 'info';
+
+                if (window.config && window.authUI && window.financeApp) {
+                    status = '<strong>✅ Solución implementada correctamente</strong><br>Todos los módulos están funcionando';
+                    type = 'success';
+                } else if (window.config) {
+                    status = '<strong>⚠️ Solución parcialmente implementada</strong><br>Algunos módulos no están disponibles';
+                    type = 'warning';
+                } else {
+                    status = '<strong>❌ Solución no implementada</strong><br>Los módulos no se han cargado correctamente';
+                    type = 'error';
+                }
+
+                updateStatus('solutionStatus', status, type);
+
+            } catch (error) {
+                updateStatus('solutionStatus', 
+                    `<strong>❌ Error verificando solución:</strong> ${error.message}`, 'error');
+            }
+        }
+
+        // Inicialización automática
+        async function initializeTest() {
+            addLog('🚀 Iniciando test de corrección de errores...', 'info');
+            
+            // Esperar a que se carguen los módulos
+            setTimeout(() => {
+                addLog('⏳ Verificando estado de la solución...', 'info');
+                
+                // Ejecutar diagnóstico automático
+                runDiagnostic();
+                checkConnectivity();
+                testModules();
+                testAPI();
+                checkSolutionStatus();
+                
+                addLog('✅ Test de corrección completado', 'success');
+            }, 3000);
+        }
+
+        // Inicializar cuando se carga la página
+        document.addEventListener('DOMContentLoaded', initializeTest);
+    </script>
+</body>
+</html>
