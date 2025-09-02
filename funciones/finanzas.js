@@ -209,6 +209,9 @@ class FinanceApp {
             // Renderizar transacciones recientes
             this.renderRecentTransactions();
             
+            // Renderizar categorías
+            this.renderCategories();
+            
             // Renderizar gráficos si están disponibles
             if (window.chartsManager) {
                 this.renderCharts();
@@ -374,6 +377,344 @@ class FinanceApp {
                 color: category ? category.color : '#95a5a6'
             };
         });
+    }
+
+    /**
+     * Renderiza las categorías disponibles
+     */
+    renderCategories() {
+        try {
+            // Renderizar categorías de ingresos
+            this.renderCategorySection('incomeCategories', 'income', 'Ingresos');
+            
+            // Renderizar categorías de gastos
+            this.renderCategorySection('expenseCategories', 'expense', 'Gastos');
+            
+            console.log('🏷️ Categorías renderizadas correctamente');
+        } catch (error) {
+            console.error('❌ Error renderizando categorías:', error);
+        }
+    }
+
+    /**
+     * Renderiza una sección de categorías
+     * @param {string} containerId - ID del contenedor
+     * @param {string} type - Tipo de categoría (income/expense)
+     * @param {string} title - Título de la sección
+     */
+    renderCategorySection(containerId, type, title) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            console.warn(`⚠️ Contenedor ${containerId} no encontrado`);
+            return;
+        }
+
+        // Filtrar categorías por tipo
+        const typeCategories = this.categories.filter(cat => cat.type === type);
+        
+        if (typeCategories.length === 0) {
+            container.innerHTML = `<p class="no-categories">No hay categorías de ${title.toLowerCase()}</p>`;
+            return;
+        }
+
+        // Crear HTML para las categorías
+        const categoriesHTML = typeCategories.map(category => `
+            <div class="category-item" data-category-id="${category.id}">
+                <div class="category-color" style="background-color: ${category.color}"></div>
+                <div class="category-info">
+                    <span class="category-name">${category.name}</span>
+                    <span class="category-count">${this.getTransactionCountByCategory(category.name)} transacciones</span>
+                </div>
+                <div class="category-actions">
+                    <button class="btn-edit-category" onclick="window.financeApp.editCategory('${category.id}')" title="Editar categoría">
+                        ✏️
+                    </button>
+                    <button class="btn-delete-category" onclick="window.financeApp.deleteCategory('${category.id}')" title="Eliminar categoría">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = `
+            <h3 class="category-section-title">${title}</h3>
+            <div class="categories-list">
+                ${categoriesHTML}
+            </div>
+        `;
+    }
+
+    /**
+     * Obtiene el número de transacciones por categoría
+     * @param {string} categoryName - Nombre de la categoría
+     * @returns {number} Número de transacciones
+     */
+    getTransactionCountByCategory(categoryName) {
+        return this.transactions.filter(t => t.category === categoryName).length;
+    }
+
+    /**
+     * Muestra el modal para agregar categoría
+     */
+    showAddCategoryModal() {
+        try {
+            // Crear modal
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>➕ Agregar Nueva Categoría</h3>
+                        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addCategoryForm">
+                            <div class="form-group">
+                                <label for="categoryName">Nombre de la categoría:</label>
+                                <input type="text" id="categoryName" required placeholder="Ej: Comida, Transporte...">
+                            </div>
+                            <div class="form-group">
+                                <label for="categoryType">Tipo:</label>
+                                <select id="categoryType" required>
+                                    <option value="income">Ingreso</option>
+                                    <option value="expense">Gasto</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="categoryColor">Color:</label>
+                                <input type="color" id="categoryColor" value="#3498db">
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+                                <button type="submit">Agregar Categoría</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            // Agregar al DOM
+            document.body.appendChild(modal);
+
+            // Configurar formulario
+            const form = modal.querySelector('#addCategoryForm');
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.addNewCategory();
+                modal.remove();
+            });
+
+            console.log('📝 Modal de agregar categoría mostrado');
+        } catch (error) {
+            console.error('❌ Error mostrando modal de categoría:', error);
+        }
+    }
+
+    /**
+     * Agrega una nueva categoría
+     */
+    addNewCategory() {
+        try {
+            const name = document.getElementById('categoryName').value.trim();
+            const type = document.getElementById('categoryType').value;
+            const color = document.getElementById('categoryColor').value;
+
+            if (!name) {
+                this.showNotification('El nombre de la categoría es requerido', 'error');
+                return;
+            }
+
+            // Verificar que no exista una categoría con el mismo nombre
+            if (this.categories.some(cat => cat.name.toLowerCase() === name.toLowerCase())) {
+                this.showNotification('Ya existe una categoría con ese nombre', 'error');
+                return;
+            }
+
+            // Crear nueva categoría
+            const newCategory = {
+                id: this.generateId(),
+                name: name,
+                type: type,
+                color: color,
+                createdAt: new Date()
+            };
+
+            // Agregar a la lista
+            this.categories.push(newCategory);
+
+            // Guardar en localStorage
+            this.saveDataToStorage();
+
+            // Re-renderizar categorías
+            this.renderCategories();
+
+            // Mostrar notificación
+            this.showNotification(`Categoría "${name}" agregada correctamente`, 'success');
+
+            console.log('✅ Nueva categoría agregada:', newCategory);
+        } catch (error) {
+            console.error('❌ Error agregando categoría:', error);
+            this.showNotification('Error al agregar la categoría', 'error');
+        }
+    }
+
+    /**
+     * Edita una categoría existente
+     * @param {string} categoryId - ID de la categoría
+     */
+    editCategory(categoryId) {
+        try {
+            const category = this.categories.find(cat => cat.id === categoryId);
+            if (!category) {
+                this.showNotification('Categoría no encontrada', 'error');
+                return;
+            }
+
+            // Crear modal de edición
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>✏️ Editar Categoría</h3>
+                        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editCategoryForm">
+                            <div class="form-group">
+                                <label for="editCategoryName">Nombre de la categoría:</label>
+                                <input type="text" id="editCategoryName" value="${category.name}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editCategoryType">Tipo:</label>
+                                <select id="editCategoryType" required>
+                                    <option value="income" ${category.type === 'income' ? 'selected' : ''}>Ingreso</option>
+                                    <option value="expense" ${category.type === 'expense' ? 'selected' : ''}>Gasto</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editCategoryColor">Color:</label>
+                                <input type="color" id="editCategoryColor" value="${category.color}">
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+                                <button type="submit">Guardar Cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            // Agregar al DOM
+            document.body.appendChild(modal);
+
+            // Configurar formulario
+            const form = modal.querySelector('#editCategoryForm');
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.updateCategory(categoryId);
+                modal.remove();
+            });
+
+            console.log('✏️ Modal de editar categoría mostrado');
+        } catch (error) {
+            console.error('❌ Error mostrando modal de edición:', error);
+        }
+    }
+
+    /**
+     * Actualiza una categoría existente
+     * @param {string} categoryId - ID de la categoría
+     */
+    updateCategory(categoryId) {
+        try {
+            const name = document.getElementById('editCategoryName').value.trim();
+            const type = document.getElementById('editCategoryType').value;
+            const color = document.getElementById('editCategoryColor').value;
+
+            if (!name) {
+                this.showNotification('El nombre de la categoría es requerido', 'error');
+                return;
+            }
+
+            // Verificar que no exista otra categoría con el mismo nombre
+            const existingCategory = this.categories.find(cat => 
+                cat.id !== categoryId && cat.name.toLowerCase() === name.toLowerCase()
+            );
+            
+            if (existingCategory) {
+                this.showNotification('Ya existe otra categoría con ese nombre', 'error');
+                return;
+            }
+
+            // Actualizar categoría
+            const categoryIndex = this.categories.findIndex(cat => cat.id === categoryId);
+            if (categoryIndex !== -1) {
+                this.categories[categoryIndex] = {
+                    ...this.categories[categoryIndex],
+                    name: name,
+                    type: type,
+                    color: color,
+                    updatedAt: new Date()
+                };
+
+                // Guardar en localStorage
+                this.saveDataToStorage();
+
+                // Re-renderizar categorías
+                this.renderCategories();
+
+                // Mostrar notificación
+                this.showNotification(`Categoría "${name}" actualizada correctamente`, 'success');
+
+                console.log('✅ Categoría actualizada:', this.categories[categoryIndex]);
+            }
+        } catch (error) {
+            console.error('❌ Error actualizando categoría:', error);
+            this.showNotification('Error al actualizar la categoría', 'error');
+        }
+    }
+
+    /**
+     * Elimina una categoría
+     * @param {string} categoryId - ID de la categoría
+     */
+    deleteCategory(categoryId) {
+        try {
+            const category = this.categories.find(cat => cat.id === categoryId);
+            if (!category) {
+                this.showNotification('Categoría no encontrada', 'error');
+                return;
+            }
+
+            // Verificar si hay transacciones usando esta categoría
+            const transactionsUsingCategory = this.transactions.filter(t => t.category === category.name);
+            if (transactionsUsingCategory.length > 0) {
+                const confirmDelete = confirm(
+                    `La categoría "${category.name}" tiene ${transactionsUsingCategory.length} transacciones. ` +
+                    '¿Estás seguro de que quieres eliminarla? Las transacciones quedarán sin categoría.'
+                );
+                
+                if (!confirmDelete) return;
+            }
+
+            // Eliminar categoría
+            this.categories = this.categories.filter(cat => cat.id !== categoryId);
+
+            // Guardar en localStorage
+            this.saveDataToStorage();
+
+            // Re-renderizar categorías
+            this.renderCategories();
+
+            // Mostrar notificación
+            this.showNotification(`Categoría "${category.name}" eliminada correctamente`, 'success');
+
+            console.log('🗑️ Categoría eliminada:', category);
+        } catch (error) {
+            console.error('❌ Error eliminando categoría:', error);
+            this.showNotification('Error al eliminar la categoría', 'error');
+        }
     }
 
     // ==================== MÉTODOS DE NOTIFICACIÓN ====================
