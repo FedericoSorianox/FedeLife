@@ -1,56 +1,39 @@
 /**
- * ⚙️ CONFIG PRODUCTION - CONFIGURACIÓN OPTIMIZADA PARA PRODUCCIÓN
+ * ⚙️ CONFIG PRODUCCIÓN - CONFIGURACIÓN PARA PRODUCCIÓN CON MODO SIN AUTH
  * 
- * Archivo de configuración específico para producción que maneja
- * errores de conexión y fallbacks de manera robusta
+ * Archivo de configuración para producción que permite modo sin autenticación
+ * para transacciones básicas y análisis de PDFs
  * Autor: Senior Backend Developer
  */
 
-// ==================== CONFIGURACIÓN DE PRODUCCIÓN ====================
+// ==================== API KEYS ====================
 
 /**
- * Configuración global del sistema optimizada para producción
+ * API Key de Google AI Studio (Gemini)
+ * Clave gratuita para análisis de texto y chat con IA
  */
-export const PRODUCTION_CONFIG = {
-    // URLs de la API con fallbacks
-    apiUrl: (() => {
-        // Detectar ambiente automáticamente
-        const hostname = window.location.hostname;
-        
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-            return 'http://localhost:3000/api';
-        } else if (hostname.includes('fedelife-finanzas.onrender.com')) {
-            return 'https://fedelife-finanzas.onrender.com/api';
-        } else if (hostname.includes('fedelife')) {
-            return `https://${hostname}/api`;
-        } else {
-            // Fallback genérico
-            return `${window.location.protocol}//${hostname}/api`;
-        }
-    })(),
-    
-    // Configuración del ambiente
-    environment: (() => {
-        const hostname = window.location.hostname;
-        return (hostname === 'localhost' || hostname === '127.0.0.1') ? 'development' : 'production';
-    })(),
-    
-    // Versión y metadatos
+export const GOOGLE_AI_API_KEY = 'AIzaSyCSCVx7P1_nSmeWxPZAs9lKGKv_VdFeoJ8';
+
+// ==================== CONFIGURACIÓN GLOBAL ====================
+
+/**
+ * Configuración global del sistema
+ */
+export const GLOBAL_CONFIG = {
+    apiUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? 'http://localhost:3000/api' 
+        : 'https://fedelife-finanzas.onrender.com/api',
+    environment: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'development' : 'production',
     version: '1.0.0',
     buildDate: new Date().toISOString(),
-    
-    // Configuración de reintentos
-    retryConfig: {
-        maxRetries: 3,
-        retryDelay: 1000, // 1 segundo
-        backoffMultiplier: 2
-    },
-    
-    // Configuración de timeout
-    timeoutConfig: {
-        requestTimeout: 10000, // 10 segundos
-        connectionTimeout: 5000 // 5 segundos
-    }
+    // Modo sin autenticación para funcionalidades básicas
+    allowNoAuth: true,
+    // Endpoints que no requieren autenticación
+    noAuthEndpoints: [
+        '/api/transactions/public',
+        '/api/ai/analyze-pdf',
+        '/api/categories/public'
+    ]
 };
 
 // ==================== FUNCIONES DE UTILIDAD ====================
@@ -59,142 +42,71 @@ export const PRODUCTION_CONFIG = {
  * Verifica si estamos en modo desarrollo
  */
 export function isDevelopment() {
-    return PRODUCTION_CONFIG.environment === 'development';
+    return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 }
 
 /**
- * Verifica si la API está disponible
+ * Obtiene la API Key según el entorno
  */
-export async function checkApiHealth() {
+export function getApiKey() {
+    // En desarrollo, usar la key por defecto
+    if (isDevelopment()) {
+        return GOOGLE_AI_API_KEY;
+    }
+    
+    // En producción, intentar obtener del localStorage
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), PRODUCTION_CONFIG.timeoutConfig.connectionTimeout);
-        
-        const response = await fetch(`${PRODUCTION_CONFIG.apiUrl}/health`, {
-            method: 'GET',
-            signal: controller.signal,
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        clearTimeout(timeoutId);
-        return response.ok;
+        return localStorage.getItem('google_ai_key') || GOOGLE_AI_API_KEY;
     } catch (error) {
-        console.warn('⚠️ API no disponible:', error.message);
-        return false;
+        console.warn('No se pudo acceder al localStorage:', error);
+        return GOOGLE_AI_API_KEY;
     }
 }
 
 /**
- * Realiza una petición HTTP con reintentos automáticos
+ * Verifica si un endpoint requiere autenticación
  */
-export async function apiRequest(endpoint, options = {}, retryCount = 0) {
-    try {
-        const url = `${PRODUCTION_CONFIG.apiUrl}${endpoint}`;
-        
-        // Configuración por defecto
-        const defaultOptions = {
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            },
-            ...options
-        };
-        
-        // Agregar token de autenticación si existe
-        try {
-            const authData = localStorage.getItem('auth_data');
-            if (authData) {
-                const parsed = JSON.parse(authData);
-                if (parsed.token) {
-                    defaultOptions.headers.Authorization = `Bearer ${parsed.token}`;
-                }
-            }
-        } catch (error) {
-            console.warn('⚠️ No se pudo obtener token de autenticación:', error);
-        }
-        
-        // Realizar petición con timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), PRODUCTION_CONFIG.timeoutConfig.requestTimeout);
-        
-        const response = await fetch(url, {
-            ...defaultOptions,
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        // Verificar respuesta
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        return await response.json();
-        
-    } catch (error) {
-        // Manejar reintentos
-        if (retryCount < PRODUCTION_CONFIG.retryConfig.maxRetries && 
-            (error.name === 'AbortError' || error.message.includes('fetch'))) {
-            
-            const delay = PRODUCTION_CONFIG.retryConfig.retryDelay * 
-                         Math.pow(PRODUCTION_CONFIG.retryConfig.backoffMultiplier, retryCount);
-            
-            console.log(`🔄 Reintentando en ${delay}ms... (${retryCount + 1}/${PRODUCTION_CONFIG.retryConfig.maxRetries})`);
-            
-            await new Promise(resolve => setTimeout(resolve, delay));
-            return apiRequest(endpoint, options, retryCount + 1);
-        }
-        
-        throw error;
-    }
+export function requiresAuth(endpoint) {
+    return !GLOBAL_CONFIG.noAuthEndpoints.some(noAuthEndpoint => 
+        endpoint.includes(noAuthEndpoint)
+    );
 }
 
 /**
- * Verifica la conectividad general
+ * Obtiene headers para las peticiones HTTP
  */
-export async function checkConnectivity() {
-    try {
-        // Verificar conexión a internet
-        const internetCheck = await fetch('https://www.google.com/favicon.ico', {
-            method: 'HEAD',
-            mode: 'no-cors'
-        });
-        
-        // Verificar API
-        const apiCheck = await checkApiHealth();
-        
-        return {
-            internet: true,
-            api: apiCheck,
-            timestamp: new Date().toISOString()
-        };
-    } catch (error) {
-        return {
-            internet: false,
-            api: false,
-            error: error.message,
-            timestamp: new Date().toISOString()
-        };
+export function getRequestHeaders(requireAuth = false) {
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    
+    if (requireAuth) {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
     }
+    
+    return headers;
 }
 
 // ==================== INICIALIZACIÓN ====================
 
 // Agregar configuración global al objeto window
 if (typeof window !== 'undefined') {
-    window.config = PRODUCTION_CONFIG;
-    window.checkApiHealth = checkApiHealth;
-    window.apiRequest = apiRequest;
-    window.checkConnectivity = checkConnectivity;
+    window.config = GLOBAL_CONFIG;
+    window.configHelpers = {
+        requiresAuth,
+        getRequestHeaders
+    };
 }
 
 // Exportar todo como objeto por defecto para compatibilidad
 export default {
-    PRODUCTION_CONFIG,
+    GOOGLE_AI_API_KEY,
+    GLOBAL_CONFIG,
     isDevelopment,
-    checkApiHealth,
-    apiRequest,
-    checkConnectivity
+    getApiKey,
+    requiresAuth,
+    getRequestHeaders
 };

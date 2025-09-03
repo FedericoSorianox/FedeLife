@@ -3340,19 +3340,57 @@ class FinanceController {
             const formData = new FormData(form);
             
             // Obtener y validar datos del formulario
-            const type = (this.elements.transactionType as HTMLSelectElement).value as TransactionType;
+            const type = (this.elements.transactionType as HTMLSelectElement).value as 'income' | 'expense';
             const amount = parseFloat((this.elements.transactionAmount as HTMLInputElement).value);
             const description = (this.elements.transactionDescription as HTMLInputElement).value;
             const category = (this.elements.transactionCategory as HTMLSelectElement).value;
             const date = new Date((this.elements.transactionDate as HTMLInputElement).value);
-            const paymentMethod = (this.elements.paymentMethod as HTMLSelectElement).value as PaymentMethod;
+            const paymentMethod = (this.elements.paymentMethod as HTMLSelectElement).value as 'cash' | 'card' | 'transfer' | 'check';
 
             // Validaciones del frontend
             if (!type || !amount || !description || !category || !paymentMethod) {
                 throw new Error('Todos los campos son requeridos');
             }
 
-            // Crear transacción usando el manager
+            // Intentar usar el endpoint público primero
+            try {
+                const response = await fetch(`${window.config.apiUrl}/transactions/public`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type,
+                        amount,
+                        description,
+                        category,
+                        date,
+                        paymentMethod
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // Actualizar UI
+                    this.updateDashboard();
+                    this.refreshTransactions();
+                    
+                    // Actualizar gráficos
+                    const currentPeriod = this.chartsManager.getCurrentPeriod();
+                    this.updateChartsForPeriod(currentPeriod);
+                    
+                    form.reset();
+                    this.setDefaultDates();
+                    
+                    this.showNotification(`Transacción agregada correctamente (modo demo)`, 'success');
+                    return;
+                }
+            } catch (publicError) {
+                console.log('⚠️ Endpoint público no disponible, intentando con autenticación...');
+            }
+
+            // Si el endpoint público falla, intentar con autenticación
             const transactionId = await this.transactionManager.addTransaction({
                 type,
                 amount,

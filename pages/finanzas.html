@@ -222,7 +222,7 @@
                         </div>
                         <div class="form-row">
                             <input type="date" id="transactionDate" required>
-                            <select id="paymentMethod">
+                            <select id="paymentMethod" required>
                                 <option value="">Método de pago</option>
                                 <option value="cash">Efectivo</option>
                                 <option value="card">Tarjeta</option>
@@ -416,18 +416,18 @@
                 <!-- Formulario para agregar nueva categoría -->
                 <div class="add-category-form">
                     <h4><i class="fas fa-plus-circle"></i> Agregar Nueva Categoría</h4>
-                    <form id="budgetCategoryForm" class="category-form">
+                    <form id="categoryForm" class="category-form">
                         <div class="form-row">
-                            <select id="budgetCategoryType" required>
+                            <select id="categoryType" required>
                                 <option value="">Tipo</option>
                                 <option value="income">Ingreso</option>
                                 <option value="expense">Gasto</option>
                             </select>
-                            <input type="text" id="budgetCategoryName" placeholder="Nombre de la categoría" required>
+                            <input type="text" id="categoryName" placeholder="Nombre de la categoría" required>
                         </div>
                         <div class="form-row">
-                            <input type="color" id="budgetCategoryColor" value="#3498db" title="Color de la categoría">
-                            <input type="text" id="budgetCategoryDescription" placeholder="Descripción (opcional)">
+                            <input type="color" id="categoryColor" value="#3498db" title="Color de la categoría">
+                            <input type="text" id="categoryDescription" placeholder="Descripción (opcional)">
                         </div>
                         <button type="submit" class="add-btn">
                             <i class="fas fa-plus"></i> Agregar Categoría
@@ -489,7 +489,7 @@
         <p>&copy; Desde 1992 Fede Life. Todos los derechos reservados.</p>
     </footer>
 
-    <script type="module" src="/funciones/main.js"></script>
+    <script src="/funciones/finanzas-simple.js"></script>
     <script src="/pages/auth.js"></script>
 </body>
 
