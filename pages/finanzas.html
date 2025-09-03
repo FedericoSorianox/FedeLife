@@ -188,9 +188,7 @@
             <button class="tab-btn active" data-tab="transactions">
                 <i class="fas fa-exchange-alt"></i> Transacciones
             </button>
-            <button class="tab-btn" data-tab="budget">
-                <i class="fas fa-chart-pie"></i> Presupuesto
-            </button>
+          
             <button class="tab-btn" data-tab="goals">
                 <i class="fas fa-target"></i> Metas
             </button>
@@ -334,64 +332,6 @@
                 </div>
             </div>
         </div>
-        <!-- Pestaña de Categorías -->
-        <div id="categories" class="tab-content">
-            <div class="categories-section">
-                <div class="categories-header">
-                    <h3><i class="fas fa-tags"></i> Categorías</h3>
-                </div>
-
-                <div class="categories-container">
-                    <!-- Formulario para agregar categoría -->
-                    <div class="add-category-form">
-                        <h4><i class="fas fa-plus-circle"></i> Agregar Nueva Categoría</h4>
-                        <form id="categoryForm" class="category-form">
-                            <div class="form-row">
-                                <select id="categoryType" required>
-                                    <option value="">Tipo</option>
-                                    <option value="income">Ingreso</option>
-                                    <option value="expense">Gasto</option>
-                                </select>
-                                <input type="text" id="categoryName" placeholder="Nombre de la categoría" required>
-                            </div>
-                            <div class="form-row">
-                                <input type="color" id="categoryColor" value="#3498db" title="Color de la categoría">
-                                <input type="text" id="categoryDescription" placeholder="Descripción (opcional)">
-                            </div>
-                            <button type="submit" class="add-btn">
-                                <i class="fas fa-plus"></i> Agregar Categoría
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Lista de categorías existentes -->
-                    <div class="categories-display">
-                        <div class="categories-tabs">
-                            <button class="category-tab-btn active" data-type="income">
-                                <i class="fas fa-arrow-up"></i> Ingresos
-                            </button>
-                            <button class="category-tab-btn" data-type="expense">
-                                <i class="fas fa-arrow-down"></i> Gastos
-                            </button>
-                        </div>
-
-                        <div id="incomeCategories" class="category-list active">
-                            <h5>Categorías de Ingresos</h5>
-                            <div id="incomeCategoriesList" class="categories-grid">
-                                <!-- Las categorías de ingresos se cargarán aquí -->
-                            </div>
-                        </div>
-
-                        <div id="expenseCategories" class="category-list">
-                            <h5>Categorías de Gastos</h5>
-                            <div id="expenseCategoriesList" class="categories-grid">
-                                <!-- Las categorías de gastos se cargarán aquí -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Pestaña de Metas -->
         <div id="goals" class="tab-content">
@@ -471,6 +411,28 @@
                     <button id="addCategoryBtn" class="add-btn">
                         <i class="fas fa-plus"></i> Agregar Categoría
                     </button>
+                </div>
+                
+                <!-- Formulario para agregar nueva categoría -->
+                <div class="add-category-form">
+                    <h4><i class="fas fa-plus-circle"></i> Agregar Nueva Categoría</h4>
+                    <form id="budgetCategoryForm" class="category-form">
+                        <div class="form-row">
+                            <select id="budgetCategoryType" required>
+                                <option value="">Tipo</option>
+                                <option value="income">Ingreso</option>
+                                <option value="expense">Gasto</option>
+                            </select>
+                            <input type="text" id="budgetCategoryName" placeholder="Nombre de la categoría" required>
+                        </div>
+                        <div class="form-row">
+                            <input type="color" id="budgetCategoryColor" value="#3498db" title="Color de la categoría">
+                            <input type="text" id="budgetCategoryDescription" placeholder="Descripción (opcional)">
+                        </div>
+                        <button type="submit" class="add-btn">
+                            <i class="fas fa-plus"></i> Agregar Categoría
+                        </button>
+                    </form>
                 </div>
                 
                 <div class="categories-content">

@@ -165,7 +165,7 @@ class FinanceApp {
     }
 
     /**
-     * Configura event listeners de la aplicación
+     * Configura todos los event listeners de la aplicación
      */
     setupEventListeners() {
         // Botón para agregar transacción
@@ -192,7 +192,132 @@ class FinanceApp {
             addGoalBtn.addEventListener('click', () => this.showAddGoalModal());
         }
 
+        // ==================== SISTEMA DE PESTAÑAS ====================
+        // Configurar event listeners para cambiar entre pestañas
+        this.setupTabSystem();
+
         console.log('🎯 Event listeners configurados');
+    }
+
+    /**
+     * Configura el sistema de pestañas para navegar entre secciones
+     * Permite cambiar entre: Transacciones, Presupuesto, Metas, Reportes y Categorías
+     */
+    setupTabSystem() {
+        try {
+            // Obtener todos los botones de pestaña
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            
+            // Agregar event listener a cada botón de pestaña
+            tabButtons.forEach(button => {
+                button.addEventListener('click', (event) => {
+                    // Prevenir comportamiento por defecto
+                    event.preventDefault();
+                    
+                    // Obtener el identificador de la pestaña desde data-tab
+                    const targetTab = button.getAttribute('data-tab');
+                    
+                    if (targetTab) {
+                        // Cambiar a la pestaña seleccionada
+                        this.switchToTab(targetTab);
+                        
+                        // Log para debugging
+                        console.log(`🔄 Cambiando a pestaña: ${targetTab}`);
+                    } else {
+                        console.warn('⚠️ Botón de pestaña sin atributo data-tab:', button);
+                    }
+                });
+            });
+            
+            console.log('✅ Sistema de pestañas configurado correctamente');
+            
+        } catch (error) {
+            console.error('❌ Error configurando sistema de pestañas:', error);
+        }
+    }
+
+    /**
+     * Cambia a la pestaña especificada
+     * @param {string} tabName - Nombre de la pestaña a mostrar
+     */
+    switchToTab(tabName) {
+        try {
+            // 1. Ocultar todas las pestañas de contenido
+            const allTabContents = document.querySelectorAll('.tab-content');
+            allTabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 2. Desactivar todos los botones de pestaña
+            const allTabButtons = document.querySelectorAll('.tab-btn');
+            allTabButtons.forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 3. Mostrar la pestaña de contenido seleccionada
+            const targetContent = document.getElementById(tabName);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            } else {
+                console.warn(`⚠️ Contenido de pestaña no encontrado: ${tabName}`);
+            }
+            
+            // 4. Activar el botón de pestaña correspondiente
+            const targetButton = document.querySelector(`[data-tab="${tabName}"]`);
+            if (targetButton) {
+                targetButton.classList.add('active');
+            } else {
+                console.warn(`⚠️ Botón de pestaña no encontrado: ${tabName}`);
+            }
+            
+            // 5. Ejecutar acciones específicas según la pestaña
+            this.handleTabSpecificActions(tabName);
+            
+            console.log(`✅ Pestaña ${tabName} activada correctamente`);
+            
+        } catch (error) {
+            console.error(`❌ Error cambiando a pestaña ${tabName}:`, error);
+        }
+    }
+
+    /**
+     * Ejecuta acciones específicas según la pestaña seleccionada
+     * @param {string} tabName - Nombre de la pestaña activada
+     */
+    handleTabSpecificActions(tabName) {
+        try {
+            switch (tabName) {
+                case 'transactions':
+                    // Recargar transacciones recientes
+                    this.renderRecentTransactions();
+                    break;
+                    
+                case 'budget':
+                    // Recargar presupuestos
+                    this.renderBudgets();
+                    break;
+                    
+                case 'goals':
+                    // Recargar metas
+                    this.renderGoals();
+                    break;
+                    
+                case 'reports':
+                    // Preparar reportes
+                    this.prepareReports();
+                    break;
+                    
+                case 'categories':
+                    // Recargar y renderizar categorías
+                    this.renderCategories();
+                    break;
+                    
+                default:
+                    console.log(`ℹ️ Pestaña ${tabName} no requiere acciones específicas`);
+            }
+        } catch (error) {
+            console.error(`❌ Error ejecutando acciones de pestaña ${tabName}:`, error);
+        }
     }
 
     /**
@@ -390,6 +515,9 @@ class FinanceApp {
             // Renderizar categorías de gastos
             this.renderCategorySection('expenseCategories', 'expense', 'Gastos');
             
+            // Actualizar el dropdown de categorías para transacciones
+            this.populateTransactionCategoryDropdown();
+
             console.log('🏷️ Categorías renderizadas correctamente');
         } catch (error) {
             console.error('❌ Error renderizando categorías:', error);
@@ -442,6 +570,55 @@ class FinanceApp {
                 ${categoriesHTML}
             </div>
         `;
+    }
+
+    /**
+     * Pobla el dropdown de categorías para transacciones
+     * Esta función actualiza dinámicamente el select de categorías
+     * con todas las categorías disponibles del usuario
+     */
+    populateTransactionCategoryDropdown() {
+        try {
+            // Obtener el elemento select del dropdown
+            const categoryDropdown = document.getElementById('transactionCategory');
+            
+            if (!categoryDropdown) {
+                console.warn('⚠️ Dropdown de categorías no encontrado');
+                return;
+            }
+
+            // Limpiar opciones existentes (mantener la primera opción por defecto)
+            const defaultOption = categoryDropdown.querySelector('option[value=""]');
+            categoryDropdown.innerHTML = '';
+            
+            // Restaurar la opción por defecto
+            if (defaultOption) {
+                categoryDropdown.appendChild(defaultOption);
+            } else {
+                // Si no existe la opción por defecto, crearla
+                const defaultOpt = document.createElement('option');
+                defaultOpt.value = '';
+                defaultOpt.textContent = 'Categoría';
+                categoryDropdown.appendChild(defaultOpt);
+            }
+
+            // Agregar todas las categorías disponibles
+            this.categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.name; // Usar el nombre como valor
+                option.textContent = category.name;
+                
+                // Agregar estilo visual con el color de la categoría
+                option.style.color = category.color;
+                option.style.fontWeight = 'bold';
+                
+                categoryDropdown.appendChild(option);
+            });
+
+            console.log(`✅ Dropdown de categorías actualizado con ${this.categories.length} categorías`);
+        } catch (error) {
+            console.error('❌ Error poblando dropdown de categorías:', error);
+        }
     }
 
     /**
