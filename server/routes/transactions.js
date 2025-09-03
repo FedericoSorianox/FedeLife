@@ -763,6 +763,150 @@ router.post('/sync', authenticateToken, async (req, res) => {
     }
 });
 
+// ==================== ENDPOINTS PÚBLICOS (SIN AUTENTICACIÓN) ====================
+
+/**
+ * POST /api/transactions/public
+ * Crea una nueva transacción sin autenticación (para modo demo)
+ */
+router.post('/public', validateTransaction, async (req, res) => {
+    try {
+        const {
+            type,
+            amount,
+            description,
+            category,
+            date = new Date(),
+            paymentMethod = 'card',
+            currency = 'UYU',
+            tags = [],
+            notes,
+            status = 'completed'
+        } = req.body;
+        
+        // Crear transacción con usuario demo
+        const transaction = new Transaction({
+            userId: 'demo_user_public', // Usuario demo para transacciones públicas
+            type,
+            amount: parseFloat(amount),
+            description: description.trim(),
+            category: category.trim(),
+            date: new Date(date),
+            paymentMethod,
+            currency,
+            tags: tags.filter(tag => tag.trim()),
+            notes: notes?.trim(),
+            status
+        });
+
+        // Establecer valores por defecto para moneda
+        transaction.convertedAmount = transaction.amount;
+        transaction.userBaseCurrency = currency;
+        transaction.exchangeRate = 1;
+        transaction.exchangeRateDate = new Date();
+        
+        await transaction.save();
+        
+        res.status(201).json({
+            success: true,
+            message: 'Transacción creada exitosamente (modo demo)',
+            data: {
+                transaction: {
+                    ...transaction.toObject(),
+                    formattedAmount: transaction.formattedAmount,
+                    typeLabel: transaction.typeLabel
+                }
+            }
+        });
+        
+        console.log(`✅ Transacción pública creada: ${transaction.type} - $${transaction.amount} - ${transaction.description}`);
+        
+    } catch (error) {
+        console.error('❌ Error creando transacción pública:', error);
+        
+        if (error.name === 'ValidationError') {
+            const errors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({
+                error: 'Error de validación',
+                details: errors
+            });
+        }
+        
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            message: 'No se pudo crear la transacción'
+        });
+    }
+});
+
+/**
+ * GET /api/transactions/public
+ * Obtiene transacciones públicas (modo demo)
+ */
+router.get('/public', async (req, res) => {
+    try {
+        const {
+            page = 1,
+            limit = 20,
+            type,
+            category,
+            month,
+            year
+        } = req.query;
+        
+        // Construir filtros para transacciones públicas
+        const filters = { userId: 'demo_user_public' };
+        
+        if (type) filters.type = type;
+        if (category) filters.category = category;
+        
+        // Filtros de fecha
+        if (month || year) {
+            filters.date = {};
+            if (month) {
+                const [year, monthNum] = month.split('-');
+                filters.date.$gte = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
+                filters.date.$lt = new Date(parseInt(year), parseInt(monthNum), 1);
+            }
+            if (year) {
+                filters.date.$gte = new Date(parseInt(year), 0, 1);
+                filters.date.$lt = new Date(parseInt(year) + 1, 0, 1);
+            }
+        }
+        
+        // Aplicar paginación
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const transactions = await Transaction.find(filters)
+            .sort({ date: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .lean();
+        
+        // Contar total
+        const total = await Transaction.countDocuments(filters);
+        
+        res.json({
+            success: true,
+            data: {
+                transactions,
+                pagination: {
+                    currentPage: parseInt(page),
+                    totalPages: Math.ceil(total / parseInt(limit)),
+                    totalItems: total,
+                    itemsPerPage: parseInt(limit)
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Error obteniendo transacciones públicas:', error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            message: 'No se pudieron obtener las transacciones'
+        });
+    }
+});
+
 // ==================== EXPORTAR ROUTER ====================
 
 module.exports = router;

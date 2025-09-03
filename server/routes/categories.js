@@ -586,6 +586,62 @@ router.post('/merge', authenticateToken, async (req, res) => {
     }
 });
 
+// ==================== ENDPOINTS PÚBLICOS (SIN AUTENTICACIÓN) ====================
+
+/**
+ * GET /api/categories/public
+ * Obtiene categorías públicas (modo demo)
+ */
+router.get('/public', async (req, res) => {
+    try {
+        const { type } = req.query;
+        
+        // Construir filtros
+        const filters = { userId: 'demo_user_public' };
+        if (type) filters.type = type;
+        
+        // Obtener categorías
+        const categories = await Category.find(filters)
+            .sort({ name: 1 })
+            .lean();
+        
+        // Si no hay categorías demo, crear algunas por defecto
+        if (categories.length === 0) {
+            const defaultCategories = [
+                { name: 'Salario', type: 'income', color: '#27ae60', userId: 'demo_user_public' },
+                { name: 'Freelance', type: 'income', color: '#2ecc71', userId: 'demo_user_public' },
+                { name: 'Inversiones', type: 'income', color: '#3498db', userId: 'demo_user_public' },
+                { name: 'Comida', type: 'expense', color: '#e74c3c', userId: 'demo_user_public' },
+                { name: 'Transporte', type: 'expense', color: '#f39c12', userId: 'demo_user_public' },
+                { name: 'Entretenimiento', type: 'expense', color: '#9b59b6', userId: 'demo_user_public' },
+                { name: 'Servicios', type: 'expense', color: '#34495e', userId: 'demo_user_public' }
+            ];
+            
+            await Category.insertMany(defaultCategories);
+            
+            res.json({
+                success: true,
+                data: {
+                    categories: defaultCategories,
+                    message: 'Categorías demo creadas automáticamente'
+                }
+            });
+        } else {
+            res.json({
+                success: true,
+                data: { categories }
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Error obteniendo categorías públicas:', error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            message: 'No se pudieron obtener las categorías'
+        });
+    }
+});
+
 // ==================== EXPORTAR ROUTER ====================
 
 module.exports = router;

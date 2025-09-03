@@ -264,6 +264,11 @@ function setupRoutes() {
     app.use('/api/ai', authenticateToken, aiRoutes);
     app.use('/api/exchange-rates', authenticateToken, exchangeRateRoutes);
     
+    // Rutas públicas (sin autenticación) - para modo demo
+    app.use('/api/public/transactions', transactionRoutes);
+    app.use('/api/public/categories', categoryRoutes);
+    app.use('/api/public/ai', aiRoutes);
+    
     // Ruta de health check
     app.get('/api/health', (req, res) => {
         const dbStatus = mongoose.connection.readyState;
