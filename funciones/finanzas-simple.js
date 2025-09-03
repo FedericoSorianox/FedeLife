@@ -8,7 +8,7 @@
 
 // ==================== CONFIGURACIÓN ====================
 
-const API_CONFIG = {
+const FINANCE_API_CONFIG = {
     baseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
         ? 'http://localhost:3000/api' 
         : 'https://fedelife-finanzas.onrender.com/api',
@@ -86,7 +86,7 @@ class FinanceApp {
      */
     async loadCategoriesFromBackend() {
         try {
-            const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.categories}`);
+            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.categories}`);
             if (response.ok) {
                 const result = await response.json();
                 if (result.success && result.data.categories) {
@@ -173,7 +173,7 @@ class FinanceApp {
 
             // Intentar guardar en el backend
             try {
-                const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.transactions}`, {
+                const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -322,7 +322,7 @@ class FinanceApp {
             formData.append('pdf', pdfFile.files[0]);
 
             // Enviar al backend
-            const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.ai}`, {
+            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.ai}`, {
                 method: 'POST',
                 body: formData
             });
