@@ -3410,6 +3410,17 @@ nav {
         gap: 10px;
     }
 
+    .auth-status {
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        background: rgba(255, 255, 255, 0.15);
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin: 0;
+    }
+
     .header-auth button {
         background: rgba(255, 255, 255, 0.2);
         color: white;

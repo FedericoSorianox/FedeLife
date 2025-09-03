@@ -27,6 +27,11 @@ class FinanceApp {
         this.categories = [];
         this.isInitialized = false;
         
+        // Variables para los charts
+        this.expensesChart = null;
+        this.incomeChart = null;
+        this.currentChartMonth = new Date();
+        
         this.initializeApp();
     }
 
@@ -53,7 +58,11 @@ class FinanceApp {
             
             // Renderizar datos iniciales
             this.renderDashboard();
+            this.renderTransactions();
             this.renderCategories();
+            
+            // Inicializar charts
+            this.initializeCharts();
             
         } catch (error) {
             console.error('❌ Error inicializando sistema de finanzas:', error);
@@ -136,6 +145,12 @@ class FinanceApp {
 
         // Configurar fecha por defecto
         this.setDefaultDates();
+        
+        // Configurar sistema de pestañas
+        this.setupTabSystem();
+        
+        // Configurar controles de charts
+        this.setupChartControls();
     }
 
     /**
@@ -397,6 +412,448 @@ class FinanceApp {
     }
 
     /**
+     * Configura los controles de los charts
+     */
+    setupChartControls() {
+        try {
+            // Botón de actualizar charts
+            const refreshChartsBtn = document.getElementById('refreshCharts');
+            if (refreshChartsBtn) {
+                refreshChartsBtn.addEventListener('click', () => this.updateCharts());
+            }
+
+            // Selector de período
+            const chartPeriod = document.getElementById('chartPeriod');
+            if (chartPeriod) {
+                chartPeriod.addEventListener('change', () => this.updateCharts());
+            }
+
+            // Navegación de meses para charts
+            const chartPrevMonthBtn = document.getElementById('chartPrevMonthBtn');
+            const chartNextMonthBtn = document.getElementById('chartNextMonthBtn');
+            const chartMonthSelectorBtn = document.getElementById('chartMonthSelectorBtn');
+            const chartFilterMonth = document.getElementById('chartFilterMonth');
+
+            if (chartPrevMonthBtn) {
+                chartPrevMonthBtn.addEventListener('click', () => this.navigateChartMonth(-1));
+            }
+
+            if (chartNextMonthBtn) {
+                chartNextMonthBtn.addEventListener('click', () => this.navigateChartMonth(1));
+            }
+
+            if (chartMonthSelectorBtn) {
+                chartMonthSelectorBtn.addEventListener('click', () => this.toggleChartMonthSelector());
+            }
+
+            if (chartFilterMonth) {
+                chartFilterMonth.addEventListener('change', () => this.onChartMonthChange());
+            }
+
+            // Actualizar display del mes actual
+            this.updateChartMonthDisplay();
+
+        } catch (error) {
+            console.error('❌ Error configurando controles de charts:', error);
+        }
+    }
+
+    /**
+     * Inicializa los charts de Chart.js
+     */
+    initializeCharts() {
+        try {
+            console.log('📊 Inicializando charts...');
+            
+            // Crear chart de gastos por categoría
+            this.createExpensesChart();
+            
+            // Crear chart de ingresos por categoría
+            this.createIncomeChart();
+            
+            // Actualizar charts con datos iniciales
+            this.updateCharts();
+            
+            console.log('✅ Charts inicializados correctamente');
+            
+        } catch (error) {
+            console.error('❌ Error inicializando charts:', error);
+        }
+    }
+
+    /**
+     * Crea el chart de gastos por categoría
+     */
+    createExpensesChart() {
+        try {
+            const ctx = document.getElementById('expensesChart');
+            if (!ctx) {
+                console.warn('⚠️ Canvas de gastos no encontrado');
+                return;
+            }
+
+            this.expensesChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [],
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: $${value.toLocaleString('es-AR')} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error creando chart de gastos:', error);
+        }
+    }
+
+    /**
+     * Crea el chart de ingresos por categoría
+     */
+    createIncomeChart() {
+        try {
+            const ctx = document.getElementById('incomeChart');
+            if (!ctx) {
+                console.warn('⚠️ Canvas de ingresos no encontrado');
+                return;
+            }
+
+            this.incomeChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [],
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: $${value.toLocaleString('es-AR')} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error creando chart de ingresos:', error);
+        }
+    }
+
+    /**
+     * Actualiza los charts con datos actuales
+     */
+    updateCharts() {
+        try {
+            console.log('🔄 Actualizando charts...');
+            
+            // Actualizar chart de gastos
+            this.updateExpensesChart();
+            
+            // Actualizar chart de ingresos
+            this.updateIncomeChart();
+            
+            console.log('✅ Charts actualizados correctamente');
+            
+        } catch (error) {
+            console.error('❌ Error actualizando charts:', error);
+        }
+    }
+
+    /**
+     * Actualiza el chart de gastos por categoría
+     */
+    updateExpensesChart() {
+        try {
+            if (!this.expensesChart) return;
+
+            // Obtener datos filtrados por período
+            const chartData = this.getChartData('expense');
+            
+            if (chartData.labels.length === 0) {
+                // No hay datos, mostrar mensaje
+                this.expensesChart.data.labels = ['Sin datos'];
+                this.expensesChart.data.datasets[0].data = [1];
+                this.expensesChart.data.datasets[0].backgroundColor = ['#e0e0e0'];
+            } else {
+                // Actualizar con datos reales
+                this.expensesChart.data.labels = chartData.labels;
+                this.expensesChart.data.datasets[0].data = chartData.data;
+                this.expensesChart.data.datasets[0].backgroundColor = chartData.colors;
+            }
+
+            this.expensesChart.update('none');
+
+        } catch (error) {
+            console.error('❌ Error actualizando chart de gastos:', error);
+        }
+    }
+
+    /**
+     * Actualiza el chart de ingresos por categoría
+     */
+    updateIncomeChart() {
+        try {
+            if (!this.incomeChart) return;
+
+            // Obtener datos filtrados por período
+            const chartData = this.getChartData('income');
+            
+            if (chartData.labels.length === 0) {
+                // No hay datos, mostrar mensaje
+                this.incomeChart.data.labels = ['Sin datos'];
+                this.incomeChart.data.datasets[0].data = [1];
+                this.incomeChart.data.datasets[0].backgroundColor = ['#e0e0e0'];
+            } else {
+                // Actualizar con datos reales
+                this.incomeChart.data.labels = chartData.labels;
+                this.incomeChart.data.datasets[0].data = chartData.data;
+                this.incomeChart.data.datasets[0].backgroundColor = chartData.colors;
+            }
+
+            this.incomeChart.update('none');
+
+        } catch (error) {
+            console.error('❌ Error actualizando chart de ingresos:', error);
+        }
+    }
+
+    /**
+     * Obtiene los datos para los charts según el tipo y período seleccionado
+     * @param {string} type - 'income' o 'expense'
+     * @returns {Object} Datos del chart con labels, data y colors
+     */
+    getChartData(type) {
+        try {
+            // Obtener transacciones filtradas por período
+            const filteredTransactions = this.getFilteredTransactionsForCharts();
+            
+            // Filtrar por tipo
+            const typeTransactions = filteredTransactions.filter(t => t.type === type);
+            
+            if (typeTransactions.length === 0) {
+                return { labels: [], data: [], colors: [] };
+            }
+
+            // Agrupar por categoría
+            const categoryTotals = {};
+            typeTransactions.forEach(transaction => {
+                const category = transaction.category;
+                if (!categoryTotals[category]) {
+                    categoryTotals[category] = 0;
+                }
+                categoryTotals[category] += transaction.amount;
+            });
+
+            // Convertir a arrays para Chart.js
+            const labels = Object.keys(categoryTotals);
+            const data = Object.values(categoryTotals);
+            
+            // Obtener colores de las categorías
+            const colors = labels.map(categoryName => {
+                const category = this.categories.find(cat => cat.name === categoryName);
+                return category ? category.color : this.getRandomColor();
+            });
+
+            return { labels, data, colors };
+
+        } catch (error) {
+            console.error('❌ Error obteniendo datos del chart:', error);
+            return { labels: [], data: [], colors: [] };
+        }
+    }
+
+    /**
+     * Obtiene transacciones filtradas para los charts según el período seleccionado
+     * @returns {Array} Transacciones filtradas
+     */
+    getFilteredTransactionsForCharts() {
+        try {
+            const period = document.getElementById('chartPeriod')?.value || 'current-month';
+            const now = new Date();
+            
+            let startDate, endDate;
+            
+            switch (period) {
+                case 'current-month':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    break;
+                    
+                case 'last-month':
+                    startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+                    break;
+                    
+                case 'last-3-months':
+                    startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    break;
+                    
+                case 'current-year':
+                    startDate = new Date(now.getFullYear(), 0, 1);
+                    endDate = new Date(now.getFullYear(), 11, 31);
+                    break;
+                    
+                case 'all-time':
+                    return this.transactions;
+                    
+                default:
+                    // Usar mes personalizado del selector
+                    if (this.currentChartMonth) {
+                        startDate = new Date(this.currentChartMonth.getFullYear(), this.currentChartMonth.getMonth(), 1);
+                        endDate = new Date(this.currentChartMonth.getFullYear(), this.currentChartMonth.getMonth() + 1, 0);
+                    } else {
+                        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    }
+            }
+
+            return this.transactions.filter(transaction => {
+                const transactionDate = new Date(transaction.date);
+                return transactionDate >= startDate && transactionDate <= endDate;
+            });
+
+        } catch (error) {
+            console.error('❌ Error filtrando transacciones para charts:', error);
+            return this.transactions;
+        }
+    }
+
+    /**
+     * Genera un color aleatorio para categorías sin color definido
+     * @returns {string} Color hexadecimal
+     */
+    getRandomColor() {
+        const colors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+            '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    /**
+     * Navega entre meses para los charts
+     * @param {number} direction - -1 para mes anterior, 1 para mes siguiente
+     */
+    navigateChartMonth(direction) {
+        try {
+            this.currentChartMonth.setMonth(this.currentChartMonth.getMonth() + direction);
+            this.updateChartMonthDisplay();
+            this.updateCharts();
+        } catch (error) {
+            console.error('❌ Error navegando meses de charts:', error);
+        }
+    }
+
+    /**
+     * Actualiza el display del mes actual para charts
+     */
+    updateChartMonthDisplay() {
+        try {
+            const monthDisplay = document.getElementById('chartCurrentMonthDisplay');
+            if (monthDisplay && this.currentChartMonth) {
+                const monthNames = [
+                    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                ];
+                const monthName = monthNames[this.currentChartMonth.getMonth()];
+                const year = this.currentChartMonth.getFullYear();
+                monthDisplay.textContent = `${monthName} ${year}`;
+            }
+        } catch (error) {
+            console.error('❌ Error actualizando display del mes de charts:', error);
+        }
+    }
+
+    /**
+     * Alterna la visibilidad del selector de mes para charts
+     */
+    toggleChartMonthSelector() {
+        try {
+            const monthInput = document.getElementById('chartFilterMonth');
+            if (monthInput) {
+                monthInput.style.display = monthInput.style.display === 'none' ? 'block' : 'none';
+                if (monthInput.style.display === 'block') {
+                    monthInput.focus();
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error alternando selector de mes de charts:', error);
+        }
+    }
+
+    /**
+     * Maneja el cambio de mes en el selector de charts
+     */
+    onChartMonthChange() {
+        try {
+            const monthInput = document.getElementById('chartFilterMonth');
+            if (monthInput && monthInput.value) {
+                this.currentChartMonth = new Date(monthInput.value + '-01');
+                this.updateChartMonthDisplay();
+                this.updateCharts();
+                monthInput.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('❌ Error cambiando mes de charts:', error);
+        }
+    }
+
+    /**
      * Renderiza el dashboard
      */
     renderDashboard() {
@@ -431,6 +888,11 @@ class FinanceApp {
         if (balanceEl) {
             balanceEl.textContent = `$${balance.toLocaleString('es-AR')}`;
             balanceEl.className = balance >= 0 ? 'positive' : 'negative';
+        }
+
+        // Actualizar charts después de cambios en transacciones
+        if (this.isInitialized) {
+            this.updateCharts();
         }
     }
 
@@ -630,6 +1092,179 @@ class FinanceApp {
             console.error('❌ Error mostrando notificación:', error);
         }
     }
+
+    /**
+     * Configura el sistema de pestañas para navegar entre secciones
+     * Permite cambiar entre: Transacciones, Presupuesto, Metas, Reportes y Categorías
+     */
+    setupTabSystem() {
+        try {
+            // Obtener todos los botones de pestaña
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            
+            // Agregar event listener a cada botón de pestaña
+            tabButtons.forEach(button => {
+                button.addEventListener('click', (event) => {
+                    // Prevenir comportamiento por defecto
+                    event.preventDefault();
+                    
+                    // Obtener el identificador de la pestaña desde data-tab
+                    const targetTab = button.getAttribute('data-tab');
+                    
+                    if (targetTab) {
+                        // Cambiar a la pestaña seleccionada
+                        this.switchToTab(targetTab);
+                        
+                        // Log para debugging
+                        console.log(`🔄 Cambiando a pestaña: ${targetTab}`);
+                    } else {
+                        console.warn('⚠️ Botón de pestaña sin atributo data-tab:', button);
+                    }
+                });
+            });
+            
+            console.log('✅ Sistema de pestañas configurado correctamente');
+            
+        } catch (error) {
+            console.error('❌ Error configurando sistema de pestañas:', error);
+        }
+    }
+
+    /**
+     * Cambia a la pestaña especificada
+     * @param {string} tabName - Nombre de la pestaña a mostrar
+     */
+    switchToTab(tabName) {
+        try {
+            // 1. Ocultar todas las pestañas de contenido
+            const allTabContents = document.querySelectorAll('.tab-content');
+            allTabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 2. Desactivar todos los botones de pestaña
+            const allTabButtons = document.querySelectorAll('.tab-btn');
+            allTabButtons.forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 3. Mostrar la pestaña de contenido seleccionada
+            const targetContent = document.getElementById(tabName);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            } else {
+                console.warn(`⚠️ Contenido de pestaña no encontrado: ${tabName}`);
+            }
+            
+            // 4. Activar el botón de pestaña correspondiente
+            const targetButton = document.querySelector(`[data-tab="${tabName}"]`);
+            if (targetButton) {
+                targetButton.classList.add('active');
+            } else {
+                console.warn(`⚠️ Botón de pestaña no encontrado: ${tabName}`);
+            }
+            
+            // 5. Ejecutar acciones específicas según la pestaña
+            this.handleTabSpecificActions(tabName);
+            
+            console.log(`✅ Pestaña ${tabName} activada correctamente`);
+            
+        } catch (error) {
+            console.error(`❌ Error cambiando a pestaña ${tabName}:`, error);
+        }
+    }
+
+    /**
+     * Ejecuta acciones específicas según la pestaña seleccionada
+     * @param {string} tabName - Nombre de la pestaña activada
+     */
+    handleTabSpecificActions(tabName) {
+        try {
+            switch (tabName) {
+                case 'transactions':
+                    // Recargar transacciones recientes
+                    this.renderRecentTransactions();
+                    break;
+                    
+                case 'budget':
+                    // Recargar presupuestos
+                    this.renderBudgets();
+                    break;
+                    
+                case 'goals':
+                    // Recargar metas
+                    this.renderGoals();
+                    break;
+                    
+                case 'reports':
+                    // Recargar reportes
+                    this.renderReports();
+                    break;
+                    
+                case 'categories':
+                    // Recargar categorías
+                    this.renderCategories();
+                    break;
+                    
+                default:
+                    console.log(`ℹ️ Pestaña ${tabName} no tiene acciones específicas`);
+            }
+        } catch (error) {
+            console.error(`❌ Error ejecutando acciones de pestaña ${tabName}:`, error);
+        }
+    }
+
+    /**
+     * Renderiza transacciones recientes
+     */
+    renderRecentTransactions() {
+        try {
+            console.log('🔄 Renderizando transacciones recientes...');
+            // Aquí puedes agregar lógica específica para recargar transacciones
+            // Por ahora solo logueamos la acción
+        } catch (error) {
+            console.error('❌ Error renderizando transacciones recientes:', error);
+        }
+    }
+
+    /**
+     * Renderiza presupuestos
+     */
+    renderBudgets() {
+        try {
+            console.log('🔄 Renderizando presupuestos...');
+            // Aquí puedes agregar lógica específica para recargar presupuestos
+            // Por ahora solo logueamos la acción
+        } catch (error) {
+            console.error('❌ Error renderizando presupuestos:', error);
+        }
+    }
+
+    /**
+     * Renderiza metas
+     */
+    renderGoals() {
+        try {
+            console.log('🔄 Renderizando metas...');
+            // Aquí puedes agregar lógica específica para recargar metas
+            // Por ahora solo logueamos la acción
+        } catch (error) {
+            console.error('❌ Error renderizando metas:', error);
+        }
+    }
+
+    /**
+     * Renderiza reportes
+     */
+    renderReports() {
+        try {
+            console.log('🔄 Renderizando reportes...');
+            // Aquí puedes agregar lógica específica para recargar reportes
+            // Por ahora solo logueamos la acción
+        } catch (error) {
+            console.error('❌ Error renderizando reportes:', error);
+        }
+    }
 }
 
 // ==================== INICIALIZACIÓN ====================
@@ -644,7 +1279,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Exportar para uso en módulos
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = FinanceApp;
+// Exportar para uso en módulos ES6
+export default FinanceApp;
+
+// También exportar para compatibilidad global
+if (typeof window !== 'undefined') {
+    window.FinanceApp = FinanceApp;
 }
+

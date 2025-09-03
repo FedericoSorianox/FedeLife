@@ -201,3 +201,6 @@ document.addEventListener('DOMContentLoaded', () => {
 window.logout = logout;
 window.checkAuthStatus = checkAuthStatus;
 window.tryAutoLogin = tryAutoLogin;
+
+// Exportar para uso en módulos ES6
+export { logout, checkAuthStatus, tryAutoLogin, initAuth };
