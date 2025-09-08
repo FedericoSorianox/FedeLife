@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📄 Analizador de PDFs con GPT-4o-mini - Fede Life</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js para leer PDFs en el navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- OpenAI Analyzer -->
+    <script type="module" src="../funciones/openai_analyzer.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        accent: '#f59e0b',
+                        danger: '#ef4444'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">📄 Analizador de PDFs</h1>
+                    <span class="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">OpenAI</span>
+                </div>
+                <a href="finanzas.html" class="text-primary hover:text-primary/80 font-medium">
+                    ← Volver a Finanzas
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Upload Section -->
+        <div class="bg-white rounded-lg shadow-sm border p-6 mb-8">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Subir PDF para Análisis</h2>
+            
+            <form id="pdfUploadForm" class="space-y-4">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
+                    <input 
+                        type="file" 
+                        id="pdfFile" 
+                        name="pdf" 
+                        accept=".pdf"
+                        class="hidden"
+                        required
+                    >
+                    <label for="pdfFile" class="cursor-pointer">
+                        <div class="space-y-2">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="text-sm text-gray-600">
+                                <span class="font-medium text-primary hover:text-primary/80">Haz clic para subir</span>
+                                o arrastra y suelta
+                            </div>
+                            <p class="text-xs text-gray-500">PDF hasta 10MB</p>
+                        </div>
+                    </label>
+                </div>
+                
+                <div id="fileInfo" class="hidden">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <svg class="h-8 w-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                            </svg>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900" id="fileName"></p>
+                                <p class="text-xs text-gray-500" id="fileSize"></p>
+                            </div>
+                        </div>
+                        <button type="button" id="removeFile" class="text-gray-400 hover:text-gray-600">
+                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                        <div class="flex items-center justify-between text-sm text-gray-600">
+                        <span>Modo de análisis:</span>
+                        <div class="flex items-center space-x-2">
+                            <span id="analysisMode" class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">OpenAI GPT-4o-mini (Económico)</span>
+                        </div>
+                    </div>
+                    
+                    <button 
+                        type="submit" 
+                        id="analyzeBtn"
+                        class="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        disabled
+                    >
+                        <span id="analyzeBtnText">Analizar PDF con OpenAI</span>
+                        <span id="analyzeBtnLoading" class="hidden">
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Analizando...
+                        </span>
+                    </button>
+                    
+                    <div class="text-xs text-gray-500 text-center">
+                        💡 OpenAI API: Análisis inteligente con GPT-4o-mini
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            <div class="bg-white rounded-lg shadow-sm border p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Resultados del Análisis</h2>
+                
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-red-800">Total Gastos</p>
+                                <p class="text-2xl font-bold text-red-900" id="totalExpenses">$0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h2a2 2 0 01-2-2z" />
+                            </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-blue-800">Cantidad de Gastos</p>
+                                <p class="text-2xl font-bold text-blue-900" id="expenseCount">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Expenses Section -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-md font-semibold text-gray-900 flex items-center">
+                            <svg class="h-5 w-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0-2.08.402-2.599-1" />
+                            </svg>
+                            Gastos Identificados
+                        </h3>
+                        <button 
+                            id="addAllExpensesBtn" 
+                            class="hidden bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            <span id="addAllBtnText">Agregar Todos</span>
+                        </button>
+                    </div>
+                    <div id="expensesList" class="space-y-3 max-h-96 overflow-y-auto">
+                        <!-- Expenses will be populated here -->
+                    </div>
+                </div>
+                
+
+                
+                <!-- Metadata -->
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    <div class="text-sm text-gray-500">
+                        <p><strong>Confianza del análisis:</strong> <span id="confidenceScore">0%</span></p>
+                        <p><strong>Modelo de IA:</strong> <span id="aiModel">-</span></p>
+                        <p><strong>Timestamp:</strong> <span id="analysisTimestamp">-</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Section -->
+        <div id="errorSection" class="hidden">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Error en el Análisis</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            <p id="errorMessage"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        // ==================== VARIABLES GLOBALES ====================
+        let selectedFile = null;
+        let openaiAnalyzer = null;
+        let analysisCache = new Map(); // Cache para evitar requests duplicados
+        let lastRequestTime = 0; // Control de rate limiting
+        
+        // ==================== ELEMENTOS DEL DOM ====================
+        const pdfFileInput = document.getElementById('pdfFile');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const removeFileBtn = document.getElementById('removeFile');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const analyzeBtnText = document.getElementById('analyzeBtnText');
+        const analyzeBtnLoading = document.getElementById('analyzeBtnLoading');
+        const addAllExpensesBtn = document.getElementById('addAllExpensesBtn');
+        const addAllBtnText = document.getElementById('addAllBtnText');
+        const resultsSection = document.getElementById('resultsSection');
+        const errorSection = document.getElementById('errorSection');
+        
+        // ==================== INICIALIZACIÓN ====================
+        
+        // Inicializar PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        // Cargar OpenAI Analyzer
+        import('../funciones/openai_analyzer.js').then(module => {
+            openaiAnalyzer = module.default;
+            
+            // Configurar para análisis completo de PDFs
+            openaiAnalyzer.updateConfig({
+                maxTokens: 10000, // Aumentado para análisis completo
+                temperature: 0.1, // Baja para respuestas consistentes
+                model: 'gpt-4o-mini' // Modelo más económico y potente
+            });
+            
+            console.log('✅ OpenAI Analyzer cargado y optimizado');
+            console.log('🔧 Configuración optimizada:', openaiAnalyzer.getConfig());
+            
+            // Cargar API Key guardada
+            loadSavedApiKey();
+        }).catch(error => {
+            console.error('❌ Error cargando OpenAI Analyzer:', error);
+            showError('Error cargando el analizador de IA');
+        });
+        
+        // ==================== EVENT LISTENERS ====================
+        
+        // Manejar selección de archivo
+        pdfFileInput.addEventListener('change', handleFileSelect);
+        
+        // Remover archivo seleccionado
+        removeFileBtn.addEventListener('click', removeSelectedFile);
+        
+        // Enviar formulario
+        document.getElementById('pdfUploadForm').addEventListener('submit', handleFormSubmit);
+        
+        // Agregar todos los gastos
+        addAllExpensesBtn.addEventListener('click', handleAddAllExpenses);
+        
+        // ==================== FUNCIONES PRINCIPALES ====================
+        
+        /**
+         * Configura la API Key fija
+         */
+        function loadSavedApiKey() {
+            // API Key fija - reemplaza con tu API key real
+            const fixedApiKey = 'your-api-key-here'; // Reemplazar con tu clave API real
+            
+            if (openaiAnalyzer) {
+                openaiAnalyzer.setApiKey(fixedApiKey);
+                console.log('✅ API Key fija configurada correctamente');
+            }
+        }
+        
+        
+        /**
+         * Extrae gastos de un texto que contiene JSON malformado
+         * @param {string} text - Texto que contiene gastos
+         * @returns {Array} Array de gastos extraídos
+         */
+        function extractExpensesFromText(text) {
+            const expenses = [];
+            
+            try {
+                console.log('🔍 Iniciando extracción de gastos del texto...');
+                console.log('🔍 Primeros 1000 caracteres del texto:', text.substring(0, 1000));
+                
+                // Primero intentar extraer del formato de tabla markdown
+                const tableExpenses = extractFromMarkdownTable(text);
+                if (tableExpenses.length > 0) {
+                    console.log('✅ Gastos extraídos del formato tabla markdown:', tableExpenses.length);
+                    return tableExpenses;
+                }
+                
+                // Luego intentar extraer del formato markdown con emojis
+                const markdownExpenses = extractFromMarkdownFormat(text);
+                if (markdownExpenses.length > 0) {
+                    console.log('✅ Gastos extraídos del formato markdown:', markdownExpenses.length);
+                    return markdownExpenses;
+                }
+                
+                // Buscar patrones de gastos en formato JSON
+                const expensePattern = /\{[^}]*"description"[^}]*"amount"[^}]*"category"[^}]*\}/g;
+                const matches = text.match(expensePattern);
+                
+                if (matches) {
+                    console.log('🔍 Encontrados matches JSON:', matches.length);
+                    matches.forEach(match => {
+                        try {
+                            // Intentar limpiar y parsear cada match
+                            let cleanMatch = match
+                                .replace(/\n/g, ' ')  // Reemplazar saltos de línea
+                                .replace(/\s+/g, ' ') // Normalizar espacios
+                                .trim();
+                            
+                            // Intentar parsear
+                            const expense = JSON.parse(cleanMatch);
+                            if (expense.description && expense.amount !== undefined) {
+                                expenses.push({
+                                    description: expense.description,
+                                    amount: parseFloat(expense.amount) || 0,
+                                    category: expense.category || 'Otros',
+                                    date: expense.date || new Date().toISOString().split('T')[0]
+                                });
+                            }
+                        } catch (e) {
+                            console.log('🔍 No se pudo parsear match JSON:', match.substring(0, 100));
+                        }
+                    });
+                }
+                
+                // Si no se encontraron con el patrón JSON, intentar extracción manual
+                if (expenses.length === 0) {
+                    console.log('🔍 Intentando extracción manual de JSON...');
+                    
+                    // Buscar líneas que contengan descripción, monto y categoría
+                    const lines = text.split('\n');
+                    let currentExpense = {};
+                    
+                    for (const line of lines) {
+                        const trimmedLine = line.trim();
+                        
+                        // Buscar descripción
+                        if (trimmedLine.includes('"description"') && trimmedLine.includes(':')) {
+                            const descMatch = trimmedLine.match(/"description"\s*:\s*"([^"]+)"/);
+                            if (descMatch) {
+                                currentExpense.description = descMatch[1];
+                            }
+                        }
+                        
+                        // Buscar monto
+                        if (trimmedLine.includes('"amount"') && trimmedLine.includes(':')) {
+                            const amountMatch = trimmedLine.match(/"amount"\s*:\s*([0-9.]+)/);
+                            if (amountMatch) {
+                                currentExpense.amount = parseFloat(amountMatch[1]);
+                            }
+                        }
+                        
+                        // Buscar categoría
+                        if (trimmedLine.includes('"category"') && trimmedLine.includes(':')) {
+                            const categoryMatch = trimmedLine.match(/"category"\s*:\s*"([^"]+)"/);
+                            if (categoryMatch) {
+                                currentExpense.category = categoryMatch[1];
+                            }
+                        }
+                        
+                        // Si tenemos todos los campos, agregar el gasto
+                        if (currentExpense.description && currentExpense.amount !== undefined && currentExpense.category) {
+                            expenses.push({
+                                description: currentExpense.description,
+                                amount: currentExpense.amount,
+                                category: currentExpense.category,
+                                date: currentExpense.date || new Date().toISOString().split('T')[0]
+                            });
+                            currentExpense = {}; // Resetear para el siguiente gasto
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('❌ Error en extractExpensesFromText:', error);
+            }
+            
+            console.log('🔍 Total de gastos extraídos:', expenses.length);
+            return expenses;
+        }
+        
+        /**
+         * Extrae gastos del formato de tabla markdown
+         * @param {string} text - Texto con formato de tabla markdown
+         * @returns {Array} Array de gastos extraídos
+         */
+        function extractFromMarkdownTable(text) {
+            const expenses = [];
+            
+            try {
+                console.log('🔍 Extrayendo gastos del formato tabla markdown...');
+                
+                // Buscar la tabla markdown - patrón mejorado
+                console.log('🔍 Buscando tabla markdown en texto de', text.length, 'caracteres');
+                console.log('🔍 Primeros 1000 caracteres:', text.substring(0, 1000));
+                
+                const tableMatch = text.match(/\|.*\|[\s\S]*?(?=\n\n|\*\*Notas|\*\*Resumen|$)/);
+                if (!tableMatch) {
+                    console.log('🔍 No se encontró tabla markdown');
+                    console.log('🔍 Intentando patrón alternativo...');
+                    
+                    // Intentar patrón más simple
+                    const simpleTableMatch = text.match(/\|.*\|[\s\S]*?\|.*\|/);
+                    if (simpleTableMatch) {
+                        console.log('🔍 Tabla encontrada con patrón simple');
+                        const tableContent = simpleTableMatch[0];
+                        console.log('🔍 Contenido de tabla simple:', tableContent.substring(0, 500) + '...');
+                        return processTableContent(tableContent, expenses);
+                    }
+                    
+                    return expenses;
+                }
+                
+                const tableContent = tableMatch[0];
+                console.log('🔍 Tabla encontrada:', tableContent.substring(0, 500) + '...');
+                
+                return processTableContent(tableContent, expenses);
+            } catch (error) {
+                console.error('❌ Error en extractFromMarkdownTable:', error);
+            }
+            
+            return expenses;
+        }
+        
+        /**
+         * Procesa el contenido de una tabla markdown
+         * @param {string} tableContent - Contenido de la tabla
+         * @param {Array} expenses - Array de gastos para llenar
+         * @returns {Array} Array de gastos procesados
+         */
+        function processTableContent(tableContent, expenses) {
+            try {
+                // Dividir en líneas y procesar
+                const lines = tableContent.split('\n');
+                let headerFound = false;
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    
+                    // Saltar líneas vacías
+                    if (!line || line === '|' || line === '---') {
+                        continue;
+                    }
+                    
+                    // Detectar header
+                    if (line.includes('Fecha') && line.includes('Descripción') && line.includes('Monto')) {
+                        headerFound = true;
+                        console.log('🔍 Header de tabla encontrado');
+                        continue;
+                    }
+                    
+                    // Procesar filas de datos
+                    if (headerFound && line.startsWith('|') && line.endsWith('|')) {
+                        // Saltar líneas de separación (que contienen solo guiones)
+                        if (line.includes('---') || line.includes('---')) {
+                            continue;
+                        }
+                        
+                        const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
+                        
+                        // Verificar que no sea una línea de separación
+                        if (cells.length >= 4 && !cells.every(cell => cell.includes('-'))) {
+                            try {
+                                const date = cells[0];
+                                const description = cells[1];
+                                const originalAmount = cells[2];
+                                const convertedAmount = cells[3];
+                                const category = cells[4] || 'Otros';
+                                
+                                // Función para procesar montos correctamente
+                                function parseAmount(amountStr) {
+                                    // Remover todo excepto dígitos, comas, puntos y signos
+                                    let clean = amountStr.replace(/[^\d.,-]/g, '');
+                                    
+                                    // Si tiene coma y punto, asumir formato europeo: 1.000,00
+                                    if (clean.includes(',') && clean.includes('.')) {
+                                        // Reemplazar punto (separador de miles) por nada, y coma (decimal) por punto
+                                        clean = clean.replace(/\./g, '').replace(',', '.');
+                                    } else if (clean.includes(',')) {
+                                        // Solo coma, podría ser decimal o separador de miles
+                                        // Si hay más de 2 dígitos después de la coma, es separador de miles
+                                        const parts = clean.split(',');
+                                        if (parts[1] && parts[1].length > 2) {
+                                            // Es separador de miles, remover comas
+                                            clean = clean.replace(/,/g, '');
+                                        } else {
+                                            // Es decimal, reemplazar coma por punto
+                                            clean = clean.replace(',', '.');
+                                        }
+                                    }
+                                    
+                                    return parseFloat(clean) || 0;
+                                }
+                                
+                                // Función para detectar moneda
+                                function detectCurrency(amountStr) {
+                                    if (amountStr.includes('USD') || amountStr.includes('$')) {
+                                        return 'USD';
+                                    } else if (amountStr.includes('UYU') || amountStr.includes('pesos')) {
+                                        return 'UYU';
+                                    } else {
+                                        // Por defecto, asumir UYU si no se especifica
+                                        return 'UYU';
+                                    }
+                                }
+                                
+                                // Procesar monto y moneda - NO CONVERTIR
+                                const amount = parseAmount(originalAmount);
+                                const currency = detectCurrency(originalAmount);
+                                
+                                // Convertir fecha al formato ISO
+                                const isoDate = convertDateToISO(date);
+                                
+                                expenses.push({
+                                    description: description,
+                                    amount: amount,
+                                    currency: currency,
+                                    category: category,
+                                    date: isoDate
+                                });
+                                
+                            } catch (e) {
+                                console.log('🔍 Error procesando fila de tabla:', e.message);
+                            }
+                        }
+                    }
+                }
+                
+                console.log(`✅ Extraídos ${expenses.length} gastos de tabla markdown`);
+                
+            } catch (error) {
+                console.error('❌ Error en extractFromMarkdownTable:', error);
+            }
+            
+            return expenses;
+        }
+        
+        /**
+         * Extrae gastos del formato markdown con emojis
+         * @param {string} text - Texto con formato markdown
+         * @returns {Array} Array de gastos extraídos
+         */
+        function extractFromMarkdownFormat(text) {
+            const expenses = [];
+            
+            try {
+                // Patrón para extraer gastos del formato markdown
+                // Ejemplo: "1. **Fecha:** 07/07/25  **Descripción:** PAGOS  **Monto:** -42.327,29 UYU  **Categoría:** Otros"
+                const expensePattern = /(\d+)\.\s*\*\*Fecha:\*\*\s*([^\n]+?)\n\s*\*\*Descripción:\*\*\s*([^\n]+?)\n\s*\*\*Monto:\*\*\s*([^\n]+?)\n\s*\*\*Moneda Original:\*\*\s*([^\n]+?)\n\s*\*\*Categoría:\*\*\s*([^\n]+?)(?:\n\s*\*\*Monto Convertido:\*\*\s*([^\n]+?))?(?:\n|$)/gs;
+                
+                let match;
+                while ((match = expensePattern.exec(text)) !== null) {
+                    try {
+                        // Usar los grupos de captura correctos
+                        const amount = match[4].trim();
+                        const convertedAmount = match[7] ? match[7].trim() : null;
+                        const originalCurrency = match[5].trim();
+                        
+                        // Limpiar y procesar los datos
+                        const cleanDate = match[2].trim();
+                        const cleanDescription = match[3].trim();
+                        const cleanCategory = match[6].trim();
+                        
+                        // Procesar el monto
+                        let finalAmount = 0;
+                        let originalAmount = 0;
+                        let currency = 'UYU';
+                        
+                        if (convertedAmount) {
+                            // Si hay monto convertido, usarlo
+                            let cleanConverted = convertedAmount.replace(/[^\d.,-]/g, '');
+                            if (cleanConverted.includes(',')) {
+                                cleanConverted = cleanConverted.replace(',', '.');
+                            }
+                            finalAmount = parseFloat(cleanConverted) || 0;
+                            
+                            let cleanOriginal = amount.replace(/[^\d.,-]/g, '');
+                            if (cleanOriginal.includes(',')) {
+                                cleanOriginal = cleanOriginal.replace(',', '.');
+                            }
+                            originalAmount = parseFloat(cleanOriginal) || 0;
+                            currency = originalCurrency;
+                        } else {
+                            // Si no hay conversión, usar el monto original
+                            let cleanAmount = amount.replace(/[^\d.,-]/g, '');
+                            if (cleanAmount.includes(',')) {
+                                cleanAmount = cleanAmount.replace(',', '.');
+                            }
+                            finalAmount = parseFloat(cleanAmount) || 0;
+                            originalAmount = finalAmount;
+                            currency = originalCurrency;
+                        }
+                        
+                        // Convertir fecha al formato ISO
+                        const isoDate = convertDateToISO(cleanDate);
+                        
+                        expenses.push({
+                            description: cleanDescription,
+                            amount: finalAmount,
+                            originalAmount: originalAmount,
+                            originalCurrency: currency,
+                            category: cleanCategory,
+                            date: isoDate
+                        });
+                        
+                    } catch (e) {
+                        console.log('🔍 Error procesando match markdown:', e.message);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('❌ Error en extractFromMarkdownFormat:', error);
+            }
+            
+            return expenses;
+        }
+        
+        /**
+         * Convierte fecha en formato DD/MM/YY a ISO
+         * @param {string} dateStr - Fecha en formato DD/MM/YY
+         * @returns {string} Fecha en formato ISO
+         */
+        function convertDateToISO(dateStr) {
+            try {
+                // Formato esperado: DD/MM/YY
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                    const day = parts[0].padStart(2, '0');
+                    const month = parts[1].padStart(2, '0');
+                    let year = parts[2];
+                    
+                    // Convertir año de 2 dígitos a 4 dígitos
+                    if (year.length === 2) {
+                        const currentYear = new Date().getFullYear();
+                        const currentCentury = Math.floor(currentYear / 100) * 100;
+                        const yearNum = parseInt(year);
+                        
+                        // Si el año es mayor a 50, asumir siglo anterior, sino actual
+                        if (yearNum > 50) {
+                            year = (currentCentury - 100 + yearNum).toString();
+                        } else {
+                            year = (currentCentury + yearNum).toString();
+                        }
+                    }
+                    
+                    return `${year}-${month}-${day}`;
+                }
+            } catch (e) {
+                console.log('🔍 Error convirtiendo fecha:', dateStr, e.message);
+            }
+            
+            // Si falla, devolver fecha actual
+            return new Date().toISOString().split('T')[0];
+        }
+        
+        /**
+         * Genera un hash simple para el texto (para cache)
+         * @param {string} text - Texto a hashear
+         * @returns {string} Hash del texto
+         */
+        function generateTextHash(text) {
+            let hash = 0;
+            for (let i = 0; i < text.length; i++) {
+                const char = text.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convertir a 32bit integer
+            }
+            return hash.toString();
+        }
+        
+        /**
+         * Verifica si hay un análisis en cache
+         * @param {string} textHash - Hash del texto
+         * @returns {Object|null} Análisis en cache o null
+         */
+        function getCachedAnalysis(textHash) {
+            const cached = analysisCache.get(textHash);
+            if (cached && (Date.now() - cached.timestamp) < 24 * 60 * 60 * 1000) { // 24 horas
+                console.log('✅ Usando análisis en cache');
+                return cached.data;
+            }
+            return null;
+        }
+        
+        /**
+         * Guarda un análisis en cache
+         * @param {string} textHash - Hash del texto
+         * @param {Object} data - Datos del análisis
+         */
+        function setCachedAnalysis(textHash, data) {
+            analysisCache.set(textHash, {
+                data: data,
+                timestamp: Date.now()
+            });
+            console.log('💾 Análisis guardado en cache');
+        }
+        
+        /**
+         * Controla el rate limiting para evitar errores 429
+         * @returns {Promise<void>} Espera si es necesario
+         */
+        async function handleRateLimit() {
+            const now = Date.now();
+            const timeSinceLastRequest = now - lastRequestTime;
+            const minInterval = 2000; // 2 segundos entre requests
+            
+            if (timeSinceLastRequest < minInterval) {
+                const waitTime = minInterval - timeSinceLastRequest;
+                console.log(`⏳ Esperando ${waitTime}ms para evitar rate limiting...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
+            
+            lastRequestTime = Date.now();
+        }
+        
+        /**
+         * Divide el texto en chunks para procesamiento de PDFs grandes
+         * @param {string} text - Texto a dividir
+         * @param {number} maxChunkSize - Tamaño máximo de cada chunk (caracteres)
+         * @returns {Array<string>} Array de chunks de texto
+         */
+        function splitTextIntoChunks(text, maxChunkSize = 30000) {
+            const chunks = [];
+            const lines = text.split('\n');
+            let currentChunk = '';
+            
+            for (const line of lines) {
+                // Si agregar esta línea excede el límite, guardar el chunk actual
+                if (currentChunk.length + line.length > maxChunkSize && currentChunk.length > 0) {
+                    chunks.push(currentChunk.trim());
+                    currentChunk = line + '\n';
+                } else {
+                    currentChunk += line + '\n';
+                }
+            }
+            
+            // Agregar el último chunk si no está vacío
+            if (currentChunk.trim().length > 0) {
+                chunks.push(currentChunk.trim());
+            }
+            
+            console.log(`📄 Texto dividido en ${chunks.length} chunks`);
+            return chunks;
+        }
+        
+        /**
+         * Analiza texto por chunks para PDFs muy grandes
+         * @param {string} text - Texto a analizar
+         * @param {Object} analyzer - Analizador de IA
+         * @returns {Promise<Object>} Resultado del análisis
+         */
+        async function analyzeTextInChunks(text, analyzer) {
+            try {
+                const chunks = splitTextIntoChunks(text, 30000); // 30KB por chunk
+                const chunkResults = [];
+                
+                console.log(`🔄 Procesando ${chunks.length} chunks...`);
+                
+                for (let i = 0; i < chunks.length; i++) {
+                    console.log(`🔄 Procesando chunk ${i + 1}/${chunks.length}...`);
+                    
+                    const systemPrompt = `Extrae gastos del texto. Solo JSON:
+{"summary":{"totalExpenses":0,"expenseCount":0},"expenses":[{"description":"gasto","amount":0,"date":"2024-01-01","category":"Comida"}],"confidence":0.9}`;
+                    
+                    try {
+                        const result = await analyzer.analyzeText(chunks[i], systemPrompt);
+                        chunkResults.push(result);
+                        
+                        // Pausa entre chunks para evitar rate limiting
+                        if (i < chunks.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                        }
+                    } catch (error) {
+                        console.error(`❌ Error procesando chunk ${i + 1}:`, error);
+                        // Continuar con el siguiente chunk
+                        chunkResults.push({
+                            success: false,
+                            error: error.message
+                        });
+                    }
+                }
+                
+                // Combinar resultados
+                const combinedResult = combineChunkResults(chunkResults);
+                console.log(`✅ Análisis por chunks completado: ${combinedResult.expenses.length} gastos encontrados`);
+                
+                return {
+                    analysis: combinedResult,
+                    metadata: {
+                        aiModel: 'OpenAI GPT-3.5-turbo (Chunked)',
+                        analysisTimestamp: new Date().toISOString(),
+                        extractedTextLength: text.length,
+                        chunksProcessed: chunks.length
+                    }
+                };
+                
+            } catch (error) {
+                console.error('❌ Error en análisis por chunks:', error);
+                return null;
+            }
+        }
+        
+        /**
+         * Combina múltiples análisis de chunks en un solo resultado
+         * @param {Array<Object>} chunkResults - Resultados de cada chunk
+         * @returns {Object} Resultado combinado
+         */
+        function combineChunkResults(chunkResults) {
+            const allExpenses = [];
+            let totalExpenses = 0;
+            let totalConfidence = 0;
+            const summaries = [];
+            
+            chunkResults.forEach((result, index) => {
+                if (result.success && result.data) {
+                    // Procesar diferentes formatos de respuesta
+                    let expenses = [];
+                    
+                    if (Array.isArray(result.data)) {
+                        expenses = result.data;
+                    } else if (result.data.expenses && Array.isArray(result.data.expenses)) {
+                        expenses = result.data.expenses;
+                    }
+                    
+                    // Combinar gastos
+                    allExpenses.push(...expenses);
+                    
+                    // Sumar totales
+                    if (result.data.totalExpenses) {
+                        totalExpenses += result.data.totalExpenses;
+                    } else if (result.data.summary && result.data.summary.totalExpenses) {
+                        totalExpenses += result.data.summary.totalExpenses;
+                    }
+                    
+                    // Promediar confianza
+                    if (result.data.confidence) {
+                        totalConfidence += result.data.confidence;
+                    }
+                    
+                    // Combinar resúmenes
+                    if (result.data.summary) {
+                        summaries.push(`Chunk ${index + 1}: ${result.data.summary.summary || result.data.summary}`);
+                    }
+                }
+            });
+            
+            return {
+                summary: {
+                    totalExpenses: totalExpenses,
+                    expenseCount: allExpenses.length
+                },
+                expenses: allExpenses,
+                confidence: chunkResults.length > 0 ? totalConfidence / chunkResults.length : 0,
+                method: 'chunked_analysis',
+                chunksProcessed: chunkResults.length
+            };
+        }
+        
+        /**
+         * Optimiza el texto extraído para análisis completo
+         * @param {string} text - Texto original
+         * @returns {string} Texto optimizado
+         */
+        function optimizeTextForAnalysis(text) {
+            // Remover líneas vacías y espacios excesivos
+            let optimized = text.replace(/\n\s*\n/g, '\n').replace(/\s+/g, ' ').trim();
+            
+            // NO truncar el texto - analizar completo
+            console.log(`📄 Texto completo para análisis: ${optimized.length} caracteres`);
+            
+            return optimized;
+        }
+        
+        
+        /**
+         * Extrae texto de un archivo PDF usando PDF.js
+         * @param {File} file - Archivo PDF
+         * @returns {Promise<string>} Texto extraído del PDF
+         */
+        async function extractTextFromPDF(file) {
+            return new Promise((resolve, reject) => {
+                const fileReader = new FileReader();
+                
+                fileReader.onload = async function() {
+                    try {
+                        const typedArray = new Uint8Array(this.result);
+                        const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                        
+                        let fullText = '';
+                        
+                        // Extraer texto de todas las páginas
+                        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                            const page = await pdf.getPage(pageNum);
+                            const textContent = await page.getTextContent();
+                            const pageText = textContent.items.map(item => item.str).join(' ');
+                            fullText += pageText + '\n';
+                        }
+                        
+                        resolve(fullText.trim());
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                
+                fileReader.onerror = () => reject(new Error('Error leyendo el archivo PDF'));
+                fileReader.readAsArrayBuffer(file);
+            });
+        }
+        
+        /**
+         * Maneja la selección de un archivo PDF
+         * @param {Event} event - Evento de cambio del input
+         */
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            
+            if (file) {
+                // Validar tipo de archivo
+                if (file.type !== 'application/pdf') {
+                    showError('Por favor selecciona un archivo PDF válido');
+                    return;
+                }
+                
+                // Validar tamaño (10MB máximo)
+                if (file.size > 10 * 1024 * 1024) {
+                    showError('El archivo es demasiado grande. Máximo 10MB permitido');
+                    return;
+                }
+                
+                selectedFile = file;
+                displayFileInfo(file);
+                analyzeBtn.disabled = false;
+                hideError();
+                
+            } else {
+                removeSelectedFile();
+            }
+        }
+        
+        /**
+         * Muestra la información del archivo seleccionado
+         * @param {File} file - Archivo seleccionado
+         */
+        function displayFileInfo(file) {
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.classList.remove('hidden');
+        }
+        
+        /**
+         * Remueve el archivo seleccionado
+         */
+        function removeSelectedFile() {
+            selectedFile = null;
+            pdfFileInput.value = '';
+            fileInfo.classList.add('hidden');
+            analyzeBtn.disabled = true;
+            hideResults();
+            hideError();
+        }
+        
+        
+        /**
+         * Maneja el envío del formulario
+         * @param {Event} event - Evento de envío del formulario
+         */
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            if (!selectedFile) {
+                showError('Por favor selecciona un archivo PDF');
+                return;
+            }
+            
+            if (!openaiAnalyzer || !openaiAnalyzer.isConfigValid()) {
+                showError('Por favor configura tu API Key de OpenAI primero');
+                return;
+            }
+            
+            // Mostrar estado de carga
+            setLoadingState(true);
+            hideError();
+            hideResults();
+            
+            try {
+                console.log('📄 Extrayendo texto del PDF...');
+                
+                // Extraer texto del PDF
+                const extractedText = await extractTextFromPDF(selectedFile);
+                
+                if (!extractedText || extractedText.trim() === '') {
+                    throw new Error('No se pudo extraer texto del PDF. Verifica que el archivo no esté dañado.');
+                }
+                
+                console.log(`📄 Texto extraído del PDF: ${extractedText.length} caracteres`);
+                console.log(`📄 Primeras 500 caracteres: ${extractedText.substring(0, 500)}...`);
+                console.log(`📄 Últimos 500 caracteres: ...${extractedText.substring(extractedText.length - 500)}`);
+                
+                // Optimizar texto para análisis completo
+                const optimizedText = optimizeTextForAnalysis(extractedText);
+                console.log(`✅ Texto optimizado: ${optimizedText.length} caracteres`);
+                console.log(`✅ Palabras en el texto: ${optimizedText.split(' ').length}`);
+                
+                // Generar hash para cache
+                const textHash = generateTextHash(optimizedText);
+                
+                // Verificar cache primero
+                const cachedAnalysis = getCachedAnalysis(textHash);
+                if (cachedAnalysis) {
+                    console.log('💾 Usando análisis en cache');
+                    const resultData = {
+                        analysis: cachedAnalysis,
+                        metadata: {
+                            aiModel: 'OpenAI GPT-3.5-turbo (Cached)',
+                            analysisTimestamp: new Date().toISOString(),
+                            extractedTextLength: optimizedText.length
+                        }
+                    };
+                    console.log('🔍 Llamando displayResults con datos del cache:', resultData);
+                    displayResults(resultData);
+                    return;
+                }
+                
+                // Controlar rate limiting (menos crítico con OpenAI)
+                await handleRateLimit();
+                
+                // Verificar si el texto es muy grande para procesamiento por chunks
+                if (optimizedText.length > 50000) { // 50KB
+                    console.log('📄 Texto muy grande, procesando por chunks...');
+                    const chunkResult = await analyzeTextInChunks(optimizedText, openaiAnalyzer);
+                    if (chunkResult) {
+                        console.log('🔍 Llamando displayResults con datos de chunks:', chunkResult);
+                        displayResults(chunkResult);
+                        return;
+                    }
+                }
+
+                console.log('🤖 Enviando a OpenAI GPT-4o-mini para análisis...');
+                console.log(`🤖 Configuración actual:`, openaiAnalyzer.getConfig());
+                console.log(`🤖 Tamaño del texto: ${optimizedText.length} caracteres`);
+                
+                // Analizar con OpenAI (sin systemPrompt adicional, ya está en el analizador)
+                const analysisResult = await openaiAnalyzer.analyzeText(optimizedText);
+                
+                console.log('🤖 Respuesta de OpenAI recibida:', analysisResult);
+                
+                if (analysisResult && analysisResult.success) {
+                    console.log('✅ Análisis completado:', analysisResult.data);
+                    
+                    // Procesar la respuesta de OpenAI
+                    let processedData;
+                    
+                    // Si la respuesta es un array de gastos (formato directo)
+                    if (Array.isArray(analysisResult.data)) {
+                        console.log('🔍 Procesando array de gastos directo');
+                        const expenses = analysisResult.data;
+                        const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+                        
+                        processedData = {
+                            summary: {
+                                totalExpenses: totalExpenses,
+                                expenseCount: expenses.length
+                            },
+                            expenses: expenses,
+                            confidence: analysisResult.confidence || 0.8
+                        };
+                    }
+                    // Si la respuesta ya tiene la estructura correcta
+                    else if (analysisResult.data && typeof analysisResult.data === 'object') {
+                        console.log('🔍 Procesando objeto con estructura completa');
+                        processedData = analysisResult.data;
+                    }
+                    // Si es un string JSON
+                    else if (typeof analysisResult.data === 'string') {
+                        console.log('🔍 Procesando string JSON');
+                        console.log('🔍 String original:', analysisResult.data.substring(0, 500) + '...');
+                        
+                        try {
+                            // Intentar parsear directamente
+                            const parsed = JSON.parse(analysisResult.data);
+                            if (Array.isArray(parsed)) {
+                                const expenses = parsed;
+                                const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+                                
+                                processedData = {
+                                    summary: {
+                                        totalExpenses: totalExpenses,
+                                        expenseCount: expenses.length
+                                    },
+                                    expenses: expenses,
+                                    confidence: analysisResult.confidence || 0.8
+                                };
+                            } else {
+                                processedData = parsed;
+                            }
+                        } catch (e) {
+                            console.log('🔍 JSON directo falló, intentando extraer array...');
+                            
+                            // Intentar extraer array de gastos del texto
+                            console.log('🔍 Texto completo para extracción:', analysisResult.data);
+                            const extractedExpenses = extractExpensesFromText(analysisResult.data);
+                            
+                            if (extractedExpenses.length > 0) {
+                                console.log('✅ Gastos extraídos del texto:', extractedExpenses);
+                                const totalExpenses = extractedExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+                                
+                                processedData = {
+                                    summary: {
+                                        totalExpenses: totalExpenses,
+                                        expenseCount: extractedExpenses.length
+                                    },
+                                    expenses: extractedExpenses,
+                                    confidence: analysisResult.confidence || 0.8
+                                };
+                            } else {
+                                console.error('❌ No se pudieron extraer gastos del texto');
+                                throw new Error('No se pudieron extraer gastos de la respuesta de la IA');
+                            }
+                        }
+                    }
+                    else {
+                        console.error('❌ Formato de respuesta no reconocido:', typeof analysisResult.data, analysisResult.data);
+                        throw new Error('Formato de respuesta no reconocido');
+                    }
+                    
+                    console.log('🔍 Datos procesados:', processedData);
+                    
+                    // Guardar en cache
+                    setCachedAnalysis(textHash, processedData);
+                    
+                    // Crear estructura de datos compatible
+                    const resultData = {
+                        analysis: processedData,
+                        metadata: {
+                            aiModel: 'OpenAI GPT-4o-mini',
+                            analysisTimestamp: new Date().toISOString(),
+                            extractedTextLength: optimizedText.length,
+                            usage: analysisResult.usage // Información de tokens usados
+                        }
+                    };
+                    
+                    console.log('🔍 Llamando displayResults con datos de OpenAI:', resultData);
+                    displayResults(resultData);
+                } else {
+                    console.error('❌ Error en análisis de OpenAI:', analysisResult);
+                    throw new Error(analysisResult.error || 'Error en el análisis con OpenAI');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error analizando PDF:', error);
+                showError(error.message || 'Error inesperado al analizar el PDF');
+            } finally {
+                setLoadingState(false);
+            }
+        }
+        
+        /**
+         * Muestra los resultados del análisis
+         * @param {Object} data - Datos del análisis
+         */
+        function displayResults(data) {
+            try {
+                console.log('🔍 displayResults llamada con datos:', data);
+                
+                // Validar estructura de datos
+                if (!data.analysis) {
+                    console.error('❌ Estructura de datos inválida:', data);
+                    throw new Error('Estructura de datos inválida');
+                }
+                
+                // Actualizar resumen
+                const summary = data.analysis.summary || {};
+                
+                // Calcular totales por moneda
+                const expenses = data.analysis.expenses || [];
+                const totalsByCurrency = {};
+                let totalCount = 0;
+                
+                expenses.forEach(expense => {
+                    const currency = expense.currency || 'UYU';
+                    if (!totalsByCurrency[currency]) {
+                        totalsByCurrency[currency] = 0;
+                    }
+                    totalsByCurrency[currency] += expense.amount || 0;
+                    totalCount++;
+                });
+                
+                // Mostrar resumen por moneda
+                let summaryText = '';
+                Object.keys(totalsByCurrency).forEach(currency => {
+                    if (summaryText) summaryText += ' | ';
+                    summaryText += `${formatCurrency(totalsByCurrency[currency], currency)}`;
+                });
+                
+                document.getElementById('totalExpenses').textContent = summaryText || 'No hay gastos';
+                document.getElementById('expenseCount').textContent = totalCount;
+                
+                // Actualizar gastos
+                const expensesList = document.getElementById('expensesList');
+                expensesList.innerHTML = '';
+                
+                if (data.analysis.expenses && Array.isArray(data.analysis.expenses) && data.analysis.expenses.length > 0) {
+                    // Mostrar botón "Agregar Todos" si hay gastos
+                    addAllExpensesBtn.classList.remove('hidden');
+                    
+                    data.analysis.expenses.forEach((expense, index) => {
+                        const expenseElement = createExpenseElement(expense, index);
+                        expensesList.appendChild(expenseElement);
+                    });
+                    
+                    // Actualizar contador inicial
+                    updateAddAllButton();
+                } else {
+                    // Ocultar botón "Agregar Todos" si no hay gastos
+                    addAllExpensesBtn.classList.add('hidden');
+                    expensesList.innerHTML = '<p class="text-gray-500 text-sm">No se identificaron gastos en el PDF</p>';
+                }
+                
+                // Actualizar metadata
+                const confidence = data.analysis.confidence || 0.8;
+                document.getElementById('confidenceScore').textContent = `${Math.round(confidence * 100)}%`;
+                document.getElementById('aiModel').textContent = data.metadata?.aiModel || 'OpenAI GPT-4o-mini';
+                document.getElementById('analysisTimestamp').textContent = new Date(data.metadata?.analysisTimestamp || Date.now()).toLocaleString('es-AR');
+                
+                // Mostrar resultados
+                console.log('🔍 Mostrando sección de resultados...');
+                resultsSection.classList.remove('hidden');
+                console.log('🔍 resultsSection.classList después de remove hidden:', resultsSection.classList.toString());
+                
+                console.log('✅ Resultados mostrados correctamente');
+                
+            } catch (error) {
+                console.error('❌ Error mostrando resultados:', error);
+                showError('Error procesando los resultados del análisis');
+            }
+        }
+        
+        /**
+         * Crea un elemento HTML para mostrar un gasto con selección de categoría
+         * @param {Object} expense - Datos del gasto
+         * @param {number} index - Índice del gasto
+         * @returns {HTMLElement} Elemento HTML creado
+         */
+        function createExpenseElement(expense, index) {
+            const element = document.createElement('div');
+            element.className = 'bg-white border border-gray-200 rounded-lg p-4 shadow-sm';
+            
+            // Categorías disponibles
+            const categories = [
+                'Comida', 'Transporte', 'Entretenimiento', 'Servicios', 
+                'Salud', 'Educación', 'Ropa', 'Hogar', 'Otros'
+            ];
+            
+            element.innerHTML = `
+                <div class="flex items-start space-x-3 mb-3">
+                    <input type="checkbox" class="expense-checkbox mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+                    <div class="flex-1">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900 text-lg">${expense.description}</h4>
+                                <p class="text-sm text-gray-500">${expense.date}</p>
+                            </div>
+                            <div class="text-right ml-4">
+                                <p class="font-bold text-red-600 text-xl">${formatCurrency(expense.amount, expense.currency)}</p>
+                                <p class="text-xs text-gray-500">${expense.currency}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Categoría:</label>
+                        <select class="expense-category w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            ${categories.map(cat => 
+                                `<option value="${cat}" ${cat === expense.category ? 'selected' : ''}>${cat}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    
+                    <button class="add-expense-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center space-x-2" 
+                            data-amount="${expense.amount}" 
+                            data-description="${expense.description}" 
+                            data-date="${expense.date}"
+                            data-currency="${expense.currency}"
+                            data-index="${index}">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span>Agregar</span>
+                    </button>
+                </div>
+            `;
+            
+            // Agregar event listener al botón
+            const addBtn = element.querySelector('.add-expense-btn');
+            addBtn.addEventListener('click', handleAddExpense);
+            
+            // Agregar event listener al checkbox
+            const checkbox = element.querySelector('.expense-checkbox');
+            checkbox.addEventListener('change', updateAddAllButton);
+            
+            return element;
+        }
+        
+        /**
+         * Actualiza el contador del botón "Agregar Todos"
+         */
+        function updateAddAllButton() {
+            const expensesList = document.getElementById('expensesList');
+            const selectedCheckboxes = expensesList.querySelectorAll('.expense-checkbox:checked');
+            const totalExpenses = expensesList.querySelectorAll('.expense-checkbox').length;
+            
+            if (totalExpenses > 0) {
+                if (selectedCheckboxes.length === 0) {
+                    addAllBtnText.textContent = 'Agregar Todos';
+                } else {
+                    addAllBtnText.textContent = `Agregar Todos (${selectedCheckboxes.length})`;
+                }
+            }
+        }
+        
+        /**
+         * Maneja el agregado de todos los gastos seleccionados
+         * @param {Event} event - Evento del botón
+         */
+        function handleAddAllExpenses(event) {
+            event.preventDefault();
+            
+            const expensesList = document.getElementById('expensesList');
+            const expenseElements = expensesList.querySelectorAll('.bg-white.border');
+            
+            let addedCount = 0;
+            let skippedCount = 0;
+            
+            expenseElements.forEach(element => {
+                const checkbox = element.querySelector('.expense-checkbox');
+                const addBtn = element.querySelector('.add-expense-btn');
+                
+                // Solo procesar si está seleccionado y no está ya agregado
+                if (checkbox.checked && !addBtn.disabled) {
+                    const amount = parseFloat(addBtn.dataset.amount);
+                    const description = addBtn.dataset.description;
+                    const date = addBtn.dataset.date;
+                    const currency = addBtn.dataset.currency || 'UYU';
+                    
+                    // Obtener la categoría seleccionada
+                    const categorySelect = element.querySelector('.expense-category');
+                    const category = categorySelect.value;
+                    
+                    // Crear el objeto del gasto
+                    const expense = {
+                        description: description,
+                        amount: amount,
+                        currency: currency,
+                        category: category,
+                        date: date,
+                        type: 'expense'
+                    };
+                    
+                    // Agregar a localStorage
+                    addExpenseToStorage(expense);
+                    
+                    // Marcar como agregado
+                    addBtn.disabled = true;
+                    addBtn.innerHTML = `
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Agregado</span>
+                    `;
+                    addBtn.className = 'bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2';
+                    
+                    // Desmarcar checkbox
+                    checkbox.checked = false;
+                    checkbox.disabled = true;
+                    
+                    addedCount++;
+                } else if (addBtn.disabled) {
+                    skippedCount++;
+                }
+            });
+            
+            // Mostrar mensaje de resultado
+            if (addedCount > 0) {
+                showSuccess(`✅ ${addedCount} gastos agregados exitosamente a la página de finanzas${skippedCount > 0 ? ` (${skippedCount} ya estaban agregados)` : ''}`);
+                
+                // Mostrar mensaje adicional sobre la página de finanzas
+                setTimeout(() => {
+                    showSuccess('💡 Ve a la página de Finanzas para ver todos tus gastos organizados');
+                }, 2000);
+            } else {
+                showSuccess('ℹ️ No hay gastos seleccionados para agregar');
+            }
+            
+            // Ocultar botón "Agregar Todos" si todos están agregados
+            const remainingExpenses = expensesList.querySelectorAll('.add-expense-btn:not([disabled])');
+            if (remainingExpenses.length === 0) {
+                addAllExpensesBtn.classList.add('hidden');
+            }
+        }
+        
+        /**
+         * Maneja el agregado de un gasto
+         * @param {Event} event - Evento del botón
+         */
+        function handleAddExpense(event) {
+            const button = event.currentTarget;
+            const amount = parseFloat(button.dataset.amount);
+            const description = button.dataset.description;
+            const date = button.dataset.date;
+            
+            // Obtener la categoría seleccionada
+            const expenseElement = button.closest('.bg-white');
+            const categorySelect = expenseElement.querySelector('.expense-category');
+            const category = categorySelect.value;
+            
+            // Crear el objeto del gasto
+            const expense = {
+                description: description,
+                amount: amount,
+                category: category,
+                date: date,
+                type: 'expense'
+            };
+            
+            // Agregar a localStorage (simulando base de datos)
+            addExpenseToStorage(expense);
+            
+            // Cambiar el botón a "Agregado"
+            button.disabled = true;
+            button.innerHTML = `
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Agregado</span>
+            `;
+            button.className = 'bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2';
+            
+            // Mostrar mensaje de éxito
+            showSuccess(`Gasto "${description}" agregado exitosamente a la página de finanzas`);
+            
+            // Desmarcar checkbox
+            const checkbox = expenseElement.querySelector('.expense-checkbox');
+            if (checkbox) {
+                checkbox.checked = false;
+                checkbox.disabled = true;
+            }
+            
+            // Verificar si quedan gastos por agregar
+            const expensesList = document.getElementById('expensesList');
+            const remainingExpenses = expensesList.querySelectorAll('.add-expense-btn:not([disabled])');
+            if (remainingExpenses.length === 0) {
+                addAllExpensesBtn.classList.add('hidden');
+            }
+        }
+        
+        /**
+         * Agrega un gasto al almacenamiento local y al sistema de finanzas
+         * @param {Object} expense - Gasto a agregar
+         */
+        function addExpenseToStorage(expense) {
+            try {
+                // Obtener transacciones existentes (clave que usa la página de finanzas)
+                const existingTransactions = JSON.parse(localStorage.getItem('fede_life_transactions') || '[]');
+                
+                // Crear nueva transacción compatible con el sistema de finanzas
+                const newTransaction = {
+                    id: Date.now().toString(),
+                    type: 'expense',
+                    description: expense.description,
+                    amount: expense.amount,
+                    category: expense.category,
+                    date: expense.date,
+                    createdAt: new Date().toISOString(),
+                    source: 'pdf-analyzer' // Marcar que viene del analizador de PDF
+                };
+                
+                existingTransactions.push(newTransaction);
+                
+                // Guardar en localStorage con la clave correcta
+                localStorage.setItem('fede_life_transactions', JSON.stringify(existingTransactions));
+                
+                console.log('✅ Gasto agregado al sistema de finanzas:', newTransaction);
+                
+            } catch (error) {
+                console.error('❌ Error agregando gasto:', error);
+                showError('Error al guardar el gasto');
+            }
+        }
+        
+        
+        /**
+         * Muestra un mensaje de éxito
+         * @param {string} message - Mensaje a mostrar
+         */
+        function showSuccess(message) {
+            // Crear notificación temporal
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full';
+            notification.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Animar entrada
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Remover después de 3 segundos
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+        
+        /**
+         * Muestra un mensaje de error
+         * @param {string} message - Mensaje de error a mostrar
+         */
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            errorSection.classList.remove('hidden');
+        }
+        
+        /**
+         * Oculta la sección de error
+         */
+        function hideError() {
+            errorSection.classList.add('hidden');
+        }
+        
+        /**
+         * Oculta la sección de resultados
+         */
+        function hideResults() {
+            resultsSection.classList.add('hidden');
+        }
+        
+        /**
+         * Establece el estado de carga del botón principal
+         * @param {boolean} isLoading - Si está cargando o no
+         */
+        function setLoadingState(isLoading) {
+            if (isLoading) {
+                analyzeBtn.disabled = true;
+                analyzeBtnText.classList.add('hidden');
+                analyzeBtnLoading.classList.remove('hidden');
+            } else {
+                analyzeBtn.disabled = false;
+                analyzeBtnText.classList.remove('hidden');
+                analyzeBtnLoading.classList.add('hidden');
+            }
+        }
+        
+        
+        // ==================== FUNCIONES DE UTILIDAD ====================
+        
+        /**
+         * Formatea el tamaño de un archivo en formato legible
+         * @param {number} bytes - Tamaño en bytes
+         * @returns {string} Tamaño formateado
+         */
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        /**
+         * Formatea un monto como moneda
+         * @param {number} amount - Monto a formatear
+         * @returns {string} Monto formateado
+         */
+        function formatCurrency(amount, currency = 'UYU') {
+            const currencyMap = {
+                'USD': 'USD',
+                'UYU': 'UYU',
+                
+            };
+            
+            const targetCurrency = currencyMap[currency] || 'UYU';
+            
+            return new Intl.NumberFormat('es-AR', {
+                style: 'currency',
+                currency: targetCurrency,
+                minimumFractionDigits: 2
+            }).format(amount);
+        }
+        
+        // ==================== INICIALIZACIÓN ====================
+        
+        console.log('📄 PDF Analyzer con OpenAI - VERSIÓN COMPLETA');
+        console.log('🔧 Características de Análisis Completo:');
+        console.log('  ✅ Cache inteligente (24h) para evitar requests duplicados');
+        console.log('  ✅ Rate limiting automático (2s entre requests)');
+        console.log('  ✅ OpenAI GPT-4o-mini (más económico y potente)');
+        console.log('  ✅ Análisis COMPLETO del PDF (sin truncamiento)');
+        console.log('  ✅ Procesamiento por chunks para PDFs grandes');
+        console.log('  ✅ Configuración optimizada (4096 tokens max)');
+        console.log('  ✅ Prompts mejorados para análisis exhaustivo');
+        console.log('  ✅ Logging detallado para debugging');
+        console.log('  💰 Análisis inteligente con OpenAI API');
+    </script>
+</body>
+</html>
