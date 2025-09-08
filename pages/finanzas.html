@@ -59,58 +59,168 @@
     </header>
 
     <section class="section">
+        <!-- Selector Global de Períodos -->
+        <div class="global-period-selector">
+            <div class="period-selector-header">
+                <h2><i class="fas fa-calendar-alt"></i> Período de Análisis</h2>
+                <div class="period-controls">
+                    <button type="button" id="prevPeriodBtn" class="period-nav-btn" title="Período anterior">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="period-display">
+                        <span id="currentPeriodDisplay">Diciembre 2024</span>
+                    </div>
+                    <button type="button" id="nextPeriodBtn" class="period-nav-btn" title="Siguiente período">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="period-options">
+                <div class="period-type-selector">
+                    <label class="period-option">
+                        <input type="radio" name="periodType" value="monthly" checked>
+                        <span class="period-option-custom"></span>
+                        <span class="period-option-label">Mensual</span>
+                    </label>
+                    <label class="period-option">
+                        <input type="radio" name="periodType" value="yearly">
+                        <span class="period-option-custom"></span>
+                        <span class="period-option-label">Anual</span>
+                    </label>
+                </div>
+                <div class="period-jump-controls">
+                    <button type="button" id="jumpToCurrentBtn" class="jump-btn">
+                        <i class="fas fa-home"></i> Actual
+                    </button>
+                    <button type="button" id="jumpToPeriodBtn" class="jump-btn">
+                        <i class="fas fa-calendar"></i> Ir a...
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Dashboard de Resumen -->
         <div class="finance-dashboard">
-            <h2 class="dashboard-title">Resumen Financiero del Mes</h2>
+            <h2 class="dashboard-title">Resumen Financiero</h2>
 
-            <div class="summary-cards">
-                <div class="summary-card income" id="incomeCard" role="button" tabindex="0" title="Hacer clic para agregar un ingreso">
-                    <div class="card-icon">
-                        <i class="fas fa-arrow-up"></i>
+            <!-- Cuenta en Pesos (UYU) -->
+            <div class="account-section">
+                <h3 class="account-title">
+                    <i class="fas fa-coins"></i> Cuenta en Pesos (UYU)
+                </h3>
+                <div class="summary-cards">
+                    <div class="summary-card income" id="incomeUYUCard" role="button" tabindex="0" title="Hacer clic para agregar un ingreso en pesos">
+                        <div class="card-icon">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Ingresos</h3>
+                            <p class="amount" id="totalIncomeUYU">$U0.00</p>
+                            <span class="period">Este mes</span>
+                        </div>
+                        <div class="card-action-indicator">
+                            <i class="fas fa-plus"></i>
+                        </div>
                     </div>
-                    <div class="card-content">
-                        <h3>Ingresos</h3>
-                        <p class="amount" id="totalIncome">$0.00</p>
-                        <span class="period">Este mes</span>
+
+                    <div class="summary-card expense" id="expenseUYUCard" role="button" tabindex="0" title="Hacer clic para agregar un gasto en pesos">
+                        <div class="card-icon">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Gastos</h3>
+                            <p class="amount" id="totalExpensesUYU">$U0.00</p>
+                            <span class="period">Este mes</span>
+                        </div>
+                        <div class="card-action-indicator">
+                            <i class="fas fa-plus"></i>
+                        </div>
                     </div>
-                    <div class="card-action-indicator">
-                        <i class="fas fa-plus"></i>
+
+                    <div class="summary-card balance">
+                        <div class="card-icon">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Balance</h3>
+                            <p class="amount" id="totalBalanceUYU">$U0.00</p>
+                            <span class="period">Este mes</span>
+                        </div>
+                    </div>
+
+                    <div class="summary-card transfer" id="transferToUSDCard" role="button" tabindex="0" title="Transferir pesos a dólares">
+                        <div class="card-icon">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Transferir a USD</h3>
+                            <p class="amount" id="transferToUSD">$U0.00</p>
+                            <span class="period">Tasa: 1 USD = 40 UYU</span>
+                        </div>
+                        <div class="card-action-indicator">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="summary-card expense" id="expenseCard" role="button" tabindex="0" title="Hacer clic para agregar un gasto">
-                    <div class="card-icon">
-                        <i class="fas fa-arrow-down"></i>
+            <!-- Cuenta en Dólares (USD) -->
+            <div class="account-section">
+                <h3 class="account-title">
+                    <i class="fas fa-dollar-sign"></i> Cuenta en Dólares (USD)
+                </h3>
+                <div class="summary-cards">
+                    <div class="summary-card income" id="incomeUSDCard" role="button" tabindex="0" title="Hacer clic para agregar un ingreso en dólares">
+                        <div class="card-icon">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Ingresos</h3>
+                            <p class="amount" id="totalIncomeUSD">$0.00</p>
+                            <span class="period">Este mes</span>
+                        </div>
+                        <div class="card-action-indicator">
+                            <i class="fas fa-plus"></i>
+                        </div>
                     </div>
-                    <div class="card-content">
-                        <h3>Gastos</h3>
-                        <p class="amount" id="totalExpenses">$0.00</p>
-                        <span class="period">Este mes</span>
-                    </div>
-                    <div class="card-action-indicator">
-                        <i class="fas fa-plus"></i>
-                    </div>
-                </div>
 
-                <div class="summary-card balance">
-                    <div class="card-icon">
-                        <i class="fas fa-wallet"></i>
+                    <div class="summary-card expense" id="expenseUSDCard" role="button" tabindex="0" title="Hacer clic para agregar un gasto en dólares">
+                        <div class="card-icon">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Gastos</h3>
+                            <p class="amount" id="totalExpensesUSD">$0.00</p>
+                            <span class="period">Este mes</span>
+                        </div>
+                        <div class="card-action-indicator">
+                            <i class="fas fa-plus"></i>
+                        </div>
                     </div>
-                    <div class="card-content">
-                        <h3>Balance</h3>
-                        <p class="amount" id="totalBalance">$0.00</p>
-                        <span class="period">Este mes</span>
-                    </div>
-                </div>
 
-                <div class="summary-card savings">
-                    <div class="card-icon">
-                        <i class="fas fa-piggy-bank"></i>
+                    <div class="summary-card balance">
+                        <div class="card-icon">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Balance</h3>
+                            <p class="amount" id="totalBalanceUSD">$0.00</p>
+                            <span class="period">Este mes</span>
+                        </div>
                     </div>
-                    <div class="card-content">
-                        <h3>Ahorros</h3>
-                        <p class="amount" id="totalSavings">$0.00</p>
-                        <span class="period">Total</span>
+
+                    <div class="summary-card transfer" id="transferToUYUCard" role="button" tabindex="0" title="Transferir dólares a pesos">
+                        <div class="card-icon">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Transferir a UYU</h3>
+                            <p class="amount" id="transferToUYU">$0.00</p>
+                            <span class="period">Tasa: 1 USD = 40 UYU</span>
+                        </div>
+                        <div class="card-action-indicator">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -120,66 +230,49 @@
         <div class="charts-section">
             <h2 class="charts-title">Análisis Visual de Finanzas</h2>
             
-            <div class="charts-container">
-                <!-- Gráfico de Gastos por Categoría -->
-                <div class="chart-card">
-                    <h3><i class="fas fa-chart-pie"></i> Gastos por Categoría</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="expensesChart" width="400" height="400"></canvas>
-                    </div>
-                    <div class="chart-legend" id="expensesLegend">
-                        <!-- La leyenda se generará dinámicamente -->
-                    </div>
-                </div>
-
-                <!-- Gráfico de Ingresos por Categoría -->
-                <div class="chart-card">
-                    <h3><i class="fas fa-chart-pie"></i> Ingresos por Categoría</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="incomeChart" width="400" height="400"></canvas>
-                    </div>
-                    <div class="chart-legend" id="incomeLegend">
-                        <!-- La leyenda se generará dinámicamente -->
-                    </div>
+            <!-- Selector de Vista de Gráficos -->
+            <div class="view-selector">
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="chartView" value="expenses" checked>
+                        <span class="radio-custom"></span>
+                        <span class="radio-label">Gastos</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="chartView" value="income">
+                        <span class="radio-custom"></span>
+                        <span class="radio-label">Ingresos</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="chartView" value="comparative">
+                        <span class="radio-custom"></span>
+                        <span class="radio-label">Comparativa</span>
+                    </label>
                 </div>
             </div>
-
-            <!-- Controles de los gráficos -->
-            <div class="chart-controls">
-                <div class="chart-period-selector">
-                    <label>Período:</label>
-                    
-                    <!-- Sistema de navegación de meses para charts (igual que transacciones) -->
-                    <div class="month-filter-container">
-                        <div class="month-filter-header">
-                            <button type="button" id="chartPrevMonthBtn" class="month-nav-btn" title="Mes anterior">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <div class="month-display">
-                                <span id="chartCurrentMonthDisplay">Mes actual</span>
-                                <button type="button" id="chartMonthSelectorBtn" class="month-selector-btn" title="Seleccionar mes">
-                                    <i class="fas fa-calendar-alt"></i>
-                                </button>
-                            </div>
-                            <button type="button" id="chartNextMonthBtn" class="month-nav-btn" title="Mes siguiente">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </div>
-                        <input type="month" id="chartFilterMonth" style="display: none;">
+            
+            <div class="charts-container">
+                <!-- Gráfico 1 (UYU) -->
+                <div class="chart-card" id="chartCard1">
+                    <h3 id="chartTitle1"><i class="fas fa-chart-pie"></i> Gastos por Categoría (UYU)</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart1" width="400" height="400"></canvas>
                     </div>
-                    
-                    <!-- Opciones de período adicionales -->
-                    <select id="chartPeriod" style="margin-left: 10px;">
-                        <option value="current-month">Mes actual</option>
-                        <option value="last-month">Mes anterior</option>
-                        <option value="last-3-months">Últimos 3 meses</option>
-                        <option value="current-year">Año actual</option>
-                        <option value="all-time">Todo el tiempo</option>
-                    </select>
+                    <div class="chart-legend" id="chartLegend1">
+                        <!-- La leyenda se generará dinámicamente -->
+                    </div>
                 </div>
-                <button id="refreshCharts" class="refresh-btn">
-                    <i class="fas fa-sync-alt"></i> Actualizar Gráficos
-                </button>
+
+                <!-- Gráfico 2 (USD) -->
+                <div class="chart-card" id="chartCard2">
+                    <h3 id="chartTitle2"><i class="fas fa-chart-pie"></i> Gastos por Categoría (USD)</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart2" width="400" height="400"></canvas>
+                    </div>
+                    <div class="chart-legend" id="chartLegend2">
+                        <!-- La leyenda se generará dinámicamente -->
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -222,6 +315,13 @@
                         </div>
                         <div class="form-row">
                             <input type="date" id="transactionDate" required>
+                            <select id="transactionCurrency" required>
+                                <option value="">Moneda</option>
+                                <option value="UYU">Pesos (UYU)</option>
+                                <option value="USD">Dólares (USD)</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
                             <select id="paymentMethod" required>
                                 <option value="">Método de pago</option>
                                 <option value="cash">Efectivo</option>
@@ -287,27 +387,12 @@
                                 <option value="">Todas las categorías</option>
                             </select>
                             
-                            <!-- Filtro por meses mejorado -->
-                            <div class="month-filter-container">
-                                <div class="month-filter-header">
-                                    <button type="button" id="prevMonthBtn" class="month-nav-btn" title="Mes anterior">
-                                        <i class="fas fa-chevron-left"></i>
-                                    </button>
-                                    <div class="month-display">
-                                        <span id="currentMonthDisplay">Enero 2024</span>
-                                        <button type="button" id="monthSelectorBtn" class="month-selector-btn" title="Seleccionar mes">
-                                            <i class="fas fa-calendar-alt"></i>
-                                        </button>
-                                    </div>
-                                    <button type="button" id="nextMonthBtn" class="month-nav-btn" title="Mes siguiente">
-                                        <i class="fas fa-chevron-right"></i>
-                                    </button>
-                                </div>
-                                <input type="month" id="filterMonth" style="display: none;">
-                            </div>
-                            
                             <button type="button" id="clearFiltersBtn" class="clear-filters-btn" title="Limpiar filtros">
                                 <i class="fas fa-times"></i>
+                            </button>
+                            
+                            <button type="button" id="clearHistoryBtn" class="clear-history-btn" title="Borrar todo el historial">
+                                <i class="fas fa-trash-alt"></i> Borrar Historial
                             </button>
                         </div>
                     </div>
