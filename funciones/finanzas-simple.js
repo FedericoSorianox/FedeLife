@@ -27,6 +27,28 @@ class FinanceApp {
         this.categories = [];
         this.isInitialized = false;
         
+        // Gráficos modernos
+        this.chart1 = null;
+        this.chart2 = null;
+        this.currentView = 'expenses';
+        this.categoryColors = {
+            'Alimentación': '#FF6384',
+            'Transporte': '#36A2EB',
+            'Entretenimiento': '#FFCE56',
+            'Salud': '#4BC0C0',
+            'Educación': '#9966FF',
+            'Vivienda': '#FF9F40',
+            'Ropa': '#FF6384',
+            'Otros': '#C9CBCF'
+        };
+        
+        // Período global
+        this.currentPeriod = {
+            year: new Date().getFullYear(),
+            month: new Date().getMonth() + 1,
+            type: 'monthly'
+        };
+        
         this.initializeApp();
     }
 
@@ -932,7 +954,7 @@ class FinanceApp {
     getTransactionsForCurrentPeriod() {
         const { year, month, type } = this.currentPeriod;
         
-        return this.transactions.filter(transaction => {
+        const filteredTransactions = this.transactions.filter(transaction => {
             const transactionDate = new Date(transaction.date);
             const transactionYear = transactionDate.getFullYear();
             const transactionMonth = transactionDate.getMonth() + 1;
@@ -943,34 +965,74 @@ class FinanceApp {
                 return transactionYear === year && transactionMonth === month;
             }
         });
+        
+        console.log(`📊 Filtradas ${filteredTransactions.length} transacciones para ${type === 'yearly' ? year : `${month}/${year}`}`);
+        return filteredTransactions;
     }
 
     /**
      * Configura el selector global de períodos
      */
     setupGlobalPeriodSelector() {
+        console.log('🔧 Configurando selector global de períodos...');
+        
         // Navegación de períodos
         const prevBtn = document.getElementById('prevPeriodBtn');
         const nextBtn = document.getElementById('nextPeriodBtn');
         
-        if (prevBtn) prevBtn.addEventListener('click', () => this.navigateToPreviousPeriod());
-        if (nextBtn) nextBtn.addEventListener('click', () => this.navigateToNextPeriod());
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                console.log('⬅️ Navegando al período anterior');
+                this.navigateToPreviousPeriod();
+            });
+        } else {
+            console.warn('⚠️ Botón prevPeriodBtn no encontrado');
+        }
+        
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                console.log('➡️ Navegando al período siguiente');
+                this.navigateToNextPeriod();
+            });
+        } else {
+            console.warn('⚠️ Botón nextPeriodBtn no encontrado');
+        }
 
         // Cambio de tipo de período
         const periodTypeInputs = document.querySelectorAll('input[name="periodType"]');
+        console.log(`📅 Encontrados ${periodTypeInputs.length} inputs de tipo de período`);
         periodTypeInputs.forEach(input => {
-            input.addEventListener('change', (e) => this.changePeriodType(e.target.value));
+            input.addEventListener('change', (e) => {
+                console.log(`🔄 Cambiando tipo de período a: ${e.target.value}`);
+                this.changePeriodType(e.target.value);
+            });
         });
 
         // Botones de salto
         const jumpToCurrentBtn = document.getElementById('jumpToCurrentBtn');
         const jumpToPeriodBtn = document.getElementById('jumpToPeriodBtn');
         
-        if (jumpToCurrentBtn) jumpToCurrentBtn.addEventListener('click', () => this.jumpToCurrentPeriod());
-        if (jumpToPeriodBtn) jumpToPeriodBtn.addEventListener('click', () => this.showJumpToPeriodModal());
+        if (jumpToCurrentBtn) {
+            jumpToCurrentBtn.addEventListener('click', () => {
+                console.log('🏠 Saltando al período actual');
+                this.jumpToCurrentPeriod();
+            });
+        } else {
+            console.warn('⚠️ Botón jumpToCurrentBtn no encontrado');
+        }
+        
+        if (jumpToPeriodBtn) {
+            jumpToPeriodBtn.addEventListener('click', () => {
+                console.log('📅 Mostrando modal de salto a período');
+                this.showJumpToPeriodModal();
+            });
+        } else {
+            console.warn('⚠️ Botón jumpToPeriodBtn no encontrado');
+        }
 
         // Actualizar display inicial
         this.updatePeriodDisplay();
+        console.log('✅ Selector global de períodos configurado correctamente');
     }
 
     /**
@@ -1172,9 +1234,11 @@ class FinanceApp {
      * Refresca todos los datos
      */
     refreshAllData() {
+        console.log('🔄 Refrescando todos los datos para el período:', this.currentPeriod);
         this.renderDashboard();
         this.renderTransactions();
         this.updateCharts();
+        console.log('✅ Todos los datos refrescados correctamente');
     }
 
     /**
