@@ -9,21 +9,20 @@
 // ==================== API KEYS ====================
 
 /**
- * API Key de Google AI Studio (Gemini)
- * Clave gratuita para análisis de texto y chat con IA
+ * Configuración de OpenAI (solo se usa en el servidor)
+ * La API Key se configura en config-local.js o variables de entorno
  */
-export const GOOGLE_AI_API_KEY = 'AIzaSyCSCVx7P1_nSmeWxPZAs9lKGKv_VdFeoJ8';
 
 // ==================== CONFIGURACIONES DE IA ====================
 
 /**
- * Configuración por defecto para Google AI Studio
+ * Configuración por defecto para OpenAI
  */
 export const DEFAULT_AI_CONFIG = {
-    model: 'gemini-1.5-flash',
-    maxTokens: 4096,
-    temperature: 0.3,
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models'
+    model: 'gpt-4o-mini',
+    maxTokens: 2000,
+    temperature: 0.1,
+    baseUrl: 'https://api.openai.com/v1/chat/completions'
 };
 
 // ==================== CONFIGURACIONES DEL SISTEMA ====================
@@ -113,20 +112,14 @@ export function getLogLevel() {
 
 /**
  * Obtiene la API Key según el entorno
+ * NOTA: Las API Keys se configuran únicamente en el servidor
  */
 export function getApiKey() {
-    // En desarrollo, usar la key por defecto
-    if (isDevelopment()) {
-        return GOOGLE_AI_API_KEY;
-    }
-    
-    // En producción, intentar obtener del localStorage
-    try {
-        return localStorage.getItem('google_ai_key') || GOOGLE_AI_API_KEY;
-    } catch (error) {
-        console.warn('No se pudo acceder al localStorage:', error);
-        return GOOGLE_AI_API_KEY;
-    }
+    console.warn('⚠️ Las API Keys se configuran únicamente en el servidor (config-local.js)');
+
+    // Las API Keys se manejan únicamente en el servidor
+    // Este archivo no debe contener keys de API
+    return null;
 }
 
 // ==================== CONFIGURACIÓN GLOBAL ====================
@@ -150,7 +143,6 @@ if (typeof window !== 'undefined') {
 
 // Exportar todo como objeto por defecto para compatibilidad
 export default {
-    GOOGLE_AI_API_KEY,
     DEFAULT_AI_CONFIG,
     SYSTEM_CONFIG,
     DEFAULT_CATEGORIES,

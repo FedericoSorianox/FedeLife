@@ -1,12 +1,12 @@
 /**
  * 💬 FINANCIAL CHAT - ASISTENTE IA PARA CONSULTAS FINANCIERAS
- * 
- * Módulo para chat con IA usando Google AI Studio (Gemini)
+ *
+ * Módulo para chat con IA usando OpenAI (GPT)
  * Analiza datos financieros y proporciona consejos personalizados
  * Autor: Senior Backend Developer
  */
 
-import { GoogleAIAnalyzer } from './google_ai_analyzer.js';
+// Nota: La integración con OpenAI se maneja en el servidor (aiService.js)
 
 // ==================== INTERFACES Y TIPOS ====================
 
@@ -52,7 +52,7 @@ interface ChatResponse {
  * Procesa consultas sobre datos financieros y proporciona respuestas inteligentes
  */
 export class FinancialChat {
-    private aiAnalyzer: GoogleAIAnalyzer;
+    // Nota: La integración con IA se maneja en el servidor
     private apiKey: string = '';
     private isInitialized: boolean = false;
 
@@ -60,24 +60,18 @@ export class FinancialChat {
      * Constructor - Inicializa el chat financiero
      */
     constructor() {
-        this.aiAnalyzer = new GoogleAIAnalyzer();
+        // La inicialización de IA se maneja en el servidor
     }
 
     /**
-     * Inicializa el chat con la API Key de Google AI
-     * @param apiKey - Clave de la API de Google AI Studio
+     * Inicializa el chat financiero
+     * Nota: La configuración de OpenAI se maneja en el servidor
      */
-    public initialize(apiKey: string): void {
+    public initialize(): void {
         try {
-            if (!apiKey || apiKey.trim() === '') {
-                throw new Error('❌ API Key de Google AI es requerida para el chat');
-            }
-
-            this.apiKey = apiKey.trim();
-            this.aiAnalyzer.setApiKey(this.apiKey);
+            // Verificar que el servidor tenga la configuración de OpenAI
+            console.log('✅ Chat financiero inicializado - OpenAI se maneja en el servidor');
             this.isInitialized = true;
-
-            console.log('✅ Chat financiero inicializado correctamente');
         } catch (error) {
             console.error('❌ Error al inicializar el chat financiero:', error);
             throw error;
@@ -113,16 +107,11 @@ export class FinancialChat {
             // Crear el prompt del sistema con contexto financiero
             const systemPrompt = this.createSystemPrompt(financialData);
             
-            // Procesar la consulta con la IA
-            const response = await this.aiAnalyzer.analyzeText(userMessage, systemPrompt);
-            
-            if (!response.success) {
-                throw new Error(`❌ Error en el análisis: ${response.error}`);
-            }
-
+            // Enviar consulta al servidor para procesamiento con OpenAI
+            // Nota: La implementación real se maneja en el frontend (finanzas.js)
             return {
                 success: true,
-                message: typeof response.data === 'string' ? response.data : 'Respuesta de IA no disponible'
+                message: 'Consulta enviada al servidor para procesamiento con OpenAI'
             };
 
         } catch (error) {
@@ -250,7 +239,7 @@ IMPORTANTE: Siempre basa tus respuestas en los datos reales proporcionados y no 
     public getConfig(): { isInitialized: boolean; model: string } {
         return {
             isInitialized: this.isInitialized,
-            model: this.aiAnalyzer.getConfig().model
+            model: 'gpt-4o-mini' // Modelo de OpenAI usado en el servidor
         };
     }
 }

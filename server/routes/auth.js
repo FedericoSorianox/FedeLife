@@ -13,6 +13,15 @@ const { authenticateToken, userRateLimit } = require('../middleware/auth');
 
 const router = express.Router();
 
+// ==================== CONFIGURACIÓN JWT ====================
+
+// Configuración de expiración JWT
+const JWT_NO_EXPIRE = process.env.JWT_NO_EXPIRE === 'true' ||
+                     (typeof window !== 'undefined' && window.LOCAL_CONFIG?.JWT_NO_EXPIRE);
+
+// Hacer disponible globalmente
+global.JWT_NO_EXPIRE = JWT_NO_EXPIRE;
+
 // ==================== VALIDACIONES ====================
 
 /**
@@ -347,7 +356,9 @@ router.post('/register', validateRegistration, async (req, res) => {
                     createdAt: user.createdAt
                 },
                 token,
-                expiresIn: '7d'
+                ...(process.env.JWT_NO_EXPIRE !== 'true' && !global.JWT_NO_EXPIRE && {
+                    expiresIn: process.env.JWT_EXPIRES_IN || '365d' // Por defecto 1 año
+                })
             }
         });
         
@@ -455,7 +466,9 @@ router.post('/login', validateLogin, async (req, res) => {
                     createdAt: user.createdAt
                 },
                 token,
-                expiresIn: '7d'
+                ...(process.env.JWT_NO_EXPIRE !== 'true' && !global.JWT_NO_EXPIRE && {
+                    expiresIn: process.env.JWT_EXPIRES_IN || '365d' // Por defecto 1 año
+                })
             }
         });
         
@@ -792,7 +805,9 @@ router.post('/refresh', authenticateToken, async (req, res) => {
             message: 'Token refrescado exitosamente',
             data: {
                 token: newToken,
-                expiresIn: '7d'
+                ...(process.env.JWT_NO_EXPIRE !== 'true' && !global.JWT_NO_EXPIRE && {
+                    expiresIn: process.env.JWT_EXPIRES_IN || '365d' // Por defecto 1 año
+                })
             }
         });
         

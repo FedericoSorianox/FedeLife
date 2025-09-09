@@ -1,7 +1,7 @@
 /**
- * 🤖 SERVICIO DE IA SIMPLIFICADO - FEDE LIFE
- * 
- * Servicio para análisis de PDFs usando Google AI (Gemini)
+ * 🤖 SERVICIO DE IA - FEDE LIFE
+ *
+ * Servicio para análisis de PDFs usando OpenAI (GPT)
  * Incluye extracción de texto y análisis de gastos
  * Autor: Senior Backend Developer
  */
@@ -11,8 +11,14 @@ const path = require('path');
 
 // ==================== CONFIGURACIÓN ====================
 
-const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY || 'AIzaSyCSCVx7P1_nSmeWxPZAs9lKGKv_VdFeoJ8';
-const GOOGLE_AI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+// Configuración de OpenAI
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+
+if (!OPENAI_API_KEY) {
+    console.error('❌ ERROR: OPENAI_API_KEY no está configurada');
+    console.error('Configura tu API Key de OpenAI en config-local.js o variables de entorno');
+}
 
 // ==================== FUNCIONES PRINCIPALES ====================
 
@@ -49,183 +55,138 @@ async function extractTextFromPDF(filePath) {
 }
 
 /**
- * Analiza texto con Google AI (Gemini)
+ * Analiza texto con OpenAI (GPT)
  * @param {string} text - Texto a analizar
  * @param {string} userId - ID del usuario (para contexto)
  * @returns {Promise<Object>} Análisis de gastos
  */
 async function analyzeTextWithAI(text, userId) {
     try {
-        console.log('🤖 Analizando texto con Google AI...');
-        
-        // Preparar prompt para Gemini
-        const prompt = `
-        Analiza el siguiente texto de un estado de cuenta bancaria y extrae los gastos identificados.
-        
-        TEXTO:
-        ${text}
-        
-        INSTRUCCIONES:
-        1. Identifica todas las transacciones que son GASTOS (no ingresos)
-        2. Extrae el monto y descripción de cada gasto
-        3. Categoriza cada gasto según su tipo
-        4. Devuelve solo un JSON válido con esta estructura:
-        
-        {
-            "expenses": [
-                {
-                    "description": "Descripción del gasto",
-                    "amount": 2500.00,
-                    "category": "Comida",
-                    "date": "2024-01-15"
-                }
-            ],
-            "summary": {
-                "totalExpenses": 6300.00,
-                "expenseCount": 4,
-                "categories": ["Comida", "Transporte", "Entretenimiento", "Servicios"]
-            }
-        }
-        
-        IMPORTANTE: Solo devuelve el JSON, sin texto adicional.
-        `;
+        console.log('🤖 Analizando texto con OpenAI...');
 
-        // Llamar a Google AI API
-        const response = await fetch(GOOGLE_AI_URL, {
+        // Verificar que tenemos la API key de OpenAI
+        if (!OPENAI_API_KEY) {
+            throw new Error('OPENAI_API_KEY no está configurada. Configura tu API Key de OpenAI en config-local.js');
+        }
+
+        // Preparar prompt para OpenAI
+        const systemPrompt = `Eres un analista financiero experto especializado en el análisis de estados de cuenta bancarios uruguayos.
+
+Tu tarea es analizar el texto de un estado de cuenta y extraer todos los gastos identificados.
+
+INSTRUCCIONES IMPORTANTES:
+1. Identifica ÚNICAMENTE transacciones que son GASTOS (no ingresos, depósitos, transferencias entrantes)
+2. Extrae el monto, descripción y fecha de cada gasto
+3. Categoriza cada gasto según estas categorías disponibles:
+   - Alimentación
+   - Transporte
+   - Servicios
+   - Entretenimiento
+   - Salud
+   - Educación
+   - Ropa
+   - Otros Gastos
+4. Si no puedes determinar la categoría, usa "Otros Gastos"
+5. Los montos pueden estar en USD o UYU - detecta automáticamente la moneda
+6. Las fechas pueden estar en formato DD/MM/YYYY o MM/DD/YYYY
+7. NO incluyas transacciones que no sean gastos
+8. Si hay dudas sobre si es un gasto o ingreso, omítelo
+
+Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta:`;
+
+        const userPrompt = `
+TEXTO DEL ESTADO DE CUENTA:
+${text}
+
+Devuelve la respuesta en este formato JSON exacto:
+{
+    "expenses": [
+        {
+            "description": "Descripción clara del gasto",
+            "amount": 2500.50,
+            "currency": "UYU",
+            "category": "Alimentación",
+            "date": "2024-01-15",
+            "confidence": 0.95
+        }
+    ],
+    "summary": {
+        "totalExpenses": 2500.50,
+        "currency": "UYU",
+        "expenseCount": 1
+    }
+}`;
+
+        // Llamar a OpenAI API
+        const response = await fetch(OPENAI_API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${GOOGLE_AI_API_KEY}`
+                'Authorization': `Bearer ${OPENAI_API_KEY}`
             },
             body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: prompt
-                    }]
-                }]
+                model: 'gpt-4o-mini',
+                messages: [
+                    {
+                        role: 'system',
+                        content: systemPrompt
+                    },
+                    {
+                        role: 'user',
+                        content: userPrompt
+                    }
+                ],
+                max_tokens: 2000,
+                temperature: 0.1 // Baja temperatura para respuestas consistentes
             })
         });
 
         if (!response.ok) {
-            throw new Error(`Error de Google AI API: ${response.status}`);
+            throw new Error(`Error en OpenAI API: ${response.status} ${response.statusText}`);
         }
 
-        const result = await response.json();
-        
-        // Extraer respuesta del modelo
-        const aiResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
-        
-        if (!aiResponse) {
-            throw new Error('Respuesta inválida de Google AI');
-        }
+        const data = await response.json();
+        const aiResponse = data.choices[0].message.content;
 
-        // Intentar parsear JSON de la respuesta
+        console.log('✅ Respuesta de OpenAI recibida');
+
+        // Intentar parsear el JSON de la respuesta
+        let result;
         try {
-            const analysis = JSON.parse(aiResponse);
-            console.log('✅ Análisis de IA completado');
-            return analysis;
+            // Limpiar la respuesta de posibles caracteres extra
+            const cleanResponse = aiResponse.trim();
+            result = JSON.parse(cleanResponse);
+
+            // Validar estructura
+            if (!result.expenses || !Array.isArray(result.expenses)) {
+                throw new Error('Estructura de respuesta inválida');
+            }
+
+            return result;
+
         } catch (parseError) {
-            console.warn('⚠️ No se pudo parsear JSON de IA, usando análisis por defecto');
-            
-            // Análisis por defecto basado en palabras clave
-            return analyzeTextByKeywords(text);
-        }
+            console.error('❌ Error parseando respuesta de OpenAI:', parseError);
+            console.log('Respuesta cruda:', aiResponse);
 
+            // Intentar extraer JSON de la respuesta
+            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                try {
+                    result = JSON.parse(jsonMatch[0]);
+                    return result;
+                } catch (secondParseError) {
+                    console.error('❌ Error en segundo intento de parseo:', secondParseError);
+                }
+            }
+
+            throw new Error('No se pudo parsear la respuesta de OpenAI como JSON válido');
+        }
     } catch (error) {
-        console.error('❌ Error analizando con IA:', error);
-        
-        // Fallback: análisis por palabras clave
-        console.log('🔄 Usando análisis por palabras clave como fallback');
-        return analyzeTextByKeywords(text);
+        console.error('❌ Error analizando con OpenAI:', error.message);
+        throw error;
     }
 }
 
-/**
- * Análisis por palabras clave como fallback
- * @param {string} text - Texto a analizar
- * @returns {Object} Análisis de gastos
- */
-function analyzeTextByKeywords(text) {
-    try {
-        console.log('🔍 Analizando texto por palabras clave...');
-        
-        // Buscar patrones de gastos en el texto
-        const expensePatterns = [
-            { pattern: /(\d{1,2}\/\d{1,2}\/\d{4}):\s*([^-]+)-\s*\$?([\d,]+\.?\d*)/gi, category: 'General' },
-            { pattern: /Supermercado[^$]*\$?([\d,]+\.?\d*)/gi, category: 'Comida' },
-            { pattern: /Gasolina[^$]*\$?([\d,]+\.?\d*)/gi, category: 'Transporte' },
-            { pattern: /Restaurante[^$]*\$?([\d,]+\.?\d*)/gi, category: 'Entretenimiento' },
-            { pattern: /Servicios[^$]*\$?([\d,]+\.?\d*)/gi, category: 'Servicios' }
-        ];
-
-        const expenses = [];
-        let totalAmount = 0;
-
-        expensePatterns.forEach(({ pattern, category }) => {
-            let match;
-            while ((match = pattern.exec(text)) !== null) {
-                let amount, description, date;
-                
-                if (match.length >= 4) {
-                    // Patrón con fecha
-                    date = match[1];
-                    description = match[2].trim();
-                    amount = parseFloat(match[3].replace(/,/g, ''));
-                } else if (match.length >= 2) {
-                    // Patrón simple
-                    description = match[0].split('$')[0].trim();
-                    amount = parseFloat(match[1].replace(/,/g, ''));
-                    date = new Date().toISOString().split('T')[0]; // Fecha actual
-                }
-
-                if (amount && !isNaN(amount)) {
-                    expenses.push({
-                        description: description || 'Gasto identificado',
-                        amount: amount,
-                        category: category,
-                        date: date || new Date().toISOString().split('T')[0]
-                    });
-                    totalAmount += amount;
-                }
-            }
-        });
-
-        // Si no se encontraron gastos, crear algunos por defecto
-        if (expenses.length === 0) {
-            expenses.push(
-                { description: 'Gasto general', amount: 1000, category: 'General', date: new Date().toISOString().split('T')[0] },
-                { description: 'Otro gasto', amount: 500, category: 'General', date: new Date().toISOString().split('T')[0] }
-            );
-            totalAmount = 1500;
-        }
-
-        const categories = [...new Set(expenses.map(e => e.category))];
-
-        return {
-            expenses: expenses,
-            summary: {
-                totalExpenses: totalAmount,
-                expenseCount: expenses.length,
-                categories: categories
-            }
-        };
-
-    } catch (error) {
-        console.error('❌ Error en análisis por palabras clave:', error);
-        
-        // Respuesta mínima en caso de error
-        return {
-            expenses: [
-                { description: 'Gasto no identificado', amount: 1000, category: 'General', date: new Date().toISOString().split('T')[0] }
-            ],
-            summary: {
-                totalExpenses: 1000,
-                expenseCount: 1,
-                categories: ['General']
-            }
-        };
-    }
-}
 
 // ==================== EXPORTAR FUNCIONES ====================
 

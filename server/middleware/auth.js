@@ -13,6 +13,10 @@ const User = require('../models/User');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fede-life-secret-key';
 
+// Configuración de expiración JWT
+const JWT_NO_EXPIRE = process.env.JWT_NO_EXPIRE === 'true' ||
+                     (typeof window !== 'undefined' && window.LOCAL_CONFIG?.JWT_NO_EXPIRE);
+
 // ==================== MIDDLEWARE PRINCIPAL ====================
 
 /**
@@ -33,7 +37,15 @@ const authenticateToken = async (req, res, next) => {
         }
         
         // Verificar y decodificar el token
-        const decoded = jwt.verify(token, JWT_SECRET);
+        let decoded;
+        if (JWT_NO_EXPIRE) {
+            // Verificar sin expiración (para desarrollo)
+            decoded = jwt.verify(token, JWT_SECRET, { ignoreExpiration: true });
+            console.log('🔓 Token verificado sin verificar expiración (modo desarrollo)');
+        } else {
+            // Verificación normal con expiración
+            decoded = jwt.verify(token, JWT_SECRET);
+        }
         
         // Buscar el usuario en la base de datos
         const user = await User.findById(decoded.id).select('-password');

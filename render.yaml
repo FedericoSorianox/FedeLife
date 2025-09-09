@@ -19,15 +19,15 @@ services:
       - key: JWT_SECRET
         value: fede-life-super-secret-key-2024-production
       - key: JWT_EXPIRES_IN
-        value: 7d
+        value: 365d
+      - key: JWT_NO_EXPIRE
+        value: false
       - key: RATE_LIMIT_WINDOW_MS
         value: 900000
       - key: RATE_LIMIT_MAX_REQUESTS
         value: 50
       - key: LOG_LEVEL
         value: error
-      - key: GOOGLE_AI_API_KEY
-        value: tu-api-key-de-google-ai-studio
       - key: FRONTEND_URL
         value: https://fedelife-finanzas.onrender.com
 
