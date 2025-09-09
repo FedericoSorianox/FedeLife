@@ -363,7 +363,21 @@ class FinanceApp {
                 window.openaiAnalyzer = new OpenAIAnalyzer();
                 
                 // Configurar API Key
-                const apiKey = localStorage.getItem('openai_api_key') || 'sk-proj-your-openai-api-key-here';
+                let apiKey = localStorage.getItem('openai_api_key');
+                
+                // Si no hay API key en localStorage, intentar cargar desde config local
+                if (!apiKey || apiKey === 'sk-proj-your-openai-api-key-here') {
+                    try {
+                        // Intentar cargar configuración local
+                        const localConfig = await import('../config-local.js');
+                        apiKey = localConfig.getLocalApiKey();
+                        console.log('🔑 API Key cargada desde configuración local');
+                    } catch (error) {
+                        console.warn('⚠️ No se pudo cargar configuración local, usando placeholder');
+                        apiKey = 'sk-proj-your-openai-api-key-here';
+                    }
+                }
+                
                 window.openaiAnalyzer.setApiKey(apiKey);
                 
                 console.log('✅ OpenAI Analyzer cargado y configurado');
