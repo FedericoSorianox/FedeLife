@@ -10,7 +10,7 @@ export class OpenAIAnalyzer {
     constructor() {
         // Configuración optimizada para OpenAI API
         this.config = {
-            apiKey: process.env.OPENAI_API_KEY || 'your-api-key-here', // Se configurará dinámicamente
+            apiKey: 'your-api-key-here', // Se configurará dinámicamente
             model: 'gpt-4o-mini', // Modelo más económico y potente
             maxTokens: 10000, // Aumentado para análisis completo de PDFs
             temperature: 0.1, // Baja para respuestas consistentes

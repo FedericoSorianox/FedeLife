@@ -98,6 +98,16 @@
                         </div>
                     </div>
                     
+                    <div class="flex items-center justify-between text-sm text-gray-600">
+                        <span>API Key:</span>
+                        <div class="flex items-center space-x-2">
+                            <span id="apiKeyStatus" class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">No configurada</span>
+                            <button type="button" onclick="setApiKey()" class="text-xs text-primary hover:text-primary/80 underline">
+                                Configurar
+                            </button>
+                        </div>
+                    </div>
+                    
                     <button 
                         type="submit" 
                         id="analyzeBtn"
@@ -281,12 +291,55 @@
          * Configura la API Key fija
          */
         function loadSavedApiKey() {
-            // API Key fija - reemplaza con tu API key real
-            const fixedApiKey = 'your-api-key-here'; // Reemplazar con tu clave API real
+            // Intentar cargar API Key desde localStorage primero
+            let apiKey = localStorage.getItem('openai_api_key');
+            
+            // Si no hay API key guardada, usar una por defecto
+            if (!apiKey || apiKey === 'your-api-key-here') {
+                // API Key por defecto - DEBES REEMPLAZAR ESTA CON TU API KEY REAL
+                apiKey = 'sk-proj-your-openai-api-key-here'; // ⚠️ REEMPLAZAR CON TU API KEY REAL
+                console.warn('⚠️ Usando API Key por defecto. Por favor configura tu API Key real de OpenAI.');
+                updateApiKeyStatus(false);
+            } else {
+                updateApiKeyStatus(true);
+            }
             
             if (openaiAnalyzer) {
-                openaiAnalyzer.setApiKey(fixedApiKey);
-                console.log('✅ API Key fija configurada correctamente');
+                openaiAnalyzer.setApiKey(apiKey);
+                console.log('✅ API Key configurada correctamente');
+            }
+        }
+        
+        /**
+         * Actualiza el estado visual de la API Key
+         */
+        function updateApiKeyStatus(isValid) {
+            const statusElement = document.getElementById('apiKeyStatus');
+            if (statusElement) {
+                if (isValid) {
+                    statusElement.textContent = 'Configurada';
+                    statusElement.className = 'px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs';
+                } else {
+                    statusElement.textContent = 'No configurada';
+                    statusElement.className = 'px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs';
+                }
+            }
+        }
+        
+        /**
+         * Configura una nueva API Key
+         */
+        function setApiKey() {
+            const newApiKey = prompt('Ingresa tu API Key de OpenAI (sk-proj-...):');
+            if (newApiKey && newApiKey.startsWith('sk-')) {
+                localStorage.setItem('openai_api_key', newApiKey);
+                if (openaiAnalyzer) {
+                    openaiAnalyzer.setApiKey(newApiKey);
+                }
+                updateApiKeyStatus(true);
+                showSuccess('API Key configurada correctamente');
+            } else if (newApiKey) {
+                showError('API Key inválida. Debe comenzar con "sk-"');
             }
         }
         
@@ -1554,6 +1607,24 @@
         function showError(message) {
             document.getElementById('errorMessage').textContent = message;
             errorSection.classList.remove('hidden');
+        }
+        
+        /**
+         * Muestra un mensaje de éxito
+         */
+        function showSuccess(message) {
+            // Crear notificación temporal de éxito
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Remover después de 3 segundos
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 3000);
         }
         
         /**
