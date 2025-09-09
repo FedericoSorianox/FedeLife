@@ -362,21 +362,34 @@ class FinanceApp {
                 const { OpenAIAnalyzer } = await import('../funciones/openai_analyzer.js');
                 window.openaiAnalyzer = new OpenAIAnalyzer();
                 
-                // Configurar API Key
-                let apiKey = localStorage.getItem('openai_api_key');
+                // Configurar API Key - Prioridad: config-local.js > localStorage > placeholder
+                let apiKey = null;
+                let apiKeySource = '';
                 
-                // Si no hay API key en localStorage, intentar cargar desde config local
-                if (!apiKey || apiKey === 'sk-proj-your-openai-api-key-here') {
-                    try {
-                        // Intentar cargar configuración local
-                        const localConfig = await import('../config-local.js');
-                        apiKey = localConfig.getLocalApiKey();
-                        console.log('🔑 API Key cargada desde configuración local');
-                    } catch (error) {
-                        console.warn('⚠️ No se pudo cargar configuración local, usando placeholder');
+                try {
+                    // 1. Intentar cargar desde configuración local (PRIORIDAD)
+                    const localConfig = await import('../config-local.js');
+                    apiKey = localConfig.getLocalApiKey();
+                    apiKeySource = 'config-local.js';
+                    console.log('🔑 API Key cargada desde configuración local (config-local.js)');
+                } catch (error) {
+                    console.warn('⚠️ No se pudo cargar config-local.js, intentando localStorage...');
+                    
+                    // 2. Fallback a localStorage
+                    apiKey = localStorage.getItem('openai_api_key');
+                    if (apiKey && apiKey !== 'sk-proj-your-openai-api-key-here') {
+                        apiKeySource = 'localStorage';
+                        console.log('🔑 API Key cargada desde localStorage');
+                    } else {
+                        // 3. Fallback a placeholder
                         apiKey = 'sk-proj-your-openai-api-key-here';
+                        apiKeySource = 'placeholder';
+                        console.warn('⚠️ Usando API Key placeholder - configura tu API Key real');
                     }
                 }
+                
+                console.log(`🔑 Fuente de API Key: ${apiKeySource}`);
+                console.log(`🔑 API Key configurada: ${apiKey.substring(0, 20)}...`);
                 
                 window.openaiAnalyzer.setApiKey(apiKey);
                 
