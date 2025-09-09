@@ -52,7 +52,6 @@
                 </button>
                 <div id="userInfo" style="display: none;">
                     <span id="userName">Usuario</span>
-                    <button id="logoutBtn" class="logout-btn">🚪 Cerrar Sesión</button>
                 </div>
             </div>
         </div>
@@ -281,15 +280,15 @@
             <button class="tab-btn active" data-tab="transactions">
                 <i class="fas fa-exchange-alt"></i> Transacciones
             </button>
-          
+
             <button class="tab-btn" data-tab="goals">
                 <i class="fas fa-target"></i> Metas
             </button>
+            <button class="tab-btn" data-tab="categories">
+                <i class="fas fa-tags"></i> Categorías
+            </button>
             <button class="tab-btn" data-tab="reports">
                 <i class="fas fa-chart-bar"></i> Reportes
-            </button>
-            <button class="tab-btn" data-tab="categories">
-                <i class="fas fa-chart-bar"></i> Categorías
             </button>
         </div>
 
@@ -359,6 +358,15 @@
                         <!-- Resultados del análisis -->
                         <div id="extractedExpenses" class="extracted-expenses" style="display: none;">
                             <h5><i class="fas fa-list-alt"></i> Gastos Encontrados</h5>
+
+                            <!-- Selector de fecha para transacciones del PDF -->
+                            <div class="pdf-date-selector">
+                                <h6><i class="fas fa-calendar-alt"></i> Fecha de los Gastos</h6>
+                                <p class="date-selector-description">Si el PDF no tiene fechas específicas, selecciona la fecha que corresponde a estos gastos:</p>
+                                <input type="date" id="pdfTransactionDate" class="pdf-date-input">
+                                <small class="date-hint">💡 Si el PDF contiene fechas específicas, se usarán esas. De lo contrario, se usará esta fecha.</small>
+                            </div>
+
                             <div class="expenses-actions">
                                 <button type="button" id="selectAllExpenses" class="action-btn">
                                     <i class="fas fa-check-square"></i> Seleccionar Todos
@@ -378,22 +386,12 @@
                     <div class="transactions-header">
                         <h3><i class="fas fa-list"></i> Historial de Transacciones</h3>
                         <div class="filter-controls">
-                            <select id="filterType">
-                                <option value="">Todos los tipos</option>
-                                <option value="income">Ingresos</option>
-                                <option value="expense">Gastos</option>
+                            <select id="simpleFilter">
+                                <option value="all" selected>Todas</option>
+                                <option value="income">Solo Ingresos</option>
+                                <option value="expense">Solo Gastos</option>
+                                <option value="recent">Últimas 10</option>
                             </select>
-                            <select id="filterCategory">
-                                <option value="">Todas las categorías</option>
-                            </select>
-                            
-                            <button type="button" id="clearFiltersBtn" class="clear-filters-btn" title="Limpiar filtros">
-                                <i class="fas fa-times"></i>
-                            </button>
-                            
-                            <button type="button" id="clearHistoryBtn" class="clear-history-btn" title="Borrar todo el historial">
-                                <i class="fas fa-trash-alt"></i> Borrar Historial
-                            </button>
                         </div>
                     </div>
                     <div id="transactionsList" class="transactions-container">
@@ -470,11 +468,11 @@
                     <form id="goalForm" class="goal-form">
                         <div class="form-row">
                             <input type="text" id="goalName" placeholder="Nombre de la meta" required>
-                            <input type="number" id="goalAmount" placeholder="Monto objetivo" step="0.01" required>
+                            <input type="number" id="goalAmount" placeholder="Monto objetivo (opcional)" step="0.01">
                         </div>
                         <div class="form-row">
-                            <input type="date" id="goalDeadline" required>
-                            <input type="number" id="currentSaved" placeholder="Ya ahorrado" step="0.01" value="0">
+                            <input type="date" id="goalDeadline" placeholder="Fecha límite (opcional)">
+                            <input type="number" id="currentSaved" placeholder="Ya ahorrado (opcional)" step="0.01" value="0">
                         </div>
                         <textarea id="goalDescription" placeholder="Descripción (opcional)"></textarea>
                         <button type="submit" class="add-btn">
@@ -521,11 +519,21 @@
                 </div>
                 
                 <div class="categories-content">
+                    <!-- Barra de herramientas de categorías -->
+                    <div class="categories-toolbar">
+                        <button id="cleanDescriptionsBtn" class="btn btn-warning" title="Limpiar prefijos 'Compra' de las descripciones">
+                            <i class="fas fa-broom"></i> Limpiar Descripciones
+                        </button>
+                        <div class="toolbar-info">
+                            <small>Haz clic en cualquier categoría para ver el desglose detallado</small>
+                        </div>
+                    </div>
+
                     <!-- Categorías de Ingresos -->
                     <div id="incomeCategories" class="category-section">
                         <!-- Las categorías de ingresos se renderizarán aquí -->
                     </div>
-                    
+
                     <!-- Categorías de Gastos -->
                     <div id="expenseCategories" class="category-section">
                         <!-- Las categorías de gastos se renderizarán aquí -->
@@ -574,8 +582,16 @@
         <p>&copy; Desde 1992 Fede Life. Todos los derechos reservados.</p>
     </footer>
 
+    <!-- PDF.js para extracción de texto -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Configurar PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    
+    <script src="/config-local.js"></script>
     <script src="/funciones/config-production-fixed.js"></script>
-    <script src="/funciones/finanzas-simple.js"></script>
+    <script src="/funciones/finanzas.js"></script>
     <script src="/pages/auth.js"></script>
 </body>
 

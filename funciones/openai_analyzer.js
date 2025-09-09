@@ -12,7 +12,7 @@ export class OpenAIAnalyzer {
         this.config = {
             apiKey: 'your-api-key-here', // Se configurará dinámicamente
             model: 'gpt-4o-mini', // Modelo más económico y potente
-            maxTokens: 10000, // Aumentado para análisis completo de PDFs
+            maxTokens: 12000, // Límite de output para GPT-4o-mini
             temperature: 0.1, // Baja para respuestas consistentes
             baseUrl: 'https://api.openai.com/v1'
         };
@@ -48,28 +48,106 @@ export class OpenAIAnalyzer {
 
             console.log('🔍 Analizando texto financiero...');
             
-            const prompt = `Analiza el siguiente texto financiero y extrae TODOS los gastos encontrados.
+            // Calcular tokens aproximados para evitar error 400
+            const promptBase = `🚨 CRÍTICO: Extrae TODOS los gastos bancarios sin excepción
 
-IMPORTANTE:
-- IDENTIFICA LA MONEDA ORIGINAL de cada gasto (USD, UYU) - NO CONVIERTAS NADA
-- MANTÉN CADA MONEDA EN SU FORMA ORIGINAL
-- Extrae fecha, descripción, monto y moneda de cada gasto
-- Si no hay gastos claros, devuelve un array vacío
+INSTRUCCIONES ESPECÍFICAS PARA DOCUMENTOS BANCARIOS URUGUAYOS:
 
-Texto a analizar:
-${text}
+1. **IDENTIFICA TODOS estos tipos de gastos:**
+   - Débitos automáticos
+   - Compras con tarjeta
+   - Extracciones de cajero
+   - Pagos de servicios
+   - Transferencias salientes
+   - Cualquier movimiento que represente SALIDA de dinero
 
-Responde SOLO con un JSON válido en este formato:
-{
-  "expenses": [
-    {
-      "date": "DD/MM/YY",
-      "description": "Descripción del gasto",
-      "amount": 123.45,
-      "currency": "USD" o "UYU"
-    }
-  ]
+2. **PATRONES COMUNES a buscar:**
+   - "Débito por $X.XX"
+   - "[comercio] $X.XX"
+   - "Extracción $X.XX"
+   - "[servicio] $X.XX"
+   - "Transferencia a [destino] $X.XX"
+   - Cualquier línea con montos en pesos o dólares
+
+3. **IMPORTANTE - DESCRIPCIONES:**
+   - NO agregar prefijos como "Compra", "Pago", "Gasto" al inicio
+   - Mantener la descripción original del comercio/servicio
+   - Ejemplo: "Devoto Super" en lugar de "Compra Devoto Super"
+
+4. **IGNORA COMPLETAMENTE:**
+   - Ingresos, depósitos, créditos
+   - Saldos, totales
+   - Información de cuenta
+   - Fechas sin montos
+
+5. **EXTRAE SIEMPRE:**
+   - Monto exacto (con decimales)
+   - Descripción específica del gasto (SIN prefijos como "Compra")
+   - Categoría apropiada
+   - Moneda (UYU/USD)
+   - Fecha si está disponible
+
+CATEGORÍAS BANCARIAS COMUNES:
+- Alimentación: supermercados, restaurantes, delivery, comidas
+- Transporte: combustible, taxis, ómnibus, estacionamiento
+- Servicios: UTE, OSE, Antel, internet, teléfono
+- Salud: farmacias, médicos, mutualistas
+- Entretenimiento: cines, bares, delivery de comida
+- Otros: todo lo demás (especifica el comercio/lugar)
+
+IMPORTANTE: Si encuentras menos de 60 gastos en un documento bancario típico, revisa nuevamente.
+Los extractos bancarios suelen tener muchos movimientos por página.
+
+FORMATO JSON:`;
+
+            const jsonFormat = `{
+"expenses": [
+  {
+    "date": "DD/MM/YY",
+    "description": "Descripción específica",
+    "amount": 123.45,
+    "currency": "UYU",
+    "category": "Categoría"
+  }
+]
 }`;
+
+            // Validar API key antes de procesar
+            if (!this.config.apiKey || this.config.apiKey === 'your-api-key-here' || this.config.apiKey === 'sk-proj-your-openai-api-key-here') {
+                throw new Error('API Key de OpenAI no configurada o inválida');
+            }
+
+            // Calcular tamaño aproximado y ajustar
+            const textTokens = Math.ceil(text.length / 4); // Aproximadamente 4 chars por token
+            const promptTokens = Math.ceil((promptBase.length + jsonFormat.length) / 4);
+            const totalEstimatedTokens = textTokens + promptTokens;
+
+            console.log(`📊 Estimación de tokens: Texto=${textTokens}, Prompt=${promptTokens}, Total=${totalEstimatedTokens}`);
+
+            // Limitar el texto si es demasiado largo para el modelo
+            let textToProcess = text;
+            if (totalEstimatedTokens > 100000) { // Límite de contexto del modelo
+                const maxTextLength = 80000; // Dejar espacio para respuesta
+                textToProcess = text.substring(0, maxTextLength);
+                console.log(`📝 Texto truncado a ${maxTextLength} caracteres por límite de modelo`);
+            }
+
+            // Si es demasiado largo, usar versión más corta del prompt
+            let finalPrompt;
+            if (totalEstimatedTokens > 80000) {
+                finalPrompt = `Extrae TODOS los gastos bancarios. SOLO débitos/compras/pagos. IGNORA ingresos.
+IMPORTANTE: NO agregar prefijos como "Compra", "Pago" al inicio de descripciones.
+Mantener descripciones originales: "Devoto Super" no "Compra Devoto Super"
+Moneda: "UYU" para pesos/$U, "USD" para dólares/$.
+Categorías: Alimentación, Transporte, Entretenimiento, Salud, Educación, Vivienda, Ropa, Servicios, Otros.
+
+${jsonFormat}`;
+                console.log('📝 Usando prompt corto por límite de tokens');
+            } else {
+                finalPrompt = promptBase + '\n\n' + jsonFormat;
+            }
+
+            const prompt = finalPrompt + `\n\nTEXTO A ANALIZAR:\n${textToProcess}`;
 
             const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
                 method: 'POST',
@@ -95,7 +173,32 @@ Responde SOLO con un JSON válido en este formato:
             });
 
             if (!response.ok) {
-                throw new Error(`Error de API: ${response.status} ${response.statusText}`);
+                let errorDetails = `Error de API: ${response.status} ${response.statusText}`;
+
+                // Intentar obtener más detalles del error
+                try {
+                    const errorData = await response.json();
+                    if (errorData.error) {
+                        errorDetails += ` - ${errorData.error.message || errorData.error.type || 'Detalles no disponibles'}`;
+                    }
+                } catch (e) {
+                    // No se pudieron obtener detalles adicionales
+                }
+
+                // Diagnóstico específico para errores comunes
+                if (response.status === 400) {
+                    errorDetails += '. Posibles causas: solicitud demasiado larga, formato inválido, o límites excedidos.';
+                    console.log('🔍 Diagnóstico de error 400:');
+                    console.log(`  - Longitud del prompt: ${prompt.length} caracteres`);
+                    console.log(`  - Tokens estimados: ${totalEstimatedTokens}`);
+                    console.log(`  - Modelo usado: ${this.config.model}`);
+                } else if (response.status === 401) {
+                    errorDetails += '. Verifica que tu API key sea válida.';
+                } else if (response.status === 429) {
+                    errorDetails += '. Has excedido el límite de solicitudes. Espera un momento.';
+                }
+
+                throw new Error(errorDetails);
             }
 
             const data = await response.json();
@@ -105,17 +208,105 @@ Responde SOLO con un JSON válido en este formato:
             
             // Intentar parsear como JSON
             try {
-                const result = JSON.parse(content);
-                return result;
+                let result = JSON.parse(content);
+
+                // Mejorar la detección de monedas en los resultados
+                if (result.expenses && Array.isArray(result.expenses)) {
+                    result.expenses = result.expenses.map(expense => {
+                        // Mejorar detección de moneda
+                        expense.currency = this.improveCurrencyDetection(expense);
+                        return expense;
+                    });
+                }
+
+                return {
+                    success: true,
+                    data: result
+                };
             } catch (parseError) {
                 console.warn('⚠️ Error parseando JSON, intentando extracción manual...');
-                return this.extractExpensesFromTextResponse(content);
+                const extractedData = this.extractExpensesFromTextResponse(content);
+
+                // También mejorar monedas en la extracción manual
+                if (extractedData.expenses && Array.isArray(extractedData.expenses)) {
+                    extractedData.expenses = extractedData.expenses.map(expense => {
+                        expense.currency = this.improveCurrencyDetection(expense);
+                        return expense;
+                    });
+                }
+
+                return {
+                    success: true,
+                    data: extractedData
+                };
             }
 
         } catch (error) {
             console.error('❌ Error en análisis:', error);
-            throw error;
+            return {
+                success: false,
+                error: error.message
+            };
         }
+    }
+
+    /**
+     * Mejora la detección de monedas en un gasto
+     * @param {Object} expense - El gasto a procesar
+     * @returns {string} La moneda detectada (UYU o USD)
+     */
+    improveCurrencyDetection(expense) {
+        const description = (expense.description || '').toLowerCase();
+        let currency = (expense.currency || '').toUpperCase();
+
+        // Si ya tiene una moneda válida, mantenerla
+        if (currency === 'UYU' || currency === 'USD') {
+            return currency;
+        }
+
+        // Detección avanzada por indicadores en la descripción (orden de prioridad)
+        const usdIndicators = [
+            // Alta prioridad - símbolos explícitos
+            'u$s', 'us$', '$ ',
+            // Palabras clave específicas
+            'usd', 'dólares', 'dolares', 'americanos', 'dólar estadounidense',
+            'us dollar', 'dólar americano', 'moneda americana'
+        ];
+
+        const uyuIndicators = [
+            // Alta prioridad - símbolos explícitos
+            '$u ', '$uy ', 'u$y ',
+            // Palabras clave específicas
+            'uyu', 'pesos uruguayos', 'uruguayos', 'peso uruguayo',
+            'moneda nacional', 'pesos uruguayos', 'uruguayo'
+        ];
+
+        // Verificar indicadores de USD primero (prioridad)
+        for (const indicator of usdIndicators) {
+            if (description.toLowerCase().includes(indicator.toLowerCase())) {
+                console.log(`💵 Detectado USD por indicador: "${indicator}" en "${expense.description}"`);
+                return 'USD';
+            }
+        }
+
+        // Verificar indicadores de UYU
+        for (const indicator of uyuIndicators) {
+            if (description.toLowerCase().includes(indicator.toLowerCase())) {
+                console.log(`💰 Detectado UYU por indicador: "${indicator}" en "${expense.description}"`);
+                return 'UYU';
+            }
+        }
+
+        // Si no hay indicadores específicos, buscar patrones de símbolos
+        const hasDollarSign = description.includes('$') && !description.includes('$u') && !description.includes('$uy');
+        if (hasDollarSign) {
+            console.log(`💵 Detectado USD por símbolo $ en "${expense.description}"`);
+            return 'USD';
+        }
+
+        // Si no hay indicadores claros, asumir UYU (contexto uruguayo por defecto)
+        console.log(`🤔 Moneda no clara para "${expense.description}", asumiendo UYU`);
+        return 'UYU';
     }
 
     /**
@@ -260,11 +451,13 @@ Responde SOLO con un JSON válido en este formato:
             
             // Validar que tenemos datos mínimos
             if (date && description && amount > 0) {
+                const category = this.assignCategoryFromDescription(description);
                 return {
                     date: date,
                     description: description,
                     amount: amount,
-                    currency: currency
+                    currency: currency,
+                    category: category
                 };
             }
             
@@ -313,9 +506,36 @@ Responde SOLO con un JSON válido en este formato:
      * @returns {string} Moneda detectada
      */
     detectCurrency(amountStr) {
-        if (amountStr.includes('USD') || amountStr.includes('$') && !amountStr.includes('$U')) {
+        const str = amountStr.toLowerCase();
+
+        // Patrones específicos para UYU
+        if (str.includes('uyu') ||
+            str.includes('$u') ||
+            str.includes('pesos') ||
+            str.includes('uruguayos') ||
+            str.includes('peso uruguayo') ||
+            str.includes('pesos uruguayos')) {
+            return 'UYU';
+        }
+
+        // Patrones específicos para USD
+        if (str.includes('usd') ||
+            str.includes('dólares') ||
+            str.includes('dolares') ||
+            str.includes('dólar') ||
+            str.includes('dolar') ||
+            str.includes('u$s') ||
+            str.includes('us$') ||
+            (str.includes('$') && !str.includes('$u') && !str.includes('uyu'))) {
             return 'USD';
         }
+
+        // Por defecto, si hay un símbolo $ sin especificar, asumir USD
+        if (str.includes('$') && !str.includes('$u')) {
+            return 'USD';
+        }
+
+        // Si no se detecta nada específico, asumir UYU (más común en Uruguay)
         return 'UYU';
     }
 
@@ -360,25 +580,85 @@ Responde SOLO con un JSON válido en este formato:
             // Patrón para extraer fecha, descripción y monto
             const pattern = /(\d{1,2}\/\d{1,2}\/\d{2,4})\s*-\s*(.+?)\s*-\s*([\d.,]+)\s*([A-Z]{3})?/;
             const match = line.match(pattern);
-            
+
             if (match) {
                 const [, date, description, amountStr, currencyStr] = match;
                 const amount = this.parseAmount(amountStr);
                 const currency = currencyStr || this.detectCurrency(amountStr);
-                
+                const category = this.assignCategoryFromDescription(description.trim());
+
                 return {
                     date: date,
                     description: description.trim(),
                     amount: amount,
-                    currency: currency
+                    currency: currency,
+                    category: category
                 };
             }
-            
+
             return null;
-            
+
         } catch (error) {
             console.error('❌ Error parseando línea markdown:', error);
             return null;
+        }
+    }
+
+    /**
+     * Asigna una categoría basada en la descripción del gasto
+     * @param {string} description - Descripción del gasto
+     * @returns {string} Categoría asignada
+     */
+    assignCategoryFromDescription(description) {
+        try {
+            const desc = description.toLowerCase();
+
+            // Alimentación
+            if (desc.match(/(restaurante|delivery|comida|supermercado|mercado|panaderia|carne|verdura|fruta|bebida|cafe|bar|restaurante|comedor)/)) {
+                return 'Alimentación';
+            }
+
+            // Transporte
+            if (desc.match(/(gasolina|combustible|transporte|taxi|uber|bus|metro|estacionamiento|parking|auto|taller|mecanico)/)) {
+                return 'Transporte';
+            }
+
+            // Entretenimiento
+            if (desc.match(/(cine|pelicula|teatro|concierto|musica|juego|videojuego|libro|revista|deporte|gimnasio|gym|entretenimiento|hobby)/)) {
+                return 'Entretenimiento';
+            }
+
+            // Salud
+            if (desc.match(/(medico|doctor|farmacia|medicamento|hospital|clinica|odontologo|salud|seguro medico|consulta|tratamiento)/)) {
+                return 'Salud';
+            }
+
+            // Educación
+            if (desc.match(/(curso|escuela|universidad|colegio|libro|material|estudio|educacion|clase|profesor|diploma|certificado)/)) {
+                return 'Educación';
+            }
+
+            // Vivienda
+            if (desc.match(/(alquiler|renta|hipoteca|servicio|luz|agua|gas|electricidad|internet|telefono|reparacion|construccion|vivienda|casa|departamento)/)) {
+                return 'Vivienda';
+            }
+
+            // Ropa
+            if (desc.match(/(ropa|zapato|camisa|pantalon|vestido|accesorio|ropa interior|calzado|tienda de ropa)/)) {
+                return 'Ropa';
+            }
+
+            // Servicios
+            if (desc.match(/(servicio|telefono|celular|movil|internet|cable|television|seguro|aseguradora|banco|tarjeta)/)) {
+                return 'Servicios';
+            }
+
+            // Otros (por defecto)
+            return 'Otros';
+
+        } catch (error) {
+            console.error('❌ Error asignando categoría:', error);
+            return 'Otros';
         }
     }
 }

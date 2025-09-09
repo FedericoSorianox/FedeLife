@@ -175,8 +175,8 @@ if (typeof window !== 'undefined') {
     window.checkConnectivity = checkConnectivity;
 }
 
-// Exportar todo como objeto por defecto para compatibilidad
-export default {
+// Exportar todo como objeto global para compatibilidad
+window.PRODUCTION_CONFIG_MODULE = {
     PRODUCTION_CONFIG,
     isDevelopment,
     checkApiHealth,

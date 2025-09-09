@@ -17,6 +17,11 @@ const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
 
+// Importar modelos (necesario para que Mongoose los registre)
+require('./models/Category');
+require('./models/Transaction');
+require('./models/User');
+
 // Importar rutas
 const authRoutes = require('./routes/auth');
 const transactionRoutes = require('./routes/transactions');
@@ -266,7 +271,50 @@ function setupRoutes() {
     
     // Rutas públicas (sin autenticación) - para modo demo
     app.use('/api/public/transactions', transactionRoutes);
-    app.use('/api/public/categories', categoryRoutes);
+
+    // Rutas públicas específicas para categorías (sin autenticación)
+    app.get('/api/public/categories', async (req, res) => {
+        try {
+            const { type } = req.query;
+
+            // Obtener categorías por defecto del sistema
+            const defaultCategories = [
+                { name: 'Salario', type: 'income', color: '#27ae60', isDefault: true },
+                { name: 'Freelance', type: 'income', color: '#2ecc71', isDefault: true },
+                { name: 'Inversiones', type: 'income', color: '#3498db', isDefault: true },
+                { name: 'Otros Ingresos', type: 'income', color: '#1abc9c', isDefault: true },
+                { name: 'Alimentación', type: 'expense', color: '#e74c3c', isDefault: true },
+                { name: 'Transporte', type: 'expense', color: '#f39c12', isDefault: true },
+                { name: 'Servicios', type: 'expense', color: '#e67e22', isDefault: true },
+                { name: 'Entretenimiento', type: 'expense', color: '#8e44ad', isDefault: true },
+                { name: 'Salud', type: 'expense', color: '#2ecc71', isDefault: true },
+                { name: 'Educación', type: 'expense', color: '#3498db', isDefault: true },
+                { name: 'Ropa', type: 'expense', color: '#e91e63', isDefault: true },
+                { name: 'Otros Gastos', type: 'expense', color: '#95a5a6', isDefault: true }
+            ];
+
+            // Filtrar por tipo si se especifica
+            const filteredCategories = type
+                ? defaultCategories.filter(cat => cat.type === type)
+                : defaultCategories;
+
+            res.json({
+                success: true,
+                data: {
+                    categories: filteredCategories,
+                    message: 'Categorías públicas obtenidas correctamente'
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error obteniendo categorías públicas:', error);
+            res.status(500).json({
+                error: 'Error interno del servidor',
+                message: 'No se pudieron obtener las categorías públicas'
+            });
+        }
+    });
+
     app.use('/api/public/ai', aiRoutes);
     
     // Ruta de health check

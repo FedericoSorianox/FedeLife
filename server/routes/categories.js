@@ -8,6 +8,7 @@
 
 const express = require('express');
 const Transaction = require('../models/Transaction');
+const Category = require('../models/Category');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
