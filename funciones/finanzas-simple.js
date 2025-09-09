@@ -335,7 +335,7 @@ class FinanceApp {
     }
 
     /**
-     * Procesa el archivo PDF
+     * Procesa el archivo PDF usando OpenAI directamente
      */
     async processPdfFile() {
         const pdfFile = document.getElementById('pdfFile');
@@ -354,31 +354,51 @@ class FinanceApp {
             processingStatus.style.display = 'block';
             extractedExpenses.style.display = 'none';
 
-            // Crear FormData
-            const formData = new FormData();
-            formData.append('pdf', pdfFile.files[0]);
+            console.log('📄 Iniciando procesamiento de PDF con OpenAI...');
 
-            // Enviar al backend
-            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.ai}`, {
-                method: 'POST',
-                body: formData
-            });
+            // Cargar OpenAI Analyzer si no está cargado
+            if (!window.openaiAnalyzer) {
+                console.log('🤖 Cargando OpenAI Analyzer...');
+                const { OpenAIAnalyzer } = await import('../funciones/openai_analyzer.js');
+                window.openaiAnalyzer = new OpenAIAnalyzer();
+                
+                // Configurar API Key
+                const apiKey = localStorage.getItem('openai_api_key') || 'sk-proj-your-openai-api-key-here';
+                window.openaiAnalyzer.setApiKey(apiKey);
+                
+                console.log('✅ OpenAI Analyzer cargado y configurado');
+            }
 
-            if (response.ok) {
-                const result = await response.json();
+            // Extraer texto del PDF
+            const text = await this.extractTextFromPdf(pdfFile.files[0]);
+            console.log(`📄 Texto extraído: ${text.length} caracteres`);
+
+            if (!text || text.length < 10) {
+                throw new Error('No se pudo extraer texto del PDF o el archivo está vacío');
+            }
+
+            // Analizar con OpenAI
+            console.log('🤖 Enviando a OpenAI para análisis...');
+            const analysisResult = await window.openaiAnalyzer.analyzeFinancialText(text);
+            
+            if (analysisResult && analysisResult.success) {
+                console.log('✅ Análisis completado:', analysisResult.data);
+                
+                // Procesar resultados
+                const processedData = this.processOpenAIResults(analysisResult.data);
                 
                 // Mostrar resultados
-                this.displayPdfResults(result.data);
+                this.displayPdfResults(processedData);
                 extractedExpenses.style.display = 'block';
                 
-                this.showNotification('PDF procesado exitosamente', 'success');
+                this.showNotification('PDF procesado exitosamente con OpenAI', 'success');
             } else {
-                throw new Error('Error del servidor');
+                throw new Error(analysisResult?.error || 'Error en el análisis con OpenAI');
             }
 
         } catch (error) {
             console.error('❌ Error procesando PDF:', error);
-            this.showNotification('Error procesando PDF. Intenta nuevamente.', 'error');
+            this.showNotification(`Error procesando PDF: ${error.message}`, 'error');
         } finally {
             // Ocultar estado de procesamiento
             processingStatus.style.display = 'none';
@@ -387,25 +407,181 @@ class FinanceApp {
     }
 
     /**
+     * Extrae texto de un archivo PDF usando PDF.js
+     */
+    async extractTextFromPdf(pdfFile) {
+        return new Promise((resolve, reject) => {
+            const fileReader = new FileReader();
+            
+            fileReader.onload = async function() {
+                try {
+                    // Cargar PDF.js si no está cargado
+                    if (typeof pdfjsLib === 'undefined') {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                        script.onload = () => {
+                            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                            extractText();
+                        };
+                        document.head.appendChild(script);
+                    } else {
+                        extractText();
+                    }
+                    
+                    async function extractText() {
+                        try {
+                            const arrayBuffer = fileReader.result;
+                            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                            let fullText = '';
+                            
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const textContent = await page.getTextContent();
+                                const pageText = textContent.items.map(item => item.str).join(' ');
+                                fullText += pageText + '\n';
+                            }
+                            
+                            resolve(fullText);
+                        } catch (error) {
+                            reject(error);
+                        }
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            
+            fileReader.onerror = () => reject(new Error('Error leyendo el archivo PDF'));
+            fileReader.readAsArrayBuffer(pdfFile);
+        });
+    }
+
+    /**
+     * Procesa los resultados de OpenAI
+     */
+    processOpenAIResults(data) {
+        // Si la respuesta es un array de gastos directo
+        if (Array.isArray(data)) {
+            return { expenses: data };
+        }
+        
+        // Si la respuesta tiene estructura de análisis
+        if (data.expenses && Array.isArray(data.expenses)) {
+            return { expenses: data.expenses };
+        }
+        
+        // Si la respuesta es texto, intentar extraer gastos
+        if (typeof data === 'string') {
+            const expenses = this.extractExpensesFromText(data);
+            return { expenses };
+        }
+        
+        // Formato por defecto
+        return { expenses: [] };
+    }
+
+    /**
+     * Extrae gastos de texto usando el sistema de análisis
+     */
+    extractExpensesFromText(text) {
+        // Usar el mismo sistema de extracción que el analizador de PDF
+        const expenses = [];
+        
+        // Buscar patrones de gastos en el texto
+        const expensePatterns = [
+            /(\d+(?:[.,]\d+)?)\s*(USD|UYU|usd|uyu)/gi,
+            /\$(\d+(?:[.,]\d+)?)\s*(USD|UYU|usd|uyu)?/gi,
+            /(\d+(?:[.,]\d+)?)\s*pesos/gi
+        ];
+        
+        expensePatterns.forEach(pattern => {
+            let match;
+            while ((match = pattern.exec(text)) !== null) {
+                const amount = parseFloat(match[1].replace(',', '.'));
+                const currency = match[2] ? match[2].toUpperCase() : 'UYU';
+                
+                if (amount > 0) {
+                    expenses.push({
+                        amount: amount,
+                        description: 'Gasto extraído del PDF',
+                        currency: currency,
+                        category: 'Otros'
+                    });
+                }
+            }
+        });
+        
+        return expenses;
+    }
+
+    /**
      * Muestra los resultados del análisis de PDF
      */
     displayPdfResults(data) {
         const expensesList = document.getElementById('expensesList');
         
-        if (data.analysis && data.analysis.expenses) {
-            const expensesHTML = data.analysis.expenses.map(expense => `
-                <div class="expense-item">
-                    <input type="checkbox" class="expense-checkbox" data-amount="${expense.amount}" data-description="${expense.description}">
-                    <div class="expense-info">
-                        <span class="expense-description">${expense.description}</span>
-                        <span class="expense-amount">$${expense.amount}</span>
+        if (data.expenses && data.expenses.length > 0) {
+            const expensesHTML = data.expenses.map((expense, index) => {
+                const symbol = expense.currency === 'UYU' ? '$U' : '$';
+                return `
+                    <div class="expense-item">
+                        <input type="checkbox" class="expense-checkbox" 
+                               data-amount="${expense.amount}" 
+                               data-description="${expense.description}"
+                               data-currency="${expense.currency}"
+                               data-category="${expense.category || 'Otros'}">
+                        <div class="expense-info">
+                            <span class="expense-description">${expense.description}</span>
+                            <span class="expense-amount">${symbol}${expense.amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             
             expensesList.innerHTML = expensesHTML;
+            
+            // Agregar funcionalidad para agregar gastos seleccionados
+            this.setupExpenseSelection();
         } else {
             expensesList.innerHTML = '<p>No se encontraron gastos en el PDF</p>';
+        }
+    }
+
+    /**
+     * Configura la selección de gastos para agregar
+     */
+    setupExpenseSelection() {
+        const checkboxes = document.querySelectorAll('.expense-checkbox');
+        const addSelectedBtn = document.getElementById('addSelectedExpenses');
+        
+        if (addSelectedBtn) {
+            addSelectedBtn.addEventListener('click', () => {
+                const selectedExpenses = Array.from(checkboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => ({
+                        type: 'expense',
+                        amount: parseFloat(cb.dataset.amount),
+                        description: cb.dataset.description,
+                        category: cb.dataset.category || 'Otros',
+                        currency: cb.dataset.currency || 'UYU',
+                        date: new Date(),
+                        paymentMethod: 'pdf'
+                    }));
+                
+                if (selectedExpenses.length > 0) {
+                    selectedExpenses.forEach(expense => {
+                        expense.id = this.generateId();
+                        expense.createdAt = new Date();
+                        this.transactions.push(expense);
+                    });
+                    
+                    this.saveDataToStorage();
+                    this.refreshAllData();
+                    this.showNotification(`${selectedExpenses.length} gastos agregados correctamente`, 'success');
+                } else {
+                    this.showNotification('Selecciona al menos un gasto para agregar', 'error');
+                }
+            });
         }
     }
 
