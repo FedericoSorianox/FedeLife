@@ -2122,43 +2122,6 @@ class FinanceApp {
 
             console.log('📄 Iniciando procesamiento de PDF con OpenAI...');
 
-            // Cargar OpenAI Analyzer si no está cargado
-            if (!window.openaiAnalyzer) {
-                console.log('🤖 Cargando OpenAI Analyzer...');
-                const { OpenAIAnalyzer } = await import('../funciones/openai_analyzer.js');
-                window.openaiAnalyzer = new OpenAIAnalyzer();
-
-                // Configurar API Key
-                let apiKey = null;
-                let apiKeySource = '';
-
-                try {
-                    if (window.LOCAL_CONFIG && window.LOCAL_CONFIG.OPENAI_API_KEY) {
-                        apiKey = window.LOCAL_CONFIG.OPENAI_API_KEY;
-                        apiKeySource = 'config-local.js';
-                    } else if (window.getLocalApiKey) {
-                        apiKey = window.getLocalApiKey();
-                        apiKeySource = 'config-local.js';
-                    } else {
-                        throw new Error('Configuración local no disponible');
-                    }
-                } catch (error) {
-                    console.warn('⚠️ No se pudo cargar config-local.js, intentando localStorage...');
-                    apiKey = localStorage.getItem('openai_api_key');
-                    if (apiKey && apiKey !== 'sk-proj-your-openai-api-key-here') {
-                        apiKeySource = 'localStorage';
-                    } else {
-                        apiKey = 'sk-proj-your-openai-api-key-here';
-                        apiKeySource = 'placeholder';
-                        console.warn('⚠️ Usando API Key placeholder - configura tu API Key real');
-                    }
-                }
-
-                console.log(`🔑 Fuente de API Key: ${apiKeySource}`);
-                window.openaiAnalyzer.setApiKey(apiKey);
-                console.log('✅ OpenAI Analyzer cargado y configurado');
-            }
-
             // Extraer texto del PDF
             const text = await this.extractTextFromPdf(pdfFile.files[0]);
             console.log(`📄 Texto extraído: ${text.length} caracteres`);
@@ -2182,14 +2145,47 @@ class FinanceApp {
                 console.log('💡 Si faltan gastos, considera dividir el PDF en partes más pequeñas');
             }
 
-            // Analizar con OpenAI
-            console.log('🤖 Enviando a OpenAI para análisis...');
-            const analysisResult = await window.openaiAnalyzer.analyzeFinancialText(textToAnalyze);
+            // Verificar que el usuario esté autenticado
+            const authToken = localStorage.getItem('auth_token');
+            if (!authToken) {
+                throw new Error('Debes iniciar sesión para usar la función de análisis de PDFs');
+            }
 
-            if (analysisResult && analysisResult.success) {
+            // Analizar con OpenAI usando el endpoint del servidor
+            console.log('🤖 Enviando texto al servidor para análisis con OpenAI...');
+
+            const analysisResponse = await fetch(`${this.apiUrl}/ai/analyze-pdf`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({
+                    text: textToAnalyze
+                })
+            });
+
+            if (!analysisResponse.ok) {
+                if (analysisResponse.status === 401) {
+                    throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+                } else if (analysisResponse.status === 403) {
+                    throw new Error('No tienes permisos para usar esta función. Contacta al administrador.');
+                } else if (analysisResponse.status === 500) {
+                    throw new Error('Error interno del servidor. Intenta nuevamente en unos minutos.');
+                } else if (analysisResponse.status === 503) {
+                    throw new Error('Servicio temporalmente no disponible. Intenta nuevamente.');
+                } else {
+                    const errorText = await analysisResponse.text().catch(() => 'Error desconocido');
+                    throw new Error(`Error del servidor (${analysisResponse.status}): ${errorText}`);
+                }
+            }
+
+            const analysisResult = await analysisResponse.json();
+
+            if (analysisResult.success && analysisResult.data) {
                 console.log('✅ Análisis completado:', analysisResult.data);
 
-                // Procesar resultados
+                // Procesar resultados del servidor
                 const processedData = this.processOpenAIResults(analysisResult.data);
 
                 const expensesCount = processedData.expenses ? processedData.expenses.length : 0;
