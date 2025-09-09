@@ -361,8 +361,17 @@ class FinanceApp {
         // Chat de IA en metas
         const sendChatBtn = document.getElementById('sendChatBtn');
         const chatInput = document.getElementById('chatInput');
+        const diagnoseBtn = document.getElementById('diagnoseBtn');
+
         if (sendChatBtn && chatInput) {
             sendChatBtn.addEventListener('click', () => this.sendChatMessage());
+        }
+
+        if (diagnoseBtn) {
+            diagnoseBtn.addEventListener('click', () => this.diagnoseOpenAIConnection());
+        }
+
+        if (sendChatBtn && chatInput) {
             chatInput.addEventListener('input', () => {
                 sendChatBtn.disabled = !chatInput.value.trim();
             });
@@ -3155,6 +3164,76 @@ class FinanceApp {
     }
 
     /**
+     * Diagnostica el estado de la conexión con OpenAI
+     */
+    async diagnoseOpenAIConnection() {
+        try {
+            console.log('🔍 Iniciando diagnóstico de OpenAI...');
+
+            // Verificar API Key local
+            let apiKey = null;
+            let apiKeySource = '';
+
+            try {
+                if (window.LOCAL_CONFIG && window.LOCAL_CONFIG.OPENAI_API_KEY) {
+                    apiKey = window.LOCAL_CONFIG.OPENAI_API_KEY;
+                    apiKeySource = 'config-local.js';
+                } else if (window.getLocalApiKey) {
+                    apiKey = window.getLocalApiKey();
+                    apiKeySource = 'config-local.js';
+                } else {
+                    throw new Error('Configuración local no disponible');
+                }
+            } catch (error) {
+                apiKey = localStorage.getItem('openai_api_key');
+                if (apiKey && apiKey !== 'sk-proj-your-openai-api-key-here') {
+                    apiKeySource = 'localStorage';
+                }
+            }
+
+            console.log(`🔑 API Key encontrada en: ${apiKeySource}`);
+
+            if (!apiKey) {
+                throw new Error('No se encontró una API Key de OpenAI configurada');
+            }
+
+            // Verificar formato de API Key
+            if (!apiKey.startsWith('sk-proj-') && !apiKey.startsWith('sk-')) {
+                throw new Error('La API Key no tiene el formato correcto. Debe comenzar con "sk-proj-" o "sk-"');
+            }
+
+            // Hacer health check al servidor
+            const healthResponse = await fetch(`${this.apiUrl}/ai/health`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!healthResponse.ok) {
+                throw new Error(`Error del servidor: ${healthResponse.status}`);
+            }
+
+            const healthData = await healthResponse.json();
+
+            if (healthData.success && healthData.data.status === 'success') {
+                console.log('✅ Diagnóstico completado: OpenAI funcionando correctamente');
+                this.showNotification('✅ OpenAI funcionando correctamente', 'success');
+                return true;
+            } else {
+                console.error('❌ Diagnóstico fallido:', healthData.data.message);
+                this.showNotification(`❌ Error en OpenAI: ${healthData.data.message}`, 'error');
+                return false;
+            }
+
+        } catch (error) {
+            console.error('❌ Error en diagnóstico:', error.message);
+            this.showNotification(`❌ Error de diagnóstico: ${error.message}`, 'error');
+            return false;
+        }
+    }
+
+    /**
      * Envía un mensaje al chat de IA
      */
     async sendChatMessage() {
@@ -3190,8 +3269,35 @@ class FinanceApp {
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
         try {
-            // Obtener respuesta de OpenAI usando la misma configuración que la aplicación
-            const aiResponse = await this.getOpenAIResponse(message);
+            // Usar el endpoint del servidor para chat con IA
+            console.log('💬 Enviando mensaje al servidor...');
+
+            const chatResponse = await fetch(`${this.apiUrl}/ai/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                },
+                body: JSON.stringify({
+                    message: message
+                })
+            });
+
+            if (!chatResponse.ok) {
+                if (chatResponse.status === 401) {
+                    throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+                }
+                throw new Error(`Error del servidor: ${chatResponse.status}`);
+            }
+
+            const chatData = await chatResponse.json();
+            let aiResponse;
+
+            if (chatData.success && chatData.data) {
+                aiResponse = chatData.data.response;
+            } else {
+                throw new Error(chatData.message || 'Error procesando la respuesta');
+            }
 
             // Remover indicador de escritura
             chatMessages.removeChild(typingIndicator);

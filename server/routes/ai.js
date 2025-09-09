@@ -9,7 +9,7 @@ const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const multer = require('multer');
 const fs = require('fs');
-const { extractTextFromPDF, analyzeTextWithAI } = require('../services/aiService');
+const { extractTextFromPDF, analyzeTextWithAI, checkOpenAIHealth } = require('../services/aiService');
 
 const router = express.Router();
 
@@ -41,13 +41,9 @@ router.post('/analyze-pdf', authenticateToken, async (req, res) => {
             });
         }
         
-        // Por ahora, simulamos el análisis
-        const analysis = {
-            success: true,
-            expenses: [],
-            confidence: 0.8,
-            summary: 'Análisis simulado'
-        };
+        // Usar la función real de análisis con OpenAI
+        console.log('📄 Iniciando análisis de PDF con OpenAI...');
+        const analysis = await analyzeTextWithAI(text, req.user?.id || 'anonymous');
         
         res.json({
             success: true,
@@ -59,6 +55,32 @@ router.post('/analyze-pdf', authenticateToken, async (req, res) => {
         res.status(500).json({
             error: 'Error interno del servidor',
             message: 'No se pudo analizar el PDF'
+        });
+    }
+});
+
+/**
+ * GET /api/ai/health
+ * Verifica el estado de la conexión con OpenAI
+ */
+router.get('/health', async (req, res) => {
+    try {
+        console.log('🏥 Verificando estado de OpenAI API...');
+        const healthStatus = await checkOpenAIHealth();
+
+        res.json({
+            success: true,
+            data: healthStatus,
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ Error verificando estado de OpenAI:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error interno del servidor',
+            message: 'No se pudo verificar el estado de OpenAI',
+            timestamp: new Date().toISOString()
         });
     }
 });
@@ -78,17 +100,104 @@ router.post('/chat', authenticateToken, async (req, res) => {
             });
         }
         
-        // Por ahora, simulamos la respuesta
-        const response = {
-            success: true,
-            message: 'Respuesta simulada de IA',
-            data: {
-                response: 'Esta es una respuesta simulada del chat con IA.'
-            }
+        // Usar OpenAI para generar respuesta del chat
+        console.log('💬 Procesando mensaje del chat con OpenAI...');
+
+        // Crear contexto financiero para el chat
+        const financialContext = {
+            currentPeriod: 'Actual',
+            totalIncome: 15000,
+            totalExpenses: 12000,
+            balance: 3000,
+            goalsCount: 3,
+            categoriesCount: 8
         };
+
+        const systemPrompt = `Eres un Economista Profesional especializado en administración financiera personal.
+
+Tu especialización incluye:
+- Análisis financiero detallado
+- Estrategias de ahorro e inversión
+- Optimización de presupuestos
+- Planificación financiera a largo plazo
+
+IMPORTANTE:
+- Responde de manera profesional pero accesible
+- Proporciona consejos prácticos y accionables
+- Sé específico con números y estrategias
+- Recomienda siempre estrategias conservadoras primero
+
+Contexto financiero del usuario:
+- Ingresos mensuales: $${financialContext.totalIncome}
+- Gastos mensuales: $${financialContext.totalExpenses}
+- Balance: $${financialContext.balance}
+- Metas activas: ${financialContext.goalsCount}
+- Categorías: ${financialContext.categoriesCount}
+
+Responde como un economista profesional especializado en la mejor administración del dinero.`;
+
+        // Preparar la solicitud a OpenAI
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 segundos timeout
+
+        try {
+            const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: systemPrompt
+                        },
+                        {
+                            role: 'user',
+                            content: message
+                        }
+                    ],
+                    max_tokens: 800,
+                    temperature: 0.7
+                }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!openaiResponse.ok) {
+                throw new Error(`Error en OpenAI API: ${openaiResponse.status}`);
+            }
+
+            const data = await openaiResponse.json();
+            const aiMessage = data.choices[0].message.content;
+
+            const response = {
+                success: true,
+                message: 'Consulta procesada correctamente',
+                data: {
+                    response: aiMessage,
+                    timestamp: new Date().toISOString()
+                }
+            };
         
-        res.json(response);
-        
+            res.json(response);
+
+        } catch (innerError) {
+            console.error('❌ Error interno en chat con OpenAI:', innerError);
+            const response = {
+                success: false,
+                message: 'Error procesando la consulta con IA',
+                data: {
+                    response: 'Lo siento, no pude procesar tu consulta en este momento. Por favor, verifica tu conexión e intenta nuevamente.',
+                    timestamp: new Date().toISOString()
+                }
+            };
+            res.json(response);
+        }
+
     } catch (error) {
         console.error('❌ Error en chat con IA:', error);
         res.status(500).json({
