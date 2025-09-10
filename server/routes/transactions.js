@@ -786,7 +786,7 @@ router.post('/public', validateTransaction, async (req, res) => {
         
         // Crear transacción con usuario demo
         const transaction = new Transaction({
-            userId: 'demo_user_public', // Usuario demo para transacciones públicas
+            userId: null, // Usuario demo para transacciones públicas
             type,
             amount: parseFloat(amount),
             description: description.trim(),

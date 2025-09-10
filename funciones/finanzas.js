@@ -1010,7 +1010,21 @@ class FinanceApp {
 
                     this.showNotification('Transacción agregada correctamente', 'success');
                 } else {
-                    throw new Error('Error del servidor');
+                    // Intentar obtener detalles del error del servidor
+                    let errorMessage = 'Error del servidor';
+                    try {
+                        const errorResult = await response.json();
+                        if (errorResult.error) {
+                            errorMessage = errorResult.error;
+                        }
+                        if (errorResult.details && Array.isArray(errorResult.details)) {
+                            errorMessage += ': ' + errorResult.details.join(', ');
+                        }
+                    } catch (parseError) {
+                        console.warn('No se pudo parsear respuesta de error:', parseError);
+                    }
+
+                    throw new Error(`HTTP ${response.status}: ${errorMessage}`);
                 }
             } catch (backendError) {
                 console.warn('⚠️ Backend no disponible, guardando localmente');

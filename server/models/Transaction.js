@@ -15,7 +15,7 @@ const transactionSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: [true, 'El usuario es requerido'],
+        required: false, // Permitir null para transacciones demo
         index: true
     },
     
@@ -521,20 +521,25 @@ transactionSchema.statics.searchTransactions = async function(userId, searchText
  */
 transactionSchema.pre('save', function(next) {
     // Asegurar que la descripción no esté vacía después del trim
-    if (!this.description.trim()) {
+    if (!this.description || !this.description.trim()) {
         return next(new Error('La descripción no puede estar vacía'));
     }
-    
+
     // Asegurar que la categoría no esté vacía después del trim
-    if (!this.category.trim()) {
+    if (!this.category || !this.category.trim()) {
         return next(new Error('La categoría no puede estar vacía'));
     }
-    
+
     // Validar que la fecha no sea futura (opcional, puedes comentar si quieres permitir fechas futuras)
-    if (this.date > new Date()) {
+    if (this.date && this.date > new Date()) {
         return next(new Error('La fecha no puede ser futura'));
     }
-    
+
+    // Para transacciones demo (userId null), saltar validaciones adicionales
+    if (this.userId === null) {
+        return next();
+    }
+
     next();
 });
 
