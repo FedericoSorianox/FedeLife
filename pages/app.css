@@ -3165,6 +3165,66 @@ nav {
     color: #2ecc71;
 }
 
+/* Sección de API Key */
+.api-key-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    min-width: 300px;
+}
+
+.api-key-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+.api-key-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.api-key-input:focus {
+    outline: none;
+    border-color: #3498db;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.api-key-input::placeholder {
+    color: #999;
+}
+
+.api-key-hint {
+    font-size: 0.8em;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.4;
+}
+
+.api-key-hint a {
+    color: #3498db;
+    text-decoration: underline;
+}
+
+.api-key-hint a:hover {
+    color: #2980b9;
+}
+
 /* Botón de procesar */
 .process-btn {
     background: linear-gradient(45deg, #f39c12, #e74c3c);

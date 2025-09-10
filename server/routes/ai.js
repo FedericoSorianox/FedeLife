@@ -78,25 +78,49 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
             });
         }
 
-        console.log('🤖 Iniciando análisis con OpenAI...');
+        console.log('🤖 Iniciando análisis...');
 
-        // Verificar que la API key esté configurada
-        const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-        if (!OPENAI_API_KEY) {
-            console.error('❌ OPENAI_API_KEY no está configurada en el servidor');
-            return res.status(500).json({
-                error: 'Configuración incompleta',
-                message: 'La API Key de OpenAI no está configurada en el servidor'
-            });
+        // Verificar API Key del usuario desde el FormData
+        const userApiKey = req.body.userApiKey || req.body.apiKey; // Puede venir de diferentes campos
+        console.log('🔑 API Key del usuario:', userApiKey ? 'Proporcionada por el cliente' : 'No proporcionada');
+
+        // Verificar si tenemos API key (del servidor o del usuario)
+        const serverApiKey = process.env.OPENAI_API_KEY;
+        const effectiveApiKey = (userApiKey && userApiKey.startsWith('sk-')) ? userApiKey : serverApiKey;
+
+        let analysis;
+        let analysisMode;
+
+        if (effectiveApiKey && effectiveApiKey.startsWith('sk-')) {
+            console.log('🔑 API Key disponible - usando análisis con OpenAI');
+            analysisMode = userApiKey ? 'openai_user' : 'openai_server';
+
+            // Analizar texto con OpenAI usando la API key efectiva
+            console.log('🤖 Enviando texto a OpenAI para análisis...');
+
+            // Crear una versión temporal de analyzeTextWithAI que use la API key del usuario
+            const { analyzeTextWithAI } = require('../services/aiService');
+
+            // Si es API key del usuario, necesitamos una versión especial que la use
+            if (userApiKey) {
+                // Usar la función especial que usa API key del usuario
+                const { analyzeTextWithUserKey } = require('../services/aiService');
+                analysis = await analyzeTextWithUserKey(extractedText, userApiKey, 'anonymous');
+            } else {
+                analysis = await analyzeTextWithAI(extractedText, 'anonymous');
+            }
+
+            console.log('✅ Análisis con OpenAI completado exitosamente');
+        } else {
+            console.log('⚠️ API Key de OpenAI no disponible - usando análisis básico');
+            analysisMode = 'basic_patterns';
+
+            // Usar análisis básico sin OpenAI
+            console.log('🔍 Aplicando análisis básico de patrones...');
+            const { analyzeTextWithBasicPatterns } = require('../services/aiService');
+            analysis = analyzeTextWithBasicPatterns(extractedText, 'anonymous');
+            console.log('✅ Análisis básico completado exitosamente');
         }
-
-        console.log('🔑 API Key de OpenAI configurada correctamente');
-
-        // Analizar texto con IA
-        console.log('🤖 Enviando texto a OpenAI para análisis...');
-        const analysis = await analyzeTextWithAI(extractedText, 'anonymous');
-
-        console.log('✅ Análisis completado exitosamente');
 
         // Limpiar archivo temporal
         if (fs.existsSync(filePath)) {
@@ -108,7 +132,12 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
             data: {
                 extractedText: extractedText.substring(0, 500) + (extractedText.length > 500 ? '...' : ''),
                 analysis: analysis,
-                message: 'PDF analizado correctamente (modo demo)'
+                analysisMode: analysisMode,
+                message: analysisMode === 'openai_server'
+                    ? 'PDF analizado correctamente con OpenAI (API del servidor)'
+                    : analysisMode === 'openai_user'
+                    ? 'PDF analizado correctamente con OpenAI (tu API key)'
+                    : 'PDF analizado correctamente con análisis básico (sin OpenAI)'
             }
         });
 

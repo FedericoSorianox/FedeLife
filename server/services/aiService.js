@@ -446,6 +446,416 @@ Devuelve la respuesta en este formato JSON exacto:
 
 
 /**
+ * Análisis básico de gastos usando expresiones regulares (sin OpenAI)
+ * @param {string} text - Texto extraído del PDF
+ * @returns {Object} Análisis básico de gastos
+ */
+function analyzeTextWithBasicPatterns(text, userId) {
+    console.log('🔍 Iniciando análisis básico de gastos (sin OpenAI)...');
+
+    const expenses = [];
+    let totalAmount = 0;
+    let currency = 'UYU'; // Default
+
+    try {
+        // Limpiar y preparar el texto
+        const cleanText = text.replace(/\s+/g, ' ').toUpperCase();
+
+        // Patrones para detectar gastos en diferentes formatos
+        const expensePatterns = [
+            // Formato: "DESCRIPCION - $MONTO"
+            /([A-Z\s]+?)\s*-\s*\$([0-9,]+\.?[0-9]*)/g,
+            // Formato: "DESCRIPCION $MONTO"
+            /([A-Z\s]+?)\s+\$([0-9,]+\.?[0-9]*)/g,
+            // Formato: "MONTO DESCRIPCION"
+            /\$([0-9,]+\.?[0-9]*)\s+([A-Z\s]+)/g,
+            // Formato con UYU/USD
+            /(UYU|USD)\s*\$?([0-9,]+\.?[0-9]*)\s+([A-Z\s]+)/g,
+            // Formato numérico simple con contexto
+            /([0-9,]+\.?[0-9]*)\s+(SUPERMERCADO|RESTAURANTE|GASOLINA|COMBUSTIBLE|FARMACIA|MEDICO|HOSPITAL|TRANSPORTE|TAXI|UBER|BUSES|SERVICIOS?|LUZ|AGUA|TELEFONO|INTERNET|CABLE|SEGURO?|EDUCACION|ESCUELA|UNIVERSIDAD|LIBROS?|CURSO|DEPORTE|GIMNASIO|ENTRETENIMIENTO|CINE|TEATRO|MUSICA|CONCIERTO|PARKING|ESTACIONAMIENTO|PARKING|PAGO|MANTENIMIENTO|REPARACION|COMPRA|VENTA|TRANSFERENCIA|DEPOSITO|EXTRACCION|RETIRO)/g
+        ];
+
+        // Categorías automáticas basadas en palabras clave
+        const categoryMap = {
+            'SUPERMERCADO': 'Alimentación',
+            'RESTAURANTE': 'Alimentación',
+            'COMIDA': 'Alimentación',
+            'DELIVERY': 'Alimentación',
+            'GASOLINA': 'Transporte',
+            'COMBUSTIBLE': 'Transporte',
+            'TRANSPORTE': 'Transporte',
+            'TAXI': 'Transporte',
+            'UBER': 'Transporte',
+            'BUSES': 'Transporte',
+            'FARMACIA': 'Salud',
+            'MEDICO': 'Salud',
+            'HOSPITAL': 'Salud',
+            'SERVICIOS': 'Servicios',
+            'LUZ': 'Servicios',
+            'AGUA': 'Servicios',
+            'TELEFONO': 'Servicios',
+            'INTERNET': 'Servicios',
+            'CABLE': 'Servicios',
+            'SEGURO': 'Servicios',
+            'EDUCACION': 'Educación',
+            'ESCUELA': 'Educación',
+            'UNIVERSIDAD': 'Educación',
+            'LIBROS': 'Educación',
+            'CURSO': 'Educación',
+            'DEPORTE': 'Entretenimiento',
+            'GIMNASIO': 'Entretenimiento',
+            'ENTRETENIMIENTO': 'Entretenimiento',
+            'CINE': 'Entretenimiento',
+            'TEATRO': 'Entretenimiento',
+            'MUSICA': 'Entretenimiento',
+            'CONCIERTO': 'Entretenimiento'
+        };
+
+        // Procesar cada patrón
+        for (const pattern of expensePatterns) {
+            let match;
+            while ((match = pattern.exec(cleanText)) !== null) {
+                let description = '';
+                let amount = 0;
+                let detectedCurrency = currency;
+
+                // Extraer información según el patrón
+                if (match[1] && match[2]) {
+                    // Patrones donde descripción viene primero
+                    description = match[1].trim();
+                    amount = parseFloat(match[2].replace(/,/g, ''));
+
+                    // Verificar si es UYU/USD
+                    if (description.includes('UYU') || description.includes('USD')) {
+                        if (description.includes('UYU')) detectedCurrency = 'UYU';
+                        if (description.includes('USD')) detectedCurrency = 'USD';
+                        description = description.replace(/(UYU|USD)/g, '').trim();
+                    }
+                } else if (match[3]) {
+                    // Patrones donde monto viene primero
+                    amount = parseFloat(match[1].replace(/,/g, ''));
+                    description = match[3].trim();
+                }
+
+                // Solo agregar si el monto es razonable (> 0 y < 1M)
+                if (amount > 0 && amount < 1000000) {
+                    // Determinar categoría
+                    let category = 'Otros Gastos';
+                    for (const [keyword, cat] of Object.entries(categoryMap)) {
+                        if (description.toUpperCase().includes(keyword)) {
+                            category = cat;
+                            break;
+                        }
+                    }
+
+                    // Evitar duplicados
+                    const existingExpense = expenses.find(exp =>
+                        exp.description.toLowerCase() === description.toLowerCase() &&
+                        Math.abs(exp.amount - amount) < 1
+                    );
+
+                    if (!existingExpense) {
+                        expenses.push({
+                            description: description.substring(0, 50), // Limitar longitud
+                            amount: amount,
+                            currency: detectedCurrency,
+                            category: category,
+                            date: new Date().toISOString().split('T')[0], // Fecha actual
+                            confidence: 0.7, // Confianza media para análisis básico
+                            source: 'pattern_analysis'
+                        });
+
+                        totalAmount += amount;
+                    }
+                }
+
+                // Evitar bucles infinitos
+                if (expenses.length > 50) break;
+            }
+
+            // Evitar bucles infinitos
+            if (expenses.length > 50) break;
+        }
+
+        console.log(`✅ Análisis básico completado: ${expenses.length} gastos encontrados, total: ${totalAmount}`);
+
+        return {
+            expenses: expenses,
+            summary: {
+                totalExpenses: totalAmount,
+                currency: currency,
+                expenseCount: expenses.length
+            }
+        };
+
+    } catch (error) {
+        console.error('❌ Error en análisis básico:', error);
+
+        // Retornar resultado vacío en caso de error
+        return {
+            expenses: [],
+            summary: {
+                totalExpenses: 0,
+                currency: 'UYU',
+                expenseCount: 0
+            }
+        };
+    }
+}
+
+/**
+ * Analiza texto con OpenAI usando API Key proporcionada por el usuario
+ * @param {string} text - Texto a analizar
+ * @param {string} userApiKey - API Key proporcionada por el usuario
+ * @param {string} userId - ID del usuario (para contexto)
+ * @returns {Promise<Object>} Análisis de gastos
+ */
+async function analyzeTextWithUserKey(text, userApiKey, userId) {
+    try {
+        console.log('🤖 Analizando texto con OpenAI (API Key del usuario)...');
+
+        // Verificar que tenemos la API key del usuario
+        if (!userApiKey) {
+            throw new Error('API Key del usuario no proporcionada');
+        }
+
+        // Validar formato de la API key
+        if (!userApiKey.startsWith('sk-proj-') && !userApiKey.startsWith('sk-')) {
+            throw new Error('La API Key proporcionada no tiene el formato correcto. Debe comenzar con "sk-proj-" o "sk-"');
+        }
+
+        console.log('🔑 API Key del usuario validada correctamente');
+
+        // Filtrar texto que contenga "REDIVA" antes del análisis
+        const filteredText = filterRedivaText(text);
+        console.log('🔍 Texto filtrado - eliminadas referencias a REDIVA');
+
+        // Preparar prompt para OpenAI
+        const systemPrompt = `Eres un analista financiero experto especializado en el análisis de estados de cuenta bancarios uruguayos.
+
+Tu tarea es analizar el texto de un estado de cuenta y extraer todos los gastos identificados.
+
+INSTRUCCIONES IMPORTANTES:
+1. Identifica ÚNICAMENTE transacciones que son GASTOS (no ingresos, depósitos, transferencias entrantes)
+2. Extrae el monto, descripción y fecha de cada gasto
+3. Categoriza cada gasto según estas categorías disponibles:
+   - Alimentación
+   - Transporte
+   - Servicios
+   - Entretenimiento
+   - Salud
+   - Educación
+   - Ropa
+   - Otros Gastos
+4. Si no puedes determinar la categoría, usa "Otros Gastos"
+5. Los montos pueden estar en USD o UYU - detecta automáticamente la moneda
+6. Las fechas pueden estar en formato DD/MM/YYYY o MM/DD/YYYY
+7. NO incluyas transacciones que no sean gastos
+8. Si hay dudas sobre si es un gasto o ingreso, omítelo
+9. IGNORA completamente cualquier texto relacionado con "REDIVA" o transacciones que contengan esta palabra
+
+Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta:`;
+
+        const userPrompt = `
+TEXTO DEL ESTADO DE CUENTA:
+${filteredText}
+
+Devuelve la respuesta en este formato JSON exacto:
+{
+    "expenses": [
+        {
+            "description": "Descripción clara del gasto",
+            "amount": 2500.50,
+            "currency": "UYU",
+            "category": "Alimentación",
+            "date": "2024-01-15",
+            "confidence": 0.95
+        }
+    ],
+    "summary": {
+        "totalExpenses": 2500.50,
+        "currency": "UYU",
+        "expenseCount": 1
+    }
+}`;
+
+        // Configurar AbortController para timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+        }, 30000); // 30 segundos timeout
+
+        console.log('🚀 Enviando solicitud a OpenAI API con API Key del usuario...');
+
+        // Llamar a OpenAI API con la API key del usuario
+        const response = await fetch(OPENAI_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${userApiKey}` // Usar API key del usuario
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [
+                    {
+                        role: 'system',
+                        content: systemPrompt
+                    },
+                    {
+                        role: 'user',
+                        content: userPrompt
+                    }
+                ],
+                max_tokens: 1000, // Limitado para evitar truncamiento de respuestas
+                temperature: 0.1 // Baja temperatura para respuestas consistentes
+            }),
+            signal: controller.signal
+        });
+
+        // Limpiar timeout si la respuesta llegó a tiempo
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => 'No se pudo leer el mensaje de error');
+            console.error(`❌ Error en OpenAI API: ${response.status} ${response.statusText}`);
+            console.error('Detalles del error:', errorText);
+
+            if (response.status === 401) {
+                throw new Error('API Key del usuario inválida o expirada. Verifica tu API Key de OpenAI.');
+            } else if (response.status === 429) {
+                throw new Error('Límite de uso de OpenAI excedido. Intenta más tarde o verifica tu saldo.');
+            } else if (response.status === 500) {
+                throw new Error('Error interno del servidor de OpenAI. Intenta nuevamente.');
+            } else {
+                throw new Error(`Error en OpenAI API (${response.status}): ${response.statusText}`);
+            }
+        }
+
+        const data = await response.json();
+        const aiResponse = data.choices[0].message.content;
+
+        console.log('✅ Respuesta de OpenAI recibida con API Key del usuario');
+
+        // Intentar parsear el JSON de la respuesta con múltiples estrategias de recuperación
+        let result;
+        try {
+            // Estrategia 1: Parseo directo
+            const cleanResponse = aiResponse.trim();
+            result = JSON.parse(cleanResponse);
+
+            // Validar estructura
+            if (!result.expenses || !Array.isArray(result.expenses)) {
+                throw new Error('Estructura de respuesta inválida');
+            }
+
+            return result;
+
+        } catch (parseError) {
+            console.error('❌ Error parseando respuesta de OpenAI:', parseError);
+            console.log('Longitud de respuesta:', aiResponse.length);
+            console.log('Respuesta cruda (primeros 500 chars):', aiResponse.substring(0, 500));
+
+            // Estrategia 2: Intentar extraer JSON válido de la respuesta
+            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                try {
+                    console.log('🔄 Intentando estrategia 1: Extracción de JSON con regex');
+                    result = JSON.parse(jsonMatch[0]);
+                    if (result.expenses && Array.isArray(result.expenses)) {
+                        return result;
+                    }
+                } catch (secondParseError) {
+                    console.error('❌ Estrategia 1 falló:', secondParseError);
+                }
+            }
+
+            // Estrategia 3: Intentar reparar JSON truncado
+            try {
+                console.log('🔄 Intentando estrategia 2: Reparación de JSON truncado');
+                let repairedJson = aiResponse.trim();
+
+                // Si termina con coma, intentar cerrar el array/objeto
+                if (repairedJson.endsWith(',')) {
+                    repairedJson = repairedJson.slice(0, -1) + '}';
+                }
+
+                // Si parece incompleto, intentar completar
+                if (!repairedJson.endsWith('}')) {
+                    repairedJson += '}';
+                }
+
+                // Intentar agregar la estructura faltante si es necesario
+                if (!repairedJson.includes('"expenses"')) {
+                    repairedJson = '{"expenses": [], "summary": {"totalExpenses": 0, "currency": "UYU", "expenseCount": 0}}';
+                } else if (repairedJson.includes('"expenses"') && !repairedJson.includes('"summary"')) {
+                    repairedJson = repairedJson.replace(/}$/, ',"summary": {"totalExpenses": 0, "currency": "UYU", "expenseCount": 0}}');
+                }
+
+                result = JSON.parse(repairedJson);
+                if (result.expenses && Array.isArray(result.expenses)) {
+                    console.log('✅ JSON reparado exitosamente');
+                    return result;
+                }
+            } catch (repairError) {
+                console.error('❌ Estrategia 2 falló:', repairError);
+            }
+
+            // Estrategia 4: Extraer gastos individuales si el JSON completo falla
+            try {
+                console.log('🔄 Intentando estrategia 3: Extracción manual de gastos');
+                const expenseMatches = aiResponse.match(/"description"\s*:\s*"([^"]+)"\s*,\s*"amount"\s*:\s*([0-9.]+)\s*,\s*"currency"\s*:\s*"([^"]+)"\s*,\s*"category"\s*:\s*"([^"]+)"\s*,\s*"date"\s*:\s*"([^"]+)"/g);
+
+                if (expenseMatches && expenseMatches.length > 0) {
+                    const expenses = expenseMatches.map(match => {
+                        const [, description, amount, currency, category, date] = match.match(/"description"\s*:\s*"([^"]+)"\s*,\s*"amount"\s*:\s*([0-9.]+)\s*,\s*"currency"\s*:\s*"([^"]+)"\s*,\s*"category"\s*:\s*"([^"]+)"\s*,\s*"date"\s*:\s*"([^"]+)"/);
+                        return {
+                            description: description || 'Sin descripción',
+                            amount: parseFloat(amount) || 0,
+                            currency: currency || 'UYU',
+                            category: category || 'Otros',
+                            date: date || new Date().toISOString().split('T')[0],
+                            confidence: 0.8
+                        };
+                    });
+
+                    result = {
+                        expenses,
+                        summary: {
+                            totalExpenses: expenses.reduce((sum, exp) => sum + exp.amount, 0),
+                            currency: 'UYU',
+                            expenseCount: expenses.length
+                        }
+                    };
+
+                    console.log('✅ Extracción manual exitosa:', expenses.length, 'gastos encontrados');
+                    return result;
+                }
+            } catch (manualError) {
+                console.error('❌ Estrategia 3 falló:', manualError);
+            }
+
+            console.error('❌ Todas las estrategias de parseo fallaron');
+            throw new Error('No se pudo parsear la respuesta de OpenAI como JSON válido después de múltiples intentos');
+        }
+    } catch (error) {
+        // Manejar diferentes tipos de errores
+        if (error.name === 'AbortError') {
+            console.error('⏰ Timeout: La solicitud a OpenAI tomó demasiado tiempo (30 segundos)');
+            throw new Error('La solicitud tomó demasiado tiempo. Verifica tu conexión a internet e intenta nuevamente.');
+        } else if (error.message && error.message.includes('fetch')) {
+            console.error('🌐 Error de conexión:', error.message);
+            throw new Error('Error de conexión. Verifica tu conexión a internet e intenta nuevamente.');
+        } else if (error.message && error.message.includes('API Key')) {
+            console.error('🔑 Error de API Key:', error.message);
+            throw error; // Re-throw con el mensaje específico
+        } else {
+            console.error('❌ Error analizando con OpenAI (usuario):', error.message);
+            throw new Error(`Error procesando el análisis: ${error.message}`);
+        }
+    }
+}
+
+/**
  * Verifica la conectividad con OpenAI API
  * @returns {Promise<Object>} Estado de la conexión
  */
@@ -511,6 +921,8 @@ async function checkOpenAIHealth() {
 module.exports = {
     extractTextFromPDF,
     analyzeTextWithAI,
+    analyzeTextWithUserKey,
+    analyzeTextWithBasicPatterns,
     checkOpenAIHealth,
     filterRedivaText
 };

@@ -335,6 +335,23 @@
                                 <i class="fas fa-cloud-upload-alt"></i>
                                 <span>Seleccionar archivo PDF</span>
                             </label>
+
+                            <!-- Campo para API Key de OpenAI -->
+                            <div class="api-key-section">
+                                <label for="openaiApiKey" class="api-key-label">
+                                    <i class="fas fa-key"></i> API Key de OpenAI (opcional)
+                                </label>
+                                <input type="password" id="openaiApiKey" class="api-key-input"
+                                       placeholder="Ingresa tu API Key de OpenAI para análisis avanzado..."
+                                       title="Si no tienes API Key, el sistema usará análisis básico">
+                                <small class="api-key-hint">
+                                    💡 Obtén tu API Key gratuita en:
+                                    <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">
+                                        platform.openai.com/api-keys
+                                    </a>
+                                </small>
+                            </div>
+
                             <button type="button" id="processPdfBtn" class="process-btn" disabled>
                                 <i class="fas fa-magic"></i> Analizar con IA
                             </button>
