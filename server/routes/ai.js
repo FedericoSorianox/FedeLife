@@ -33,7 +33,11 @@ const upload = multer({ storage: storage });
  */
 router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
     try {
+        console.log('📄 === INICIANDO PROCESAMIENTO DE PDF ===');
+        console.log('📄 Headers recibidos:', JSON.stringify(req.headers, null, 2));
+
         if (!req.file) {
+            console.error('❌ No se recibió archivo PDF en la solicitud');
             return res.status(400).json({
                 error: 'Archivo PDF requerido',
                 message: 'Debes subir un archivo PDF para analizar'
@@ -42,22 +46,57 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
 
         const filePath = req.file.path;
         const fileName = req.file.originalname;
+        const fileSize = req.file.size;
 
         console.log(`📄 PDF recibido: ${fileName}`);
+        console.log(`📄 Ruta del archivo: ${filePath}`);
+        console.log(`📄 Tamaño del archivo: ${fileSize} bytes`);
+
+        // Verificar que el archivo existe
+        const fs = require('fs');
+        if (!fs.existsSync(filePath)) {
+            console.error(`❌ Archivo no encontrado en el servidor: ${filePath}`);
+            return res.status(500).json({
+                error: 'Archivo no encontrado',
+                message: 'El archivo PDF no se guardó correctamente en el servidor'
+            });
+        }
+
+        console.log('📄 Iniciando extracción de texto...');
 
         // Procesar PDF
         const extractedText = await extractTextFromPDF(filePath);
 
+        console.log(`📄 Texto extraído: ${extractedText.length} caracteres`);
+        console.log(`📄 Preview del texto: ${extractedText.substring(0, 200)}...`);
+
         if (!extractedText || extractedText.trim().length === 0) {
+            console.warn('⚠️ No se pudo extraer texto del PDF');
             return res.status(400).json({
                 error: 'No se pudo extraer texto',
                 message: 'El PDF no contiene texto legible o está corrupto'
             });
         }
 
+        console.log('🤖 Iniciando análisis con OpenAI...');
+
+        // Verificar que la API key esté configurada
+        const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+        if (!OPENAI_API_KEY) {
+            console.error('❌ OPENAI_API_KEY no está configurada en el servidor');
+            return res.status(500).json({
+                error: 'Configuración incompleta',
+                message: 'La API Key de OpenAI no está configurada en el servidor'
+            });
+        }
+
+        console.log('🔑 API Key de OpenAI configurada correctamente');
+
         // Analizar texto con IA
-        console.log('🤖 Analizando texto extraído con OpenAI...');
+        console.log('🤖 Enviando texto a OpenAI para análisis...');
         const analysis = await analyzeTextWithAI(extractedText, 'anonymous');
+
+        console.log('✅ Análisis completado exitosamente');
 
         // Limpiar archivo temporal
         if (fs.existsSync(filePath)) {
@@ -75,15 +114,42 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
 
     } catch (error) {
         console.error('❌ Error analizando PDF público:', error);
+        console.error('❌ Stack trace:', error.stack);
+        console.error('❌ Tipo de error:', error.constructor.name);
 
         // Limpiar archivo si existe
-        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
+        try {
+            if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+                console.log('🧹 Archivo temporal limpiado');
+            }
+        } catch (cleanupError) {
+            console.error('❌ Error limpiando archivo temporal:', cleanupError);
         }
 
-        res.status(500).json({
-            error: 'Error interno del servidor',
-            message: 'No se pudo analizar el PDF'
+        // Determinar el tipo de error y respuesta apropiada
+        let statusCode = 500;
+        let errorMessage = 'Error interno del servidor';
+
+        if (error.message && error.message.includes('API Key')) {
+            statusCode = 500;
+            errorMessage = 'Configuración de API incompleta';
+        } else if (error.message && error.message.includes('fetch')) {
+            statusCode = 503;
+            errorMessage = 'Error de conexión con el servicio de IA';
+        } else if (error.message && error.message.includes('timeout')) {
+            statusCode = 504;
+            errorMessage = 'Timeout en el procesamiento';
+        } else if (error.message && error.message.includes('PDF')) {
+            statusCode = 400;
+            errorMessage = 'Error procesando el archivo PDF';
+        }
+
+        res.status(statusCode).json({
+            error: error.constructor.name || 'Error interno del servidor',
+            message: errorMessage,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            timestamp: new Date().toISOString()
         });
     }
 });
