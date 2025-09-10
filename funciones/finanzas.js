@@ -2191,45 +2191,14 @@ class FinanceApp {
 
             console.log('📄 Iniciando procesamiento de PDF con OpenAI...');
 
-            // Extraer texto del PDF
-            const text = await this.extractTextFromPdf(pdfFile.files[0]);
-            console.log(`📄 Texto extraído: ${text.length} caracteres`);
-
-            if (!text || text.length < 10) {
-                throw new Error('No se pudo extraer texto del PDF o el archivo está vacío');
+            // Verificar que el archivo PDF sea válido
+            const file = pdfFile.files[0];
+            if (!file || file.type !== 'application/pdf') {
+                throw new Error('Por favor selecciona un archivo PDF válido');
             }
 
-            // Almacenar el texto completo para posibles respaldos
-            this.lastExtractedPdfText = text;
-
-            // Verificar tamaño del texto y dividir si es necesario
-            const maxTextLength = 50000; // Límite aproximado para evitar problemas con OpenAI
-            let textToAnalyze = text;
-
-            if (text.length > maxTextLength) {
-                console.log(`📄 Texto muy largo (${text.length} caracteres), truncando para análisis...`);
-                // Tomar las primeras 50,000 caracteres que deberían contener la mayoría de las transacciones
-                textToAnalyze = text.substring(0, maxTextLength);
-                console.log(`📄 Texto truncado a ${textToAnalyze.length} caracteres`);
-                console.log('💡 Si faltan gastos, considera dividir el PDF en partes más pequeñas');
-            }
-
-            // Verificar que el usuario esté autenticado
-            const authData = localStorage.getItem('auth_data');
-            if (!authData) {
-                throw new Error('Debes iniciar sesión para usar la función de análisis de PDFs');
-            }
-
-            let authToken;
-            try {
-                const parsed = JSON.parse(authData);
-                authToken = parsed.token;
-            } catch (error) {
-                throw new Error('Datos de autenticación inválidos. Por favor, inicia sesión nuevamente.');
-            }
-
-            if (!authToken) {
-                throw new Error('Token de autenticación no encontrado. Por favor, inicia sesión nuevamente.');
+            if (file.size > 10 * 1024 * 1024) { // 10MB límite
+                throw new Error('El archivo PDF es demasiado grande. Máximo 10MB permitido.');
             }
 
             // Analizar con OpenAI enviando el archivo PDF completo al servidor
@@ -2237,7 +2206,7 @@ class FinanceApp {
 
             // Crear FormData para enviar el archivo PDF
             const formData = new FormData();
-            formData.append('pdf', pdfFile.files[0]);
+            formData.append('pdf', file);
 
             const analysisResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/public/ai/analyze-pdf`, {
                 method: 'POST',
@@ -2249,14 +2218,14 @@ class FinanceApp {
             });
 
             if (!analysisResponse.ok) {
-                if (analysisResponse.status === 401) {
-                    throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
-                } else if (analysisResponse.status === 403) {
-                    throw new Error('No tienes permisos para usar esta función. Contacta al administrador.');
+                if (analysisResponse.status === 400) {
+                    throw new Error('Archivo PDF no válido o corrupto. Verifica que el archivo sea un PDF legible.');
+                } else if (analysisResponse.status === 413) {
+                    throw new Error('El archivo PDF es demasiado grande. Intenta con un archivo más pequeño.');
                 } else if (analysisResponse.status === 500) {
                     throw new Error('Error interno del servidor. Intenta nuevamente en unos minutos.');
                 } else if (analysisResponse.status === 503) {
-                    throw new Error('Servicio temporalmente no disponible. Intenta nuevamente.');
+                    throw new Error('Servicio de IA temporalmente no disponible. Intenta nuevamente.');
                 } else {
                     const errorText = await analysisResponse.text().catch(() => 'Error desconocido');
                     throw new Error(`Error del servidor (${analysisResponse.status}): ${errorText}`);
