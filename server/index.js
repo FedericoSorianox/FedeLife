@@ -148,7 +148,7 @@ function setupSecurityMiddleware() {
             directives: {
                 defaultSrc: ["'self'"],
                 styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-                scriptSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
                 imgSrc: ["'self'", "data:", "https:"],
                 fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
                 connectSrc: ["'self'", "https://generativelanguage.googleapis.com", "https://api.exchangerate.host"]
@@ -212,6 +212,9 @@ function setupGeneralMiddleware() {
         next();
     });
     
+    // Servir archivos estáticos desde la raíz del proyecto
+    app.use(express.static(path.join(__dirname, '..')));
+
     // Servir archivos estáticos desde pages y funciones
     app.use(express.static(path.join(__dirname, '../pages')));
     app.use('/pages', express.static(path.join(__dirname, '../pages')));
@@ -266,9 +269,22 @@ function setupRoutes() {
     app.use('/api/exchange-rates', authenticateToken, exchangeRateRoutes);
     
     // Rutas públicas (sin autenticación) - para modo demo
-    app.use('/api/public/transactions', transactionRoutes);
+    // Middleware específico para rutas públicas - asegurar que no requieran auth
+    app.use('/api/public/transactions', (req, res, next) => {
+        // Remover cualquier header de autorización para rutas públicas
+        delete req.headers.authorization;
+        req.user = null;
+        req.userId = null;
+        next();
+    }, transactionRoutes);
 
     // Rutas públicas específicas para categorías (sin autenticación)
+    app.use('/api/public/categories', (req, res, next) => {
+        delete req.headers.authorization;
+        req.user = null;
+        req.userId = null;
+        next();
+    });
     app.get('/api/public/categories', async (req, res) => {
         try {
             const { type } = req.query;
@@ -311,7 +327,13 @@ function setupRoutes() {
         }
     });
 
-    app.use('/api/public/ai', aiRoutes);
+    // Middleware para rutas públicas de AI
+    app.use('/api/public/ai', (req, res, next) => {
+        delete req.headers.authorization;
+        req.user = null;
+        req.userId = null;
+        next();
+    }, aiRoutes);
     
     // Ruta de health check
     app.get('/api/health', (req, res) => {
