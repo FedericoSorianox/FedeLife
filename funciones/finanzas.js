@@ -2232,18 +2232,20 @@ class FinanceApp {
                 throw new Error('Token de autenticación no encontrado. Por favor, inicia sesión nuevamente.');
             }
 
-            // Analizar con OpenAI usando el endpoint del servidor
-            console.log('🤖 Enviando texto al servidor para análisis con OpenAI...');
+            // Analizar con OpenAI enviando el archivo PDF completo al servidor
+            console.log('🤖 Enviando archivo PDF al servidor para análisis con OpenAI...');
 
-            const analysisResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/ai/analyze-pdf`, {
+            // Crear FormData para enviar el archivo PDF
+            const formData = new FormData();
+            formData.append('pdf', pdfFile.files[0]);
+
+            const analysisResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/public/ai/analyze-pdf`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
+                    // No enviar Content-Type para que el navegador lo configure automáticamente para FormData
+                    // No enviar Authorization ya que es endpoint público
                 },
-                body: JSON.stringify({
-                    text: textToAnalyze
-                })
+                body: formData
             });
 
             if (!analysisResponse.ok) {
@@ -3280,7 +3282,7 @@ class FinanceApp {
             }
 
             // Hacer health check al servidor
-            const healthResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/ai/health`, {
+            const healthResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/public/ai/health`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -3367,7 +3369,7 @@ class FinanceApp {
             // Usar el endpoint del servidor para chat con IA
             console.log('💬 Enviando mensaje al servidor...');
 
-            const chatResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/ai/chat`, {
+            const chatResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/public/ai/chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
