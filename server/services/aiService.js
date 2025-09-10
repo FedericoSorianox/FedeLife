@@ -16,8 +16,8 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 if (!OPENAI_API_KEY) {
-    console.error('❌ ERROR: OPENAI_API_KEY no está configurada');
-    console.error('Configura tu API Key de OpenAI en config-local.js o variables de entorno');
+    console.error('❌ ERROR: OPENAI_API_KEY no está configurada en las variables de entorno');
+    console.error('💡 Configura OPENAI_API_KEY en tu archivo .env');
 }
 
 // ==================== FUNCIONES PRINCIPALES ====================
