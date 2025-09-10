@@ -228,12 +228,18 @@ function setupGeneralMiddleware() {
 function setupRoutes() {
     // Middleware para verificar estado de la base de datos en rutas que requieren BD
     app.use('/api/', (req, res, next) => {
-        // Excluir rutas que no requieren base de datos
-        const nonDbRoutes = ['/api/health', '/api/auth/status'];
+        // Excluir rutas que no requieren base de datos o son públicas
+        const nonDbRoutes = [
+            '/api/health',
+            '/api/auth/status',
+            '/api/public/transactions',
+            '/api/public/categories',
+            '/api/public/ai'
+        ];
         if (nonDbRoutes.some(route => req.path.startsWith(route))) {
             return next();
         }
-        
+
         // Si la base de datos no está conectada, devolver error informativo
         if (mongoose.connection.readyState !== 1) {
             return res.status(503).json({
@@ -243,7 +249,7 @@ function setupRoutes() {
                 code: 'DB_UNAVAILABLE'
             });
         }
-        
+
         next();
     });
     

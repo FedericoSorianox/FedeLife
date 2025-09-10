@@ -18,7 +18,7 @@ const FINANCE_API_CONFIG = {
         ? 'http://localhost:3000/api'
         : 'https://fedelife-finanzas.onrender.com/api',
     endpoints: {
-        transactions: '/public/transactions/public',
+        transactions: '/public/transactions',
         categories: '/public/categories',
         ai: '/public/ai/analyze-pdf'
     }
@@ -102,8 +102,17 @@ class FinanceApp {
         try {
             console.log('🚀 Inicializando sistema de finanzas unificado...');
 
-            // Cargar datos del localStorage
-            this.loadDataFromStorage();
+            // Intentar cargar datos del backend público primero
+            try {
+                console.log('🔄 Intentando cargar datos desde backend público...');
+                await this.loadDataFromBackend();
+                console.log('✅ Datos cargados desde backend público');
+            } catch (backendError) {
+                console.warn('⚠️ Backend no disponible, cargando desde localStorage:', backendError.message);
+
+                // Cargar datos del localStorage como fallback
+                this.loadDataFromStorage();
+            }
 
             // Inicializar categorías por defecto si no existen
             if (this.categories.length === 0) {
@@ -132,6 +141,52 @@ class FinanceApp {
 
         } catch (error) {
             console.error('❌ Error inicializando sistema de finanzas:', error);
+        }
+    }
+
+    /**
+     * Carga datos del backend público
+     */
+    async loadDataFromBackend() {
+        try {
+            console.log('🔄 Cargando transacciones desde backend público...');
+
+            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data && result.data.transactions) {
+                    // Cargar transacciones desde el backend
+                    this.transactions = result.data.transactions.map(transaction => ({
+                        ...transaction,
+                        date: new Date(transaction.date),
+                        createdAt: transaction.createdAt ? new Date(transaction.createdAt) : new Date(),
+                        updatedAt: transaction.updatedAt ? new Date(transaction.updatedAt) : new Date()
+                    }));
+
+                    console.log(`✅ Cargadas ${this.transactions.length} transacciones desde backend público`);
+
+                    // Si hay transacciones, actualizar la interfaz
+                    if (this.transactions.length > 0) {
+                        this.renderDashboard();
+                        this.renderTransactions();
+                        this.updateCharts();
+                    }
+                } else {
+                    throw new Error('Respuesta del backend no tiene el formato esperado');
+                }
+            } else {
+                throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
+            }
+
+        } catch (error) {
+            console.error('❌ Error cargando datos desde backend:', error);
+            throw error; // Re-lanzar para que el catch en initializeApp lo maneje
         }
     }
 

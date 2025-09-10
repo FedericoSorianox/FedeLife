@@ -766,10 +766,10 @@ router.post('/sync', authenticateToken, async (req, res) => {
 // ==================== ENDPOINTS PÚBLICOS (SIN AUTENTICACIÓN) ====================
 
 /**
- * POST /api/transactions/public
+ * POST /api/public/transactions
  * Crea una nueva transacción sin autenticación (para modo demo)
  */
-router.post('/public', validateTransaction, async (req, res) => {
+router.post('/', validateTransaction, async (req, res) => {
     try {
         const {
             type,
@@ -840,10 +840,10 @@ router.post('/public', validateTransaction, async (req, res) => {
 });
 
 /**
- * GET /api/transactions/public
+ * GET /api/public/transactions
  * Obtiene transacciones públicas (modo demo)
  */
-router.get('/public', async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const {
             page = 1,
