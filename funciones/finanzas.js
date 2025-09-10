@@ -2215,9 +2215,21 @@ class FinanceApp {
             }
 
             // Verificar que el usuario esté autenticado
-            const authToken = localStorage.getItem('auth_token');
-            if (!authToken) {
+            const authData = localStorage.getItem('auth_data');
+            if (!authData) {
                 throw new Error('Debes iniciar sesión para usar la función de análisis de PDFs');
+            }
+
+            let authToken;
+            try {
+                const parsed = JSON.parse(authData);
+                authToken = parsed.token;
+            } catch (error) {
+                throw new Error('Datos de autenticación inválidos. Por favor, inicia sesión nuevamente.');
+            }
+
+            if (!authToken) {
+                throw new Error('Token de autenticación no encontrado. Por favor, inicia sesión nuevamente.');
             }
 
             // Analizar con OpenAI usando el endpoint del servidor
@@ -3334,6 +3346,24 @@ class FinanceApp {
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
         try {
+            // Verificar autenticación
+            const authData = localStorage.getItem('auth_data');
+            if (!authData) {
+                throw new Error('Debes iniciar sesión para usar el chat de IA');
+            }
+
+            let authToken;
+            try {
+                const parsed = JSON.parse(authData);
+                authToken = parsed.token;
+            } catch (error) {
+                throw new Error('Datos de autenticación inválidos. Por favor, inicia sesión nuevamente.');
+            }
+
+            if (!authToken) {
+                throw new Error('Token de autenticación no encontrado. Por favor, inicia sesión nuevamente.');
+            }
+
             // Usar el endpoint del servidor para chat con IA
             console.log('💬 Enviando mensaje al servidor...');
 
@@ -3341,7 +3371,7 @@ class FinanceApp {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    'Authorization': `Bearer ${authToken}`
                 },
                 body: JSON.stringify({
                     message: message

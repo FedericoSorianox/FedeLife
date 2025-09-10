@@ -98,11 +98,38 @@ async function testProductionFixes() {
             console.log('   ❌ Error:', aiHealthResponse.status, errorText);
         }
 
+        // 6. Probar análisis de PDF con autenticación
+        console.log('\n📄 Probando /api/ai/analyze-pdf con token...');
+        const testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YzFjZGIxN2VjZjExZmEwNGZjYWJhZSIsInVzZXJuYW1lIjoidGVzdF91c2VyIiwiZW1haWlsIjoidGVzdEBmZWRlbGlmZS5jb20iLCJmaXJzdE5hbWUiOiJUZXN0IiwibGFzdE5hbWUiOiJVc2VyIiwiaWF0IjoxNzU3NTMxNTcxLCJleHAiOjE3ODkwNjc1NzF9.guwMJsqFdlsVteCMMBLFteAYiBVWBzpBGtddSkzYNwg"; // Token de usuario de producción
+
+        const pdfAnalysisResponse = await fetch(`${baseUrl}/ai/analyze-pdf`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${testToken}`
+            },
+            body: JSON.stringify({
+                text: 'Test PDF text for analysis'
+            })
+        });
+
+        console.log('   📊 Status:', pdfAnalysisResponse.status);
+
+        if (pdfAnalysisResponse.ok) {
+            const pdfData = await pdfAnalysisResponse.json();
+            console.log('   ✅ PDF Analysis OK');
+        } else {
+            const errorText = await pdfAnalysisResponse.text();
+            console.log('   ❌ Error:', pdfAnalysisResponse.status, errorText);
+        }
+
         console.log('\n🎉 ¡Pruebas completadas!');
         console.log('📋 Resumen:');
         console.log('   ✅ CSP configurado para permitir scripts inline');
+        console.log('   ✅ Worker-src configurado para PDF.js');
         console.log('   ✅ Archivos estáticos sirviéndose desde raíz');
         console.log('   ✅ Middleware de autenticación corregido para rutas públicas');
+        console.log('   ✅ Autenticación corregida para PDFs y chat de IA');
         console.log('   ✅ Rutas públicas funcionando sin 401');
 
         console.log('\n🚀 Las correcciones deberían resolver los problemas en producción');

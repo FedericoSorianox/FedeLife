@@ -152,6 +152,7 @@ function setupSecurityMiddleware() {
                 defaultSrc: ["'self'"],
                 styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
                 scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
+                workerSrc: ["'self'", "blob:"],
                 imgSrc: ["'self'", "data:", "https:"],
                 fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
                 connectSrc: ["'self'", "https://generativelanguage.googleapis.com", "https://api.exchangerate.host"]
