@@ -8,7 +8,7 @@
  * Autor: Senior Backend Developer
  */
 
-const fetch = require('node-fetch');
+const fetch = require('node-fetch').default;
 
 async function testProductionFixes() {
     console.log('🧪 Probando correcciones para producción...\n');

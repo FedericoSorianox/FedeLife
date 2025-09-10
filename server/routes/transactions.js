@@ -763,13 +763,15 @@ router.post('/sync', authenticateToken, async (req, res) => {
     }
 });
 
-// ==================== ENDPOINTS PÚBLICOS (SIN AUTENTICACIÓN) ====================
+// ==================== ENDPOINTS PÚBLICOS ====================
+// Los endpoints públicos ahora están manejados directamente en server/index.js
+// para evitar conflictos con el middleware de autenticación
 
 /**
- * POST /api/public/transactions
- * Crea una nueva transacción sin autenticación (para modo demo)
+ * POST /api/transactions (PROTEGIDO)
+ * Crea una nueva transacción con autenticación requerida
  */
-router.post('/', validateTransaction, async (req, res) => {
+router.post('/', authenticateToken, validateTransaction, async (req, res) => {
     try {
         const {
             type,
@@ -840,29 +842,39 @@ router.post('/', validateTransaction, async (req, res) => {
 });
 
 /**
- * GET /api/public/transactions
- * Obtiene transacciones públicas (modo demo)
+ * GET /api/transactions (PROTEGIDO)
+ * Obtiene transacciones del usuario autenticado
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
     try {
+        const userId = req.user._id;
         const {
             page = 1,
             limit = 20,
             type,
             category,
+            paymentMethod,
+            startDate,
+            endDate,
             month,
-            year
+            year,
+            search,
+            sortBy = 'date',
+            sortOrder = 'desc'
         } = req.query;
-        
-        // Construir filtros para transacciones públicas
-        const filters = { userId: 'demo_user_public' };
-        
+
+        // Construir filtros
+        const filters = { userId };
+
         if (type) filters.type = type;
         if (category) filters.category = category;
-        
+        if (paymentMethod) filters.paymentMethod = paymentMethod;
+
         // Filtros de fecha
-        if (month || year) {
+        if (startDate || endDate || month || year) {
             filters.date = {};
+            if (startDate) filters.date.$gte = new Date(startDate);
+            if (endDate) filters.date.$lte = new Date(endDate);
             if (month) {
                 const [year, monthNum] = month.split('-');
                 filters.date.$gte = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
@@ -873,18 +885,32 @@ router.get('/', async (req, res) => {
                 filters.date.$lt = new Date(parseInt(year) + 1, 0, 1);
             }
         }
-        
+
+        // Filtro de búsqueda
+        if (search) {
+            filters.$or = [
+                { description: { $regex: search, $options: 'i' } },
+                { category: { $regex: search, $options: 'i' } },
+                { notes: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Ordenamiento
+        const sortOptions = {};
+        sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
         // Aplicar paginación
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const transactions = await Transaction.find(filters)
-            .sort({ date: -1 })
+            .sort(sortOptions)
             .skip(skip)
             .limit(parseInt(limit))
+            .populate('userId', 'username')
             .lean();
-        
+
         // Contar total
         const total = await Transaction.countDocuments(filters);
-        
+
         res.json({
             success: true,
             data: {
@@ -897,9 +923,9 @@ router.get('/', async (req, res) => {
                 }
             }
         });
-        
+
     } catch (error) {
-        console.error('❌ Error obteniendo transacciones públicas:', error);
+        console.error('❌ Error obteniendo transacciones:', error);
         res.status(500).json({
             error: 'Error interno del servidor',
             message: 'No se pudieron obtener las transacciones'

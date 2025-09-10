@@ -22,6 +22,9 @@ require('./models/Category');
 require('./models/Transaction');
 require('./models/User');
 
+// Importar modelos para uso directo
+const Transaction = require('./models/Transaction');
+
 // Importar rutas
 const authRoutes = require('./routes/auth');
 const transactionRoutes = require('./routes/transactions');
@@ -269,14 +272,125 @@ function setupRoutes() {
     app.use('/api/exchange-rates', authenticateToken, exchangeRateRoutes);
     
     // Rutas públicas (sin autenticación) - para modo demo
-    // Middleware específico para rutas públicas - asegurar que no requieran auth
-    app.use('/api/public/transactions', (req, res, next) => {
-        // Remover cualquier header de autorización para rutas públicas
-        delete req.headers.authorization;
-        req.user = null;
-        req.userId = null;
-        next();
-    }, transactionRoutes);
+    // Handlers específicos para rutas públicas sin reutilizar routers con auth
+    app.get('/api/public/transactions', async (req, res) => {
+        try {
+            const {
+                page = 1,
+                limit = 20,
+                type,
+                category,
+                month,
+                year
+            } = req.query;
+
+            // Construir filtros para transacciones públicas
+            const filters = { userId: null };
+
+            if (type) filters.type = type;
+            if (category) filters.category = category;
+
+            // Filtros de fecha
+            if (month || year) {
+                filters.date = {};
+                if (month) {
+                    const [year, monthNum] = month.split('-');
+                    filters.date.$gte = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
+                    filters.date.$lt = new Date(parseInt(year), parseInt(monthNum), 1);
+                }
+                if (year) {
+                    filters.date.$gte = new Date(parseInt(year), 0, 1);
+                    filters.date.$lt = new Date(parseInt(year) + 1, 0, 1);
+                }
+            }
+
+            // Aplicar paginación
+            const skip = (parseInt(page) - 1) * parseInt(limit);
+            const transactions = await Transaction.find(filters)
+                .sort({ date: -1 })
+                .skip(skip)
+                .limit(parseInt(limit))
+                .lean();
+
+            // Contar total
+            const total = await Transaction.countDocuments(filters);
+
+            res.json({
+                success: true,
+                data: {
+                    transactions,
+                    pagination: {
+                        page: parseInt(page),
+                        limit: parseInt(limit),
+                        total,
+                        pages: Math.ceil(total / parseInt(limit))
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error obteniendo transacciones públicas:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Error interno del servidor',
+                message: 'No se pudieron obtener las transacciones'
+            });
+        }
+    });
+
+    app.post('/api/public/transactions', async (req, res) => {
+        try {
+            const {
+                type,
+                amount,
+                description,
+                category,
+                date = new Date(),
+                paymentMethod = 'card',
+                currency = 'UYU',
+                tags = [],
+                notes,
+                status = 'completed'
+            } = req.body;
+
+            // Crear transacción con usuario demo
+            const transaction = new Transaction({
+                userId: null, // Usuario demo para transacciones públicas
+                type,
+                amount: parseFloat(amount),
+                description: description.trim(),
+                category: category.trim(),
+                date: new Date(date),
+                paymentMethod,
+                currency,
+                tags: tags.filter(tag => tag.trim()),
+                notes: notes?.trim(),
+                status
+            });
+
+            // Establecer valores por defecto para moneda
+            transaction.convertedAmount = transaction.amount;
+            transaction.userBaseCurrency = currency;
+            transaction.exchangeRate = 1;
+            transaction.exchangeRateDate = new Date();
+
+            await transaction.save();
+
+            res.status(201).json({
+                success: true,
+                message: 'Transacción creada exitosamente',
+                data: { transaction }
+            });
+
+        } catch (error) {
+            console.error('❌ Error creando transacción pública:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Error interno del servidor',
+                message: 'No se pudo crear la transacción'
+            });
+        }
+    });
 
     // Rutas públicas específicas para categorías (sin autenticación)
     app.use('/api/public/categories', (req, res, next) => {
