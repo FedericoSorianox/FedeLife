@@ -189,7 +189,7 @@ Devuelve la respuesta en este formato JSON exacto:
                         content: userPrompt
                     }
                 ],
-                max_tokens: 2000,
+                max_tokens: 1000, // Limitado para evitar truncamiento de respuestas
                 temperature: 0.1 // Baja temperatura para respuestas consistentes
             }),
             signal: controller.signal
@@ -219,10 +219,10 @@ Devuelve la respuesta en este formato JSON exacto:
 
         console.log('✅ Respuesta de OpenAI recibida');
 
-        // Intentar parsear el JSON de la respuesta
+        // Intentar parsear el JSON de la respuesta con múltiples estrategias de recuperación
         let result;
         try {
-            // Limpiar la respuesta de posibles caracteres extra
+            // Estrategia 1: Parseo directo
             const cleanResponse = aiResponse.trim();
             result = JSON.parse(cleanResponse);
 
@@ -235,20 +235,91 @@ Devuelve la respuesta en este formato JSON exacto:
 
         } catch (parseError) {
             console.error('❌ Error parseando respuesta de OpenAI:', parseError);
-            console.log('Respuesta cruda:', aiResponse);
+            console.log('Longitud de respuesta:', aiResponse.length);
+            console.log('Respuesta cruda (primeros 500 chars):', aiResponse.substring(0, 500));
+            console.log('Respuesta cruda (últimos 500 chars):', aiResponse.substring(Math.max(0, aiResponse.length - 500)));
 
-            // Intentar extraer JSON de la respuesta
+            // Estrategia 2: Intentar extraer JSON válido de la respuesta
             const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 try {
+                    console.log('🔄 Intentando estrategia 1: Extracción de JSON con regex');
                     result = JSON.parse(jsonMatch[0]);
-                    return result;
+                    if (result.expenses && Array.isArray(result.expenses)) {
+                        return result;
+                    }
                 } catch (secondParseError) {
-                    console.error('❌ Error en segundo intento de parseo:', secondParseError);
+                    console.error('❌ Estrategia 1 falló:', secondParseError);
                 }
             }
 
-            throw new Error('No se pudo parsear la respuesta de OpenAI como JSON válido');
+            // Estrategia 3: Intentar reparar JSON truncado
+            try {
+                console.log('🔄 Intentando estrategia 2: Reparación de JSON truncado');
+                let repairedJson = aiResponse.trim();
+
+                // Si termina con coma, intentar cerrar el array/objeto
+                if (repairedJson.endsWith(',')) {
+                    repairedJson = repairedJson.slice(0, -1) + '}';
+                }
+
+                // Si parece incompleto, intentar completar
+                if (!repairedJson.endsWith('}')) {
+                    repairedJson += '}';
+                }
+
+                // Intentar agregar la estructura faltante si es necesario
+                if (!repairedJson.includes('"expenses"')) {
+                    repairedJson = '{"expenses": [], "summary": {"totalExpenses": 0, "currency": "UYU", "expenseCount": 0}}';
+                } else if (repairedJson.includes('"expenses"') && !repairedJson.includes('"summary"')) {
+                    repairedJson = repairedJson.replace(/}$/, ',"summary": {"totalExpenses": 0, "currency": "UYU", "expenseCount": 0}}');
+                }
+
+                result = JSON.parse(repairedJson);
+                if (result.expenses && Array.isArray(result.expenses)) {
+                    console.log('✅ JSON reparado exitosamente');
+                    return result;
+                }
+            } catch (repairError) {
+                console.error('❌ Estrategia 2 falló:', repairError);
+            }
+
+            // Estrategia 4: Extraer gastos individuales si el JSON completo falla
+            try {
+                console.log('🔄 Intentando estrategia 3: Extracción manual de gastos');
+                const expenseMatches = aiResponse.match(/"description"\s*:\s*"([^"]+)"\s*,\s*"amount"\s*:\s*([0-9.]+)\s*,\s*"currency"\s*:\s*"([^"]+)"\s*,\s*"category"\s*:\s*"([^"]+)"\s*,\s*"date"\s*:\s*"([^"]+)"/g);
+
+                if (expenseMatches && expenseMatches.length > 0) {
+                    const expenses = expenseMatches.map(match => {
+                        const [, description, amount, currency, category, date] = match.match(/"description"\s*:\s*"([^"]+)"\s*,\s*"amount"\s*:\s*([0-9.]+)\s*,\s*"currency"\s*:\s*"([^"]+)"\s*,\s*"category"\s*:\s*"([^"]+)"\s*,\s*"date"\s*:\s*"([^"]+)"/);
+                        return {
+                            description: description || 'Sin descripción',
+                            amount: parseFloat(amount) || 0,
+                            currency: currency || 'UYU',
+                            category: category || 'Otros',
+                            date: date || new Date().toISOString().split('T')[0],
+                            confidence: 0.8
+                        };
+                    });
+
+                    result = {
+                        expenses,
+                        summary: {
+                            totalExpenses: expenses.reduce((sum, exp) => sum + exp.amount, 0),
+                            currency: 'UYU',
+                            expenseCount: expenses.length
+                        }
+                    };
+
+                    console.log('✅ Extracción manual exitosa:', expenses.length, 'gastos encontrados');
+                    return result;
+                }
+            } catch (manualError) {
+                console.error('❌ Estrategia 3 falló:', manualError);
+            }
+
+            console.error('❌ Todas las estrategias de parseo fallaron');
+            throw new Error('No se pudo parsear la respuesta de OpenAI como JSON válido después de múltiples intentos');
         }
     } catch (error) {
         // Manejar diferentes tipos de errores

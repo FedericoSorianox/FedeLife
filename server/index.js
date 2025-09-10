@@ -115,17 +115,7 @@ async function connectToMongoDB() {
         });
         
         // Configurar manejo de señales para cerrar conexión limpiamente
-        process.on('SIGINT', async () => {
-            await mongoose.connection.close();
-            console.log('✅ Conexión MongoDB cerrada por SIGINT');
-            process.exit(0);
-        });
-        
-        process.on('SIGTERM', async () => {
-            await mongoose.connection.close();
-            console.log('✅ Conexión MongoDB cerrada por SIGTERM');
-            process.exit(0);
-        });
+        console.log('🔄 Configurando manejo de señales de terminación...');
         
     } catch (error) {
         console.error('❌ Error conectando a MongoDB:', error);
@@ -484,20 +474,28 @@ async function initializeServer() {
 /**
  * Maneja señales de terminación del proceso
  */
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
     console.log('🛑 Recibida señal SIGTERM, cerrando servidor...');
-    mongoose.connection.close(() => {
+    try {
+        await mongoose.connection.close();
         console.log('✅ Conexión MongoDB cerrada');
+    } catch (error) {
+        console.error('❌ Error cerrando conexión MongoDB:', error);
+    } finally {
         process.exit(0);
-    });
+    }
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
     console.log('🛑 Recibida señal SIGINT, cerrando servidor...');
-    mongoose.connection.close(() => {
+    try {
+        await mongoose.connection.close();
         console.log('✅ Conexión MongoDB cerrada');
+    } catch (error) {
+        console.error('❌ Error cerrando conexión MongoDB:', error);
+    } finally {
         process.exit(0);
-    });
+    }
 });
 
 // ==================== INICIAR SERVIDOR ====================
