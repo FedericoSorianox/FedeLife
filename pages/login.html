@@ -224,25 +224,37 @@
             }
         }
 
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', () => {
+        // Función para inicializar event listeners
+        function initializeEventListeners() {
             // Manejar envío del formulario
-            document.getElementById('loginForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const identifier = document.getElementById('identifier').value;
-                const password = document.getElementById('password').value;
-                
-                if (!identifier || !password) {
-                    showStatus('❌ Por favor completa todos los campos', 'error');
-                    return;
-                }
-                
-                await login(identifier, password);
-            });
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    const identifier = document.getElementById('identifier').value;
+                    const password = document.getElementById('password').value;
+
+                    if (!identifier || !password) {
+                        showStatus('❌ Por favor completa todos los campos', 'error');
+                        return;
+                    }
+
+                    await login(identifier, password);
+                });
+            }
 
             // Manejar botón de crear usuario de desarrollo
-            document.getElementById('createDevUser').addEventListener('click', createDevUser);
+            const createDevUserBtn = document.getElementById('createDevUser');
+            if (createDevUserBtn) {
+                createDevUserBtn.addEventListener('click', async () => {
+                    await createDevUser();
+                });
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
 
             // Verificar si ya está logueado
             const authData = localStorage.getItem('auth_data');
@@ -262,6 +274,17 @@
             
             showStatus(`🔗 Conectando a: ${API_CONFIG.BASE_URL}`, 'info');
         });
+
+        // Inicializar event listeners
+        initializeEventListeners();
+
+        // También intentar inicializar inmediatamente por si el DOM ya está cargado
+        if (document.readyState === 'loading') {
+            // DOM aún cargando, esperar
+        } else {
+            // DOM ya cargado, inicializar
+            setTimeout(initializeEventListeners, 100);
+        }
     </script>
 </body>
 </html>

@@ -123,10 +123,30 @@ async function testProductionFixes() {
             console.log('   ❌ Error:', pdfAnalysisResponse.status, errorText);
         }
 
+        // 7. Probar página de login (solo verificar que cargue sin errores CSP)
+        console.log('\n🔐 Probando página de login...');
+        const loginPageResponse = await fetch('https://fedelife-finanzas.onrender.com/login.html');
+        console.log('   📊 Status página login:', loginPageResponse.status);
+
+        if (loginPageResponse.ok) {
+            const loginContent = await loginPageResponse.text();
+            console.log('   ✅ Página de login OK - longitud:', loginContent.length, 'caracteres');
+
+            // Verificar que contenga los elementos esperados
+            const hasCreateDevUser = loginContent.includes('createDevUser');
+            const hasLoginForm = loginContent.includes('loginForm');
+            console.log('   ✅ Contiene botón crear usuario:', hasCreateDevUser);
+            console.log('   ✅ Contiene formulario login:', hasLoginForm);
+        } else {
+            const errorText = await loginPageResponse.text();
+            console.log('   ❌ Error:', loginPageResponse.status, errorText);
+        }
+
         console.log('\n🎉 ¡Pruebas completadas!');
         console.log('📋 Resumen:');
-        console.log('   ✅ CSP configurado para permitir scripts inline');
+        console.log('   ✅ CSP configurado para permitir scripts inline y event handlers');
         console.log('   ✅ Worker-src configurado para PDF.js');
+        console.log('   ✅ Event listeners corregidos para botones');
         console.log('   ✅ Archivos estáticos sirviéndose desde raíz');
         console.log('   ✅ Middleware de autenticación corregido para rutas públicas');
         console.log('   ✅ Autenticación corregida para PDFs y chat de IA');

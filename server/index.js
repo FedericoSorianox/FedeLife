@@ -151,7 +151,7 @@ function setupSecurityMiddleware() {
             directives: {
                 defaultSrc: ["'self'"],
                 styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-                scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-hashes'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
                 workerSrc: ["'self'", "blob:"],
                 imgSrc: ["'self'", "data:", "https:"],
                 fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
