@@ -20,177 +20,23 @@ if (!OPENAI_API_KEY) {
     console.error('💡 Configura OPENAI_API_KEY en tu archivo .env');
 }
 
+// ==================== FUNCIONES DE UTILIDAD ====================
+
+/**
+ * Función de utilidad para esperar antes de reintentar por rate limit
+ * @param {number} retryAfter - Segundos a esperar (del header retry-after)
+ * @returns {Promise} Promesa que se resuelve después del delay
+ */
+async function waitForRetry(retryAfter) {
+    const delay = (retryAfter || 60) * 1000; // Convertir a ms, default 60 segundos
+    console.log(`⏳ Rate limit excedido. Esperando ${delay / 1000} segundos antes de continuar...`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    console.log('✅ Reintentando análisis después del rate limit...');
+}
+
 // ==================== FUNCIONES PRINCIPALES ====================
 
-/**
- * Extrae texto de un archivo PDF usando PDF-lib
- * @param {string} filePath - Ruta del archivo PDF
- * @returns {Promise<string>} Texto extraído del PDF
- */
-async function extractTextFromPDF(filePath) {
-    try {
-        console.log(`📄 Extrayendo texto de: ${filePath}`);
 
-        // Verificar que el archivo existe
-        if (!fs.existsSync(filePath)) {
-            throw new Error(`Archivo PDF no encontrado: ${filePath}`);
-        }
-
-        // Leer el archivo como buffer
-        const pdfBuffer = fs.readFileSync(filePath);
-        console.log(`📄 Archivo PDF cargado: ${pdfBuffer.length} bytes`);
-
-        // Para este ejemplo, vamos a intentar extraer texto básico
-        // En producción, instalarías una librería como pdf-parse:
-        // npm install pdf-parse
-        // const pdfParse = require('pdf-parse');
-
-        try {
-            // Intentar usar PDF-lib si está disponible
-            const { PDFDocument } = require('pdf-lib');
-
-            const pdfDoc = await PDFDocument.load(pdfBuffer);
-            const pages = pdfDoc.getPages();
-            console.log(`📄 PDF cargado: ${pages.length} páginas`);
-
-            let extractedText = '';
-
-            // Extraer información básica del PDF
-            const info = await pdfDoc.getInfo();
-            extractedText += `INFORMACIÓN DEL PDF:\n`;
-            extractedText += `Título: ${info.Title || 'Sin título'}\n`;
-            extractedText += `Autor: ${info.Author || 'Sin autor'}\n`;
-            extractedText += `Páginas: ${pages.length}\n`;
-            extractedText += `Fecha de creación: ${info.CreationDate || 'Sin fecha'}\n\n`;
-
-            extractedText += `CONTENIDO EXTRAÍDO:\n`;
-            extractedText += `El PDF contiene ${pages.length} página(s).\n`;
-            extractedText += `Para extracción completa de texto, instala la librería pdf-parse.\n\n`;
-
-            // Agregar un ejemplo de cómo se vería el contenido
-            extractedText += `EJEMPLO DE CONTENIDO ESPERADO:\n`;
-            extractedText += `Fecha: ${new Date().toLocaleDateString()}\n\n`;
-            extractedText += `TRANSACCIONES:\n`;
-            extractedText += `- Supermercado - $2,500.00 UYU\n`;
-            extractedText += `- Gasolina - $800.00 UYU\n`;
-            extractedText += `- Restaurante - $1,200.00 UYU\n`;
-            extractedText += `- Servicios públicos - $1,800.00 UYU\n\n`;
-            extractedText += `Total aproximado: $6,300.00 UYU\n`;
-
-            console.log(`✅ Extracción básica completada: ${extractedText.length} caracteres`);
-            return extractedText;
-
-        } catch (pdfLibError) {
-            console.warn('⚠️ PDF-lib no disponible, usando extracción básica:', pdfLibError.message);
-
-            // Extracción básica del buffer como texto
-            let extractedText = '';
-
-            // Convertir buffer a string intentando diferentes encodings
-            const encodings = ['utf8', 'latin1', 'ascii'];
-
-            for (const encoding of encodings) {
-                try {
-                    const text = pdfBuffer.toString(encoding);
-                    if (text.length > 100) { // Si encontramos texto significativo
-                        extractedText = text;
-                        console.log(`✅ Texto extraído usando encoding ${encoding}: ${text.length} caracteres`);
-                        break;
-                    }
-                } catch (encodingError) {
-                    console.log(`⚠️ Error con encoding ${encoding}:`, encodingError.message);
-                }
-            }
-
-            if (!extractedText) {
-                // Texto de respaldo si no se puede extraer nada
-                extractedText = `PDF RECIBIDO - ${new Date().toLocaleString()}
-
-Este PDF contiene información financiera que requiere análisis detallado.
-
-INFORMACIÓN TÉCNICA:
-- Archivo: ${path.basename(filePath)}
-- Tamaño: ${pdfBuffer.length} bytes
-- Fecha de procesamiento: ${new Date().toISOString()}
-
-Para análisis completo, instala la librería pdf-parse:
-npm install pdf-parse
-
-TEXTO EJEMPLO PARA DEMOSTRACIÓN:
-Fecha: ${new Date().toLocaleDateString()}
-
-GASTOS IDENTIFICADOS:
-- Compra supermercado - $2,500.00
-- Combustible - $800.00
-- Restaurante - $1,200.00
-- Servicios públicos - $1,800.00
-
-Total aproximado: $6,300.00`;
-            }
-
-            return extractedText;
-        }
-
-    } catch (error) {
-        console.error('❌ Error extrayendo texto del PDF:', error);
-
-        // Texto de respaldo en caso de error
-        const fallbackText = `ERROR EN EXTRACCIÓN DE PDF
-
-No se pudo procesar el archivo PDF correctamente.
-Error: ${error.message}
-
-INFORMACIÓN DEL ARCHIVO:
-- Ruta: ${filePath}
-- Fecha: ${new Date().toISOString()}
-
-SUGERENCIAS:
-1. Verifica que el PDF no esté corrupto
-2. Asegúrate de que el archivo no esté protegido por contraseña
-3. Intenta con un archivo PDF más pequeño
-4. Instala librerías de procesamiento PDF: npm install pdf-parse pdf-lib
-
-TEXTO DE DEMOSTRACIÓN:
-Fecha: ${new Date().toLocaleDateString()}
-Gastos: $0.00 (sin datos reales extraídos)`;
-
-        console.log('📄 Devolviendo texto de respaldo por error en extracción');
-        return fallbackText;
-    }
-}
-
-/**
- * Filtra texto que contiene "REDIVA" del análisis
- * @param {string} text - Texto original del PDF
- * @returns {string} Texto filtrado sin referencias a REDIVA
- */
-function filterRedivaText(text) {
-    if (!text) return text;
-
-    console.log('🔍 Aplicando filtro REDIVA al texto...');
-
-    // Dividir el texto en líneas para procesar línea por línea
-    const lines = text.split('\n');
-    const filteredLines = [];
-
-    for (const line of lines) {
-        // Si la línea contiene "REDIVA" (case insensitive), la omitimos
-        if (!line.toUpperCase().includes('REDIVA')) {
-            filteredLines.push(line);
-        } else {
-            console.log('🚫 Línea filtrada (contiene REDIVA):', line.substring(0, 100) + '...');
-        }
-    }
-
-    const filteredText = filteredLines.join('\n');
-
-    // Log del resultado del filtrado
-    const originalLines = lines.length;
-    const filteredCount = originalLines - filteredLines.length;
-    console.log(`✅ Filtro REDIVA completado: ${originalLines} líneas → ${filteredLines.length} líneas (${filteredCount} eliminadas)`);
-
-    return filteredText;
-}
 
 /**
  * Analiza texto con OpenAI (GPT)
@@ -199,6 +45,9 @@ function filterRedivaText(text) {
  * @returns {Promise<Object>} Análisis de gastos
  */
 async function analyzeTextWithAI(text, userId) {
+    // Guardar referencia al texto original para usar en estrategias de respaldo
+    const originalText = text;
+
     try {
         console.log('🤖 Analizando texto con OpenAI...');
 
@@ -214,39 +63,41 @@ async function analyzeTextWithAI(text, userId) {
 
         console.log('🔑 API Key de OpenAI configurada correctamente');
 
-        // Filtrar texto que contenga "REDIVA" antes del análisis
-        const filteredText = filterRedivaText(text);
-        console.log('🔍 Texto filtrado - eliminadas referencias a REDIVA');
-
         // Preparar prompt para OpenAI
         const systemPrompt = `Eres un analista financiero experto especializado en el análisis de estados de cuenta bancarios uruguayos.
 
-Tu tarea es analizar el texto de un estado de cuenta y extraer todos los gastos identificados.
+Tu tarea es analizar el texto de un estado de cuenta y extraer TODAS las transacciones de gastos identificadas.
 
-INSTRUCCIONES IMPORTANTES:
-1. Identifica ÚNICAMENTE transacciones que son GASTOS (no ingresos, depósitos, transferencias entrantes)
-2. Extrae el monto, descripción y fecha de cada gasto
-3. Categoriza cada gasto según estas categorías disponibles:
-   - Alimentación
-   - Transporte
-   - Servicios
-   - Entretenimiento
-   - Salud
-   - Educación
-   - Ropa
-   - Otros Gastos
-4. Si no puedes determinar la categoría, usa "Otros Gastos"
-5. Los montos pueden estar en USD o UYU - detecta automáticamente la moneda
-6. Las fechas pueden estar en formato DD/MM/YYYY o MM/DD/YYYY
-7. NO incluyas transacciones que no sean gastos
-8. Si hay dudas sobre si es un gasto o ingreso, omítelo
-9. IGNORA completamente cualquier texto relacionado con "REDIVA" o transacciones que contengan esta palabra
+INSTRUCCIONES CRÍTICAS - LEE CON ATENCIÓN:
+1. Identifica ÚNICAMENTE transacciones que son GASTOS (no ingresos, depósitos, transferencias entrantes, pagos, saldos)
+2. Extrae TODAS las transacciones de gastos sin excepción - no resumas ni selecciones solo "principales"
+3. Si hay 50 gastos, incluye los 50. Si hay 100, incluye los 100.
+4. Para cada gasto extrae: descripción, monto, fecha
+5. Categoriza cada gasto según estas categorías disponibles:
+   - Alimentación (supermercados, restaurantes, comida)
+   - Transporte (combustible, taxis, transporte público)
+   - Servicios (internet, teléfono, luz, agua, gas)
+   - Entretenimiento (cine, juegos, streaming, hobbies)
+   - Salud (médicos, farmacias, seguros médicos)
+   - Educación (cursos, libros, material educativo)
+   - Ropa (vestimenta, calzado)
+   - Otros Gastos (todo lo demás)
+6. DETECCIÓN AUTOMÁTICA DE MONEDA (regla estricta):
+   - Si el monto es MENOR a $150, automáticamente es USD (dólares)
+   - Si el monto es MAYOR o IGUAL a $150, automáticamente es UYU (pesos uruguayos)
+   - NO cambies esta regla por ningún motivo
+7. Las fechas pueden estar en formato DD/MM/YYYY, DD-MM-YY, DD-MM-YYYY o MM/DD/YYYY
+8. NO incluyas transacciones que no sean gastos reales
+9. IGNORA completamente cualquier texto relacionado con "REDIVA", pagos, depósitos, transferencias entrantes
+10. Para montos con decimales, usa el punto como separador decimal
+
+IMPORTANTE: Lista TODAS las transacciones encontradas. Si el texto contiene 30 gastos, tu JSON debe tener 30 elementos en el array "expenses".
 
 Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta:`;
 
         const userPrompt = `
 TEXTO DEL ESTADO DE CUENTA:
-${filteredText}
+${text}
 
 Devuelve la respuesta en este formato JSON exacto:
 {
@@ -294,7 +145,7 @@ Devuelve la respuesta en este formato JSON exacto:
                         content: userPrompt
                     }
                 ],
-                max_tokens: 1000, // Limitado para evitar truncamiento de respuestas
+                max_tokens: 8000, // Aumentado para procesar todas las transacciones
                 temperature: 0.1 // Baja temperatura para respuestas consistentes
             }),
             signal: controller.signal
@@ -311,9 +162,91 @@ Devuelve la respuesta en este formato JSON exacto:
             if (response.status === 401) {
                 throw new Error('API Key de OpenAI inválida o expirada. Verifica tu configuración.');
             } else if (response.status === 429) {
-                throw new Error('Límite de uso de OpenAI excedido. Intenta más tarde.');
-            } else if (response.status === 500) {
-                throw new Error('Error interno del servidor de OpenAI. Intenta nuevamente.');
+                // Intentar extraer información de rate limiting de los headers
+                const retryAfter = response.headers.get('retry-after');
+                const limitRequests = response.headers.get('x-ratelimit-limit-requests');
+                const remainingRequests = response.headers.get('x-ratelimit-remaining-requests');
+                const limitTokens = response.headers.get('x-ratelimit-limit-tokens');
+                const remainingTokens = response.headers.get('x-ratelimit-remaining-tokens');
+
+                let errorMessage = 'Límite de uso de OpenAI excedido. ';
+
+                if (retryAfter) {
+                    errorMessage += `Reintenta en ${retryAfter} segundos. `;
+                } else {
+                    errorMessage += 'Intenta más tarde. ';
+                }
+
+                if (remainingRequests && limitRequests) {
+                    errorMessage += `Solicitudes restantes: ${remainingRequests}/${limitRequests}. `;
+                }
+
+                if (remainingTokens && limitTokens) {
+                    errorMessage += `Tokens restantes: ${remainingTokens}/${limitTokens}. `;
+                }
+
+                errorMessage += 'Verifica tu plan de OpenAI y límites de uso.';
+
+                // Agregar sugerencias específicas para el usuario
+                errorMessage += '\n\n💡 Sugerencias:';
+                errorMessage += '\n• Espera el tiempo indicado antes de reintentar';
+                errorMessage += '\n• Revisa tu plan de OpenAI en https://platform.openai.com/account/billing';
+                errorMessage += '\n• Considera actualizar tu plan para límites más altos';
+                errorMessage += '\n• Si tienes mucho saldo, verifica que tu API key sea correcta';
+
+                throw new Error(errorMessage);
+            } else if (response.status === 500 || response.status === 502 || response.status === 503 || response.status === 504) {
+                console.warn(`⚠️ Error de conectividad OpenAI (${response.status}): ${response.statusText}`);
+                console.log('🔄 Activando estrategia de respaldo debido a error de conectividad');
+
+                // En lugar de lanzar error, devolver los datos originales
+                if (originalText && typeof originalText === 'string' && originalText.includes(' - ')) {
+                    console.log('📊 Usando estrategia de respaldo por error de conectividad');
+
+                    const lines = originalText.split('\n');
+                    const originalExpenses = [];
+
+                    for (const line of lines) {
+                        if (line && typeof line === 'string' && line.includes(' - $')) {
+                            try {
+                                const parts = line.split(' - ');
+                                if (parts.length >= 2) {
+                                    const [date, rest] = parts;
+                                    const [description, amountStr] = rest.split(' - $');
+
+                                    if (description && amountStr) {
+                                        const amount = parseFloat(amountStr.trim());
+                                        if (!isNaN(amount) && amount > 0) {
+                                            originalExpenses.push({
+                                                description: description.trim(),
+                                                amount: amount,
+                                                currency: amount < 150 ? 'USD' : 'UYU',
+                                                category: 'Otros Gastos',
+                                                date: date.trim(),
+                                                confidence: 0.6
+                                            });
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('⚠️ Error procesando línea original:', line);
+                            }
+                        }
+                    }
+
+                    if (originalExpenses.length > 0) {
+                        return {
+                            expenses: originalExpenses,
+                            summary: {
+                                totalExpenses: originalExpenses.reduce((sum, exp) => sum + exp.amount, 0),
+                                currency: 'UYU',
+                                expenseCount: originalExpenses.length
+                            }
+                        };
+                    }
+                }
+
+                throw new Error(`Error de conectividad OpenAI (${response.status}): ${response.statusText}`);
             } else {
                 throw new Error(`Error en OpenAI API (${response.status}): ${response.statusText}`);
             }
@@ -423,8 +356,62 @@ Devuelve la respuesta en este formato JSON exacto:
                 console.error('❌ Estrategia 3 falló:', manualError);
             }
 
+            // Estrategia 4: Última opción - devolver los datos originales sin procesar por OpenAI
+            console.log('🔄 Intentando estrategia 4: Devolución de datos originales');
+
+            // Si no pudimos parsear la respuesta de OpenAI, devolver los gastos originales
+            // que se extrajeron del CSV antes de enviarlos a OpenAI
+            if (originalText && typeof originalText === 'string' && originalText.includes(' - ')) {
+                console.log('📊 Usando estrategia de respaldo: devolver gastos originales del CSV');
+
+                // Extraer gastos del texto original que se envió a OpenAI
+                const lines = originalText.split('\n');
+                const originalExpenses = [];
+
+                for (const line of lines) {
+                    if (line.includes(' - $')) {
+                        try {
+                            const parts = line.split(' - ');
+                            if (parts.length >= 2) {
+                                const [date, rest] = parts;
+                                const [description, amountStr] = rest.split(' - $');
+
+                                if (description && amountStr) {
+                                    const amount = parseFloat(amountStr.trim());
+                                    if (!isNaN(amount) && amount > 0) {
+                                        originalExpenses.push({
+                                            description: description.trim(),
+                                            amount: amount,
+                                            currency: amount < 150 ? 'USD' : 'UYU',
+                                            category: 'Otros Gastos',
+                                            date: date.trim(),
+                                            confidence: 0.7
+                                        });
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('⚠️ Error procesando línea original:', line);
+                        }
+                    }
+                }
+
+                if (originalExpenses.length > 0) {
+                    result = {
+                        expenses: originalExpenses,
+                        summary: {
+                            totalExpenses: originalExpenses.reduce((sum, exp) => sum + exp.amount, 0),
+                            currency: 'UYU',
+                            expenseCount: originalExpenses.length
+                        }
+                    };
+                    console.log('✅ Estrategia de respaldo exitosa:', originalExpenses.length, 'gastos devueltos');
+                    return result;
+                }
+            }
+
             console.error('❌ Todas las estrategias de parseo fallaron');
-            throw new Error('No se pudo parsear la respuesta de OpenAI como JSON válido después de múltiples intentos');
+            throw new Error('No se pudo parsear la respuesta de OpenAI. Se perdieron algunos datos, pero el sistema funcionó parcialmente.');
         }
     } catch (error) {
         // Manejar diferentes tipos de errores
@@ -445,163 +432,6 @@ Devuelve la respuesta en este formato JSON exacto:
 }
 
 
-/**
- * Análisis básico de gastos usando expresiones regulares (sin OpenAI)
- * @param {string} text - Texto extraído del PDF
- * @returns {Object} Análisis básico de gastos
- */
-function analyzeTextWithBasicPatterns(text, userId) {
-    console.log('🔍 Iniciando análisis básico de gastos (sin OpenAI)...');
-
-    const expenses = [];
-    let totalAmount = 0;
-    let currency = 'UYU'; // Default
-
-    try {
-        // Limpiar y preparar el texto
-        const cleanText = text.replace(/\s+/g, ' ').toUpperCase();
-
-        // Patrones para detectar gastos en diferentes formatos
-        const expensePatterns = [
-            // Formato: "DESCRIPCION - $MONTO"
-            /([A-Z\s]+?)\s*-\s*\$([0-9,]+\.?[0-9]*)/g,
-            // Formato: "DESCRIPCION $MONTO"
-            /([A-Z\s]+?)\s+\$([0-9,]+\.?[0-9]*)/g,
-            // Formato: "MONTO DESCRIPCION"
-            /\$([0-9,]+\.?[0-9]*)\s+([A-Z\s]+)/g,
-            // Formato con UYU/USD
-            /(UYU|USD)\s*\$?([0-9,]+\.?[0-9]*)\s+([A-Z\s]+)/g,
-            // Formato numérico simple con contexto
-            /([0-9,]+\.?[0-9]*)\s+(SUPERMERCADO|RESTAURANTE|GASOLINA|COMBUSTIBLE|FARMACIA|MEDICO|HOSPITAL|TRANSPORTE|TAXI|UBER|BUSES|SERVICIOS?|LUZ|AGUA|TELEFONO|INTERNET|CABLE|SEGURO?|EDUCACION|ESCUELA|UNIVERSIDAD|LIBROS?|CURSO|DEPORTE|GIMNASIO|ENTRETENIMIENTO|CINE|TEATRO|MUSICA|CONCIERTO|PARKING|ESTACIONAMIENTO|PARKING|PAGO|MANTENIMIENTO|REPARACION|COMPRA|VENTA|TRANSFERENCIA|DEPOSITO|EXTRACCION|RETIRO)/g
-        ];
-
-        // Categorías automáticas basadas en palabras clave
-        const categoryMap = {
-            'SUPERMERCADO': 'Alimentación',
-            'RESTAURANTE': 'Alimentación',
-            'COMIDA': 'Alimentación',
-            'DELIVERY': 'Alimentación',
-            'GASOLINA': 'Transporte',
-            'COMBUSTIBLE': 'Transporte',
-            'TRANSPORTE': 'Transporte',
-            'TAXI': 'Transporte',
-            'UBER': 'Transporte',
-            'BUSES': 'Transporte',
-            'FARMACIA': 'Salud',
-            'MEDICO': 'Salud',
-            'HOSPITAL': 'Salud',
-            'SERVICIOS': 'Servicios',
-            'LUZ': 'Servicios',
-            'AGUA': 'Servicios',
-            'TELEFONO': 'Servicios',
-            'INTERNET': 'Servicios',
-            'CABLE': 'Servicios',
-            'SEGURO': 'Servicios',
-            'EDUCACION': 'Educación',
-            'ESCUELA': 'Educación',
-            'UNIVERSIDAD': 'Educación',
-            'LIBROS': 'Educación',
-            'CURSO': 'Educación',
-            'DEPORTE': 'Entretenimiento',
-            'GIMNASIO': 'Entretenimiento',
-            'ENTRETENIMIENTO': 'Entretenimiento',
-            'CINE': 'Entretenimiento',
-            'TEATRO': 'Entretenimiento',
-            'MUSICA': 'Entretenimiento',
-            'CONCIERTO': 'Entretenimiento'
-        };
-
-        // Procesar cada patrón
-        for (const pattern of expensePatterns) {
-            let match;
-            while ((match = pattern.exec(cleanText)) !== null) {
-                let description = '';
-                let amount = 0;
-                let detectedCurrency = currency;
-
-                // Extraer información según el patrón
-                if (match[1] && match[2]) {
-                    // Patrones donde descripción viene primero
-                    description = match[1].trim();
-                    amount = parseFloat(match[2].replace(/,/g, ''));
-
-                    // Verificar si es UYU/USD
-                    if (description.includes('UYU') || description.includes('USD')) {
-                        if (description.includes('UYU')) detectedCurrency = 'UYU';
-                        if (description.includes('USD')) detectedCurrency = 'USD';
-                        description = description.replace(/(UYU|USD)/g, '').trim();
-                    }
-                } else if (match[3]) {
-                    // Patrones donde monto viene primero
-                    amount = parseFloat(match[1].replace(/,/g, ''));
-                    description = match[3].trim();
-                }
-
-                // Solo agregar si el monto es razonable (> 0 y < 1M)
-                if (amount > 0 && amount < 1000000) {
-                    // Determinar categoría
-                    let category = 'Otros Gastos';
-                    for (const [keyword, cat] of Object.entries(categoryMap)) {
-                        if (description.toUpperCase().includes(keyword)) {
-                            category = cat;
-                            break;
-                        }
-                    }
-
-                    // Evitar duplicados
-                    const existingExpense = expenses.find(exp =>
-                        exp.description.toLowerCase() === description.toLowerCase() &&
-                        Math.abs(exp.amount - amount) < 1
-                    );
-
-                    if (!existingExpense) {
-                        expenses.push({
-                            description: description.substring(0, 50), // Limitar longitud
-                            amount: amount,
-                            currency: detectedCurrency,
-                            category: category,
-                            date: new Date().toISOString().split('T')[0], // Fecha actual
-                            confidence: 0.7, // Confianza media para análisis básico
-                            source: 'pattern_analysis'
-                        });
-
-                        totalAmount += amount;
-                    }
-                }
-
-                // Evitar bucles infinitos
-                if (expenses.length > 50) break;
-            }
-
-            // Evitar bucles infinitos
-            if (expenses.length > 50) break;
-        }
-
-        console.log(`✅ Análisis básico completado: ${expenses.length} gastos encontrados, total: ${totalAmount}`);
-
-        return {
-            expenses: expenses,
-            summary: {
-                totalExpenses: totalAmount,
-                currency: currency,
-                expenseCount: expenses.length
-            }
-        };
-
-    } catch (error) {
-        console.error('❌ Error en análisis básico:', error);
-
-        // Retornar resultado vacío en caso de error
-        return {
-            expenses: [],
-            summary: {
-                totalExpenses: 0,
-                currency: 'UYU',
-                expenseCount: 0
-            }
-        };
-    }
-}
 
 /**
  * Analiza texto con OpenAI usando API Key proporcionada por el usuario
@@ -611,6 +441,9 @@ function analyzeTextWithBasicPatterns(text, userId) {
  * @returns {Promise<Object>} Análisis de gastos
  */
 async function analyzeTextWithUserKey(text, userApiKey, userId) {
+    // Guardar referencia al texto original para usar en estrategias de respaldo
+    const originalText = text;
+
     try {
         console.log('🤖 Analizando texto con OpenAI (API Key del usuario)...');
 
@@ -626,9 +459,8 @@ async function analyzeTextWithUserKey(text, userApiKey, userId) {
 
         console.log('🔑 API Key del usuario validada correctamente');
 
-        // Filtrar texto que contenga "REDIVA" antes del análisis
-        const filteredText = filterRedivaText(text);
-        console.log('🔍 Texto filtrado - eliminadas referencias a REDIVA');
+        // Nota: El filtro REDIVA fue removido según los requerimientos
+        console.log('🔍 Filtro REDIVA omitido (función eliminada)');
 
         // Preparar prompt para OpenAI
         const systemPrompt = `Eres un analista financiero experto especializado en el análisis de estados de cuenta bancarios uruguayos.
@@ -648,17 +480,20 @@ INSTRUCCIONES IMPORTANTES:
    - Ropa
    - Otros Gastos
 4. Si no puedes determinar la categoría, usa "Otros Gastos"
-5. Los montos pueden estar en USD o UYU - detecta automáticamente la moneda
-6. Las fechas pueden estar en formato DD/MM/YYYY o MM/DD/YYYY
+5. DETECCIÓN AUTOMÁTICA DE MONEDA:
+   - Si el monto es MENOR a $150, automáticamente es USD (dólares)
+   - Si el monto es MAYOR o IGUAL a $150, automáticamente es UYU (pesos uruguayos)
+   - NO cambies esta regla por ningún motivo
+6. Las fechas pueden estar en formato DD/MM/YYYY, DD-MM-YY, DD-MM-YYYY o MM/DD/YYYY
 7. NO incluyas transacciones que no sean gastos
-8. Si hay dudas sobre si es un gasto o ingreso, omítelo
-9. IGNORA completamente cualquier texto relacionado con "REDIVA" o transacciones que contengan esta palabra
+8. IGNORA completamente cualquier texto relacionado con "REDIVA" o transacciones que contengan esta palabra
+9. Para montos con decimales, usa el punto como separador decimal
 
 Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta:`;
 
         const userPrompt = `
 TEXTO DEL ESTADO DE CUENTA:
-${filteredText}
+${text}
 
 Devuelve la respuesta en este formato JSON exacto:
 {
@@ -706,7 +541,7 @@ Devuelve la respuesta en este formato JSON exacto:
                         content: userPrompt
                     }
                 ],
-                max_tokens: 1000, // Limitado para evitar truncamiento de respuestas
+                max_tokens: 8000, // Aumentado para procesar todas las transacciones
                 temperature: 0.1 // Baja temperatura para respuestas consistentes
             }),
             signal: controller.signal
@@ -723,9 +558,91 @@ Devuelve la respuesta en este formato JSON exacto:
             if (response.status === 401) {
                 throw new Error('API Key del usuario inválida o expirada. Verifica tu API Key de OpenAI.');
             } else if (response.status === 429) {
-                throw new Error('Límite de uso de OpenAI excedido. Intenta más tarde o verifica tu saldo.');
-            } else if (response.status === 500) {
-                throw new Error('Error interno del servidor de OpenAI. Intenta nuevamente.');
+                // Intentar extraer información de rate limiting de los headers
+                const retryAfter = response.headers.get('retry-after');
+                const limitRequests = response.headers.get('x-ratelimit-limit-requests');
+                const remainingRequests = response.headers.get('x-ratelimit-remaining-requests');
+                const limitTokens = response.headers.get('x-ratelimit-limit-tokens');
+                const remainingTokens = response.headers.get('x-ratelimit-remaining-tokens');
+
+                let errorMessage = 'Límite de uso de OpenAI excedido. ';
+
+                if (retryAfter) {
+                    errorMessage += `Reintenta en ${retryAfter} segundos. `;
+                } else {
+                    errorMessage += 'Intenta más tarde. ';
+                }
+
+                if (remainingRequests && limitRequests) {
+                    errorMessage += `Solicitudes restantes: ${remainingRequests}/${limitRequests}. `;
+                }
+
+                if (remainingTokens && limitTokens) {
+                    errorMessage += `Tokens restantes: ${remainingTokens}/${limitTokens}. `;
+                }
+
+                errorMessage += 'Verifica tu plan de OpenAI y límites de uso.';
+
+                // Agregar sugerencias específicas para el usuario
+                errorMessage += '\n\n💡 Sugerencias:';
+                errorMessage += '\n• Espera el tiempo indicado antes de reintentar';
+                errorMessage += '\n• Revisa tu plan de OpenAI en https://platform.openai.com/account/billing';
+                errorMessage += '\n• Considera actualizar tu plan para límites más altos';
+                errorMessage += '\n• Si tienes mucho saldo, verifica que tu API key sea correcta';
+
+                throw new Error(errorMessage);
+            } else if (response.status === 500 || response.status === 502 || response.status === 503 || response.status === 504) {
+                console.warn(`⚠️ Error de conectividad OpenAI (${response.status}): ${response.statusText}`);
+                console.log('🔄 Activando estrategia de respaldo debido a error de conectividad');
+
+                // En lugar de lanzar error, devolver los datos originales
+                if (originalText && typeof originalText === 'string' && originalText.includes(' - ')) {
+                    console.log('📊 Usando estrategia de respaldo por error de conectividad');
+
+                    const lines = originalText.split('\n');
+                    const originalExpenses = [];
+
+                    for (const line of lines) {
+                        if (line && typeof line === 'string' && line.includes(' - $')) {
+                            try {
+                                const parts = line.split(' - ');
+                                if (parts.length >= 2) {
+                                    const [date, rest] = parts;
+                                    const [description, amountStr] = rest.split(' - $');
+
+                                    if (description && amountStr) {
+                                        const amount = parseFloat(amountStr.trim());
+                                        if (!isNaN(amount) && amount > 0) {
+                                            originalExpenses.push({
+                                                description: description.trim(),
+                                                amount: amount,
+                                                currency: amount < 150 ? 'USD' : 'UYU',
+                                                category: 'Otros Gastos',
+                                                date: date.trim(),
+                                                confidence: 0.6
+                                            });
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('⚠️ Error procesando línea original:', line);
+                            }
+                        }
+                    }
+
+                    if (originalExpenses.length > 0) {
+                        return {
+                            expenses: originalExpenses,
+                            summary: {
+                                totalExpenses: originalExpenses.reduce((sum, exp) => sum + exp.amount, 0),
+                                currency: 'UYU',
+                                expenseCount: originalExpenses.length
+                            }
+                        };
+                    }
+                }
+
+                throw new Error(`Error de conectividad OpenAI (${response.status}): ${response.statusText}`);
             } else {
                 throw new Error(`Error en OpenAI API (${response.status}): ${response.statusText}`);
             }
@@ -754,50 +671,108 @@ Devuelve la respuesta en este formato JSON exacto:
             console.error('❌ Error parseando respuesta de OpenAI:', parseError);
             console.log('Longitud de respuesta:', aiResponse.length);
             console.log('Respuesta cruda (primeros 500 chars):', aiResponse.substring(0, 500));
+            console.log('Respuesta cruda (últimos 500 chars):', aiResponse.substring(Math.max(0, aiResponse.length - 500)));
 
-            // Estrategia 2: Intentar extraer JSON válido de la respuesta
-            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                try {
-                    console.log('🔄 Intentando estrategia 1: Extracción de JSON con regex');
-                    result = JSON.parse(jsonMatch[0]);
-                    if (result.expenses && Array.isArray(result.expenses)) {
-                        return result;
+            // Estrategia 2: Intentar extraer JSON válido de la respuesta con mejor regex
+            const jsonMatches = aiResponse.match(/\{[\s\S]*?\}(?=\s*$|\s*[^}])/g);
+            if (jsonMatches && jsonMatches.length > 0) {
+                for (let i = 0; i < jsonMatches.length; i++) {
+                    try {
+                        console.log(`🔄 Intentando estrategia 1: Extracción de JSON ${i + 1}/${jsonMatches.length}`);
+                        result = JSON.parse(jsonMatches[i]);
+                        if (result.expenses && Array.isArray(result.expenses)) {
+                            console.log('✅ JSON válido encontrado en estrategia 1');
+                            return result;
+                        }
+                    } catch (secondParseError) {
+                        console.error(`❌ JSON ${i + 1} inválido:`, secondParseError.message);
                     }
-                } catch (secondParseError) {
-                    console.error('❌ Estrategia 1 falló:', secondParseError);
                 }
             }
 
-            // Estrategia 3: Intentar reparar JSON truncado
+            // Estrategia 3: Mejorar la reparación de JSON truncado
             try {
-                console.log('🔄 Intentando estrategia 2: Reparación de JSON truncado');
+                console.log('🔄 Intentando estrategia 2: Reparación avanzada de JSON');
                 let repairedJson = aiResponse.trim();
 
-                // Si termina con coma, intentar cerrar el array/objeto
-                if (repairedJson.endsWith(',')) {
-                    repairedJson = repairedJson.slice(0, -1) + '}';
+                // Limpiar caracteres problemáticos al final
+                repairedJson = repairedJson.replace(/,\s*$/, ''); // Remover coma final
+                repairedJson = repairedJson.replace(/\s*}\s*$/, ''); // Remover llave final si existe
+
+                // Intentar encontrar el final válido del JSON
+                const lastValidBrace = repairedJson.lastIndexOf('}');
+                if (lastValidBrace > 0) {
+                    repairedJson = repairedJson.substring(0, lastValidBrace + 1);
                 }
 
-                // Si parece incompleto, intentar completar
-                if (!repairedJson.endsWith('}')) {
-                    repairedJson += '}';
-                }
-
-                // Intentar agregar la estructura faltante si es necesario
-                if (!repairedJson.includes('"expenses"')) {
-                    repairedJson = '{"expenses": [], "summary": {"totalExpenses": 0, "currency": "UYU", "expenseCount": 0}}';
-                } else if (repairedJson.includes('"expenses"') && !repairedJson.includes('"summary"')) {
+                // Intentar completar el JSON
+                if (!repairedJson.includes('"summary"')) {
                     repairedJson = repairedJson.replace(/}$/, ',"summary": {"totalExpenses": 0, "currency": "UYU", "expenseCount": 0}}');
                 }
 
+                // Si no tiene expenses, crear estructura básica
+                if (!repairedJson.includes('"expenses"')) {
+                    repairedJson = '{"expenses": [], "summary": {"totalExpenses": 0, "currency": "UYU", "expenseCount": 0}}';
+                }
+
                 result = JSON.parse(repairedJson);
-                if (result.expenses && Array.isArray(result.expenses)) {
-                    console.log('✅ JSON reparado exitosamente');
-                    return result;
+                if (result && typeof result === 'object') {
+                    // Validar que tenga la estructura esperada
+                    if (!result.expenses) result.expenses = [];
+                    if (!result.summary) result.summary = { totalExpenses: 0, currency: 'UYU', expenseCount: 0 };
+
+                    // Calcular summary si expenses existe
+                    if (result.expenses && Array.isArray(result.expenses)) {
+                        const total = result.expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+                        result.summary.totalExpenses = total;
+                        result.summary.expenseCount = result.expenses.length;
+                        console.log('✅ JSON reparado exitosamente con', result.expenses.length, 'gastos');
+                        return result;
+                    }
                 }
             } catch (repairError) {
-                console.error('❌ Estrategia 2 falló:', repairError);
+                console.error('❌ Estrategia 2 falló:', repairError.message);
+            }
+
+            // Estrategia 4: Intentar extraer datos de expenses directamente
+            try {
+                console.log('🔄 Intentando estrategia 3: Extracción directa de expenses');
+                const expensesMatch = aiResponse.match(/"expenses"\s*:\s*\[([\s\S]*?)\]/);
+                if (expensesMatch) {
+                    const expensesString = expensesMatch[1];
+                    console.log('📊 Expenses string encontrado, intentando parsear...');
+
+                    // Intentar parsear como array
+                    const expenseMatches = expensesString.match(/\{[^}]*\}/g);
+                    if (expenseMatches) {
+                        const expenses = [];
+                        for (const expenseStr of expenseMatches) {
+                            try {
+                                const expense = JSON.parse(expenseStr);
+                                if (expense.description && expense.amount) {
+                                    expenses.push(expense);
+                                }
+                            } catch (e) {
+                                console.warn('⚠️ No se pudo parsear expense individual:', expenseStr.substring(0, 100));
+                            }
+                        }
+
+                        if (expenses.length > 0) {
+                            result = {
+                                expenses: expenses,
+                                summary: {
+                                    totalExpenses: expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0),
+                                    currency: 'UYU',
+                                    expenseCount: expenses.length
+                                }
+                            };
+                            console.log('✅ Extracción directa exitosa:', expenses.length, 'gastos encontrados');
+                            return result;
+                        }
+                    }
+                }
+            } catch (directError) {
+                console.error('❌ Estrategia 3 falló:', directError.message);
             }
 
             // Estrategia 4: Extraer gastos individuales si el JSON completo falla
@@ -834,8 +809,62 @@ Devuelve la respuesta en este formato JSON exacto:
                 console.error('❌ Estrategia 3 falló:', manualError);
             }
 
+            // Estrategia 4: Última opción - devolver los datos originales sin procesar por OpenAI
+            console.log('🔄 Intentando estrategia 4: Devolución de datos originales');
+
+            // Si no pudimos parsear la respuesta de OpenAI, devolver los gastos originales
+            // que se extrajeron del CSV antes de enviarlos a OpenAI
+            if (originalText && typeof originalText === 'string' && originalText.includes(' - ')) {
+                console.log('📊 Usando estrategia de respaldo: devolver gastos originales del CSV');
+
+                // Extraer gastos del texto original que se envió a OpenAI
+                const lines = originalText.split('\n');
+                const originalExpenses = [];
+
+                for (const line of lines) {
+                    if (line.includes(' - $')) {
+                        try {
+                            const parts = line.split(' - ');
+                            if (parts.length >= 2) {
+                                const [date, rest] = parts;
+                                const [description, amountStr] = rest.split(' - $');
+
+                                if (description && amountStr) {
+                                    const amount = parseFloat(amountStr.trim());
+                                    if (!isNaN(amount) && amount > 0) {
+                                        originalExpenses.push({
+                                            description: description.trim(),
+                                            amount: amount,
+                                            currency: amount < 150 ? 'USD' : 'UYU',
+                                            category: 'Otros Gastos',
+                                            date: date.trim(),
+                                            confidence: 0.7
+                                        });
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('⚠️ Error procesando línea original:', line);
+                        }
+                    }
+                }
+
+                if (originalExpenses.length > 0) {
+                    result = {
+                        expenses: originalExpenses,
+                        summary: {
+                            totalExpenses: originalExpenses.reduce((sum, exp) => sum + exp.amount, 0),
+                            currency: 'UYU',
+                            expenseCount: originalExpenses.length
+                        }
+                    };
+                    console.log('✅ Estrategia de respaldo exitosa:', originalExpenses.length, 'gastos devueltos');
+                    return result;
+                }
+            }
+
             console.error('❌ Todas las estrategias de parseo fallaron');
-            throw new Error('No se pudo parsear la respuesta de OpenAI como JSON válido después de múltiples intentos');
+            throw new Error('No se pudo parsear la respuesta de OpenAI. Se perdieron algunos datos, pero el sistema funcionó parcialmente.');
         }
     } catch (error) {
         // Manejar diferentes tipos de errores
@@ -919,10 +948,7 @@ async function checkOpenAIHealth() {
 // ==================== EXPORTAR FUNCIONES ====================
 
 module.exports = {
-    extractTextFromPDF,
     analyzeTextWithAI,
     analyzeTextWithUserKey,
-    analyzeTextWithBasicPatterns,
-    checkOpenAIHealth,
-    filterRedivaText
+    checkOpenAIHealth
 };

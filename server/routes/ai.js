@@ -10,22 +10,449 @@ const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const multer = require('multer');
 const fs = require('fs');
-const { extractTextFromPDF, analyzeTextWithAI, checkOpenAIHealth } = require('../services/aiService');
+const path = require('path');
+const { spawn, execSync } = require('child_process');
+const { analyzeTextWithAI, checkOpenAIHealth } = require('../services/aiService');
 
 const router = express.Router();
 
 // Configuración de multer para manejar la subida de archivos
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/');
+        const uploadDir = path.join(__dirname, '../../uploads/');
+
+        // Crear el directorio si no existe
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+            console.log('📁 Directorio uploads creado automáticamente:', uploadDir);
+        } else {
+            console.log('📁 Directorio uploads ya existe:', uploadDir);
+        }
+
+        cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
+        const fileName = `${Date.now()}-${file.originalname}`;
+        console.log('📄 Archivo a guardar:', fileName);
+        cb(null, fileName);
     }
 });
 const upload = multer({ storage: storage });
 
 // ==================== ENDPOINTS PÚBLICOS (SIN AUTENTICACIÓN) ====================
+
+/**
+ * POST /api/public/ai/analyze-csv
+ * Analiza un CSV sin autenticación (modo demo)
+ */
+router.post('/analyze-csv', upload.single('csv'), async (req, res) => {
+    try {
+        console.log('📄 === INICIANDO PROCESAMIENTO DE CSV ===');
+        console.log('📄 Headers recibidos:', JSON.stringify(req.headers, null, 2));
+
+        if (!req.file) {
+            console.error('❌ No se recibió archivo CSV en la solicitud');
+            return res.status(400).json({
+                error: 'Archivo CSV requerido',
+                message: 'Debes subir un archivo CSV para analizar'
+            });
+        }
+
+        const filePath = req.file.path;
+        const fileName = req.file.originalname;
+        const fileSize = req.file.size;
+
+        console.log(`📄 CSV recibido: ${fileName}`);
+        console.log(`📄 Ruta del archivo: ${filePath}`);
+        console.log(`📄 Tamaño del archivo: ${fileSize} bytes`);
+
+        // Verificar que el archivo existe usando ruta absoluta
+        const absoluteFilePath = path.resolve(filePath);
+        console.log(`📄 Ruta absoluta del archivo: ${absoluteFilePath}`);
+
+        if (!fs.existsSync(absoluteFilePath)) {
+            console.error(`❌ Archivo no encontrado en el servidor: ${absoluteFilePath}`);
+            return res.status(500).json({
+                error: 'Archivo no encontrado',
+                message: 'El archivo CSV no se guardó correctamente en el servidor'
+            });
+        }
+
+        // Verificar tamaño del archivo (máximo 10MB)
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (fileSize > maxSize) {
+            console.error(`❌ Archivo CSV demasiado grande: ${fileSize} bytes`);
+            // Limpiar archivo temporal
+            if (fs.existsSync(absoluteFilePath)) {
+                fs.unlinkSync(absoluteFilePath);
+                console.log('🧹 Archivo temporal eliminado por tamaño excedido:', absoluteFilePath);
+            }
+            return res.status(400).json({
+                error: 'Archivo demasiado grande',
+                message: 'El archivo CSV no puede superar los 10MB'
+            });
+        }
+
+        console.log('🤖 Verificando funcionamiento de OpenAI antes de procesar...');
+
+        // Verificar que OpenAI esté funcionando antes de proceder
+        const openaiHealth = await checkOpenAIHealth();
+
+        if (openaiHealth.status !== 'success') {
+            console.error('❌ OpenAI no está funcionando:', openaiHealth.message);
+
+            // Limpiar archivo temporal
+            if (fs.existsSync(absoluteFilePath)) {
+                fs.unlinkSync(absoluteFilePath);
+                console.log('🧹 Archivo temporal eliminado por error OpenAI:', absoluteFilePath);
+            }
+
+            return res.status(503).json({
+                error: 'Servicio de IA no disponible',
+                message: 'OpenAI no está funcionando correctamente. No se puede analizar el CSV.',
+                details: openaiHealth.message,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        console.log('✅ OpenAI funcionando correctamente');
+
+        // Verificar API Key del usuario desde el FormData
+        const userApiKey = req.body.userApiKey || req.body.apiKey;
+        console.log('🔑 API Key del usuario:', userApiKey ? 'Proporcionada por el cliente' : 'No proporcionada');
+
+        // Verificar si tenemos API key (del servidor o del usuario)
+        const serverApiKey = process.env.OPENAI_API_KEY;
+        const effectiveApiKey = (userApiKey && userApiKey.startsWith('sk-')) ? userApiKey : serverApiKey;
+
+        if (!effectiveApiKey || !effectiveApiKey.startsWith('sk-')) {
+            console.error('❌ No hay API Key válida disponible');
+
+            // Limpiar archivo temporal
+            if (fs.existsSync(absoluteFilePath)) {
+                fs.unlinkSync(absoluteFilePath);
+                console.log('🧹 Archivo temporal eliminado por falta de API Key:', absoluteFilePath);
+            }
+
+            return res.status(400).json({
+                error: 'API Key requerida',
+                message: 'Se requiere una API Key válida de OpenAI para analizar CSVs.',
+                details: 'Configura OPENAI_API_KEY en el servidor o proporciona tu propia API Key',
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        console.log('📄 Iniciando parseo de CSV...');
+
+        // Leer y parsear el archivo CSV
+        const csvContent = fs.readFileSync(absoluteFilePath, 'utf-8');
+        console.log(`📄 Contenido CSV leído: ${csvContent.length} caracteres`);
+
+        // Parsear CSV básico para extraer gastos
+        const expenses = parseCSVExpenses(csvContent);
+        console.log(`📄 Gastos extraídos del CSV: ${expenses.length}`);
+
+        if (expenses.length === 0) {
+            console.warn('🚨 No se encontraron gastos en el CSV procesado');
+
+            // Limpiar archivo temporal
+            if (fs.existsSync(absoluteFilePath)) {
+                fs.unlinkSync(absoluteFilePath);
+                console.log('🧹 Archivo temporal eliminado - sin gastos encontrados:', absoluteFilePath);
+            }
+
+            return res.status(400).json({
+                error: 'Sin gastos encontrados',
+                message: 'El archivo CSV no contiene gastos válidos para analizar',
+                details: {
+                    suggestions: [
+                        'Verifica que el CSV contenga transacciones de gastos',
+                        'Asegúrate de que las columnas de fecha, descripción y monto estén presentes',
+                        'El CSV debe estar en formato de estado de cuenta bancario'
+                    ]
+                },
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        console.log('🤖 Iniciando análisis con OpenAI...');
+
+        let analysis;
+        let analysisMode;
+
+        // Solo usamos análisis con OpenAI (ya que eliminamos el básico)
+        analysisMode = userApiKey ? 'openai_user' : 'openai_server';
+
+        console.log('🤖 Enviando gastos extraídos a OpenAI para análisis...');
+
+        // Convertir gastos a texto para análisis
+        const expensesText = expenses.map(expense =>
+            `${expense.date} - ${expense.description} - $${expense.amount}`
+        ).join('\n');
+
+        // Si es API key del usuario, usamos la función especial
+        if (userApiKey) {
+            const { analyzeTextWithUserKey } = require('../services/aiService');
+            analysis = await analyzeTextWithUserKey(expensesText, userApiKey, 'anonymous');
+        } else {
+            analysis = await analyzeTextWithAI(expensesText, 'anonymous');
+        }
+
+        console.log('✅ Análisis con OpenAI completado exitosamente');
+
+        // Limpiar archivo temporal
+        if (fs.existsSync(absoluteFilePath)) {
+            fs.unlinkSync(absoluteFilePath);
+            console.log('🧹 Archivo temporal eliminado:', absoluteFilePath);
+        }
+
+        res.json({
+            success: true,
+            data: {
+                extractedExpenses: expenses,
+                extractedText: expensesText.substring(0, 500) + (expensesText.length > 500 ? '...' : ''),
+                analysis: analysis,
+                analysisMode: analysisMode,
+                message: analysisMode === 'openai_server'
+                    ? 'CSV analizado correctamente con OpenAI (API del servidor)'
+                    : 'CSV analizado correctamente con OpenAI (tu API key)'
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error analizando CSV público:', error);
+        console.error('❌ Stack trace:', error.stack);
+        console.error('❌ Tipo de error:', error.constructor.name);
+        console.error('❌ Mensaje de error completo:', error.message);
+
+        // Limpiar archivo si existe
+        try {
+            if (req.file && req.file.path) {
+                const cleanupPath = path.resolve(req.file.path);
+                if (fs.existsSync(cleanupPath)) {
+                    fs.unlinkSync(cleanupPath);
+                    console.log('🧹 Archivo temporal limpiado:', cleanupPath);
+                }
+            }
+        } catch (cleanupError) {
+            console.error('❌ Error limpiando archivo temporal:', cleanupError);
+        }
+
+        // Determinar el tipo de error y respuesta apropiada
+        let statusCode = 500;
+        let errorMessage = 'Error interno del servidor';
+        let showDetailsInProduction = false;
+
+        if (error.message && error.message.includes('API Key')) {
+            statusCode = 500;
+            errorMessage = 'Configuración de API incompleta';
+        } else if (error.message && error.message.includes('fetch')) {
+            statusCode = 503;
+            errorMessage = 'Error de conexión con el servicio de IA';
+        } else if (error.message && error.message.includes('timeout')) {
+            statusCode = 504;
+            errorMessage = 'Timeout en el procesamiento';
+        } else if (error.message && error.message.includes('CSV')) {
+            statusCode = 400;
+            errorMessage = 'Error procesando el archivo CSV';
+        } else if (error.message && (error.message.includes('Límite de uso de OpenAI') || error.message.includes('rate limit'))) {
+            statusCode = 429;
+            errorMessage = 'Límite de uso de OpenAI excedido';
+            showDetailsInProduction = true;
+            console.log('🔥 Detectado error de rate limit, mostrando detalles en producción');
+        }
+
+        const responseData = {
+            error: error.constructor.name || 'Error interno del servidor',
+            message: errorMessage,
+            details: (process.env.NODE_ENV === 'development' || showDetailsInProduction) ? error.message : undefined,
+            timestamp: new Date().toISOString()
+        };
+
+        console.error('📤 Enviando respuesta de error:', JSON.stringify(responseData, null, 2));
+
+        res.status(statusCode).json(responseData);
+    }
+});
+
+/**
+ * Función auxiliar para parsear gastos desde CSV de estado de cuenta
+ * @param {string} csvContent - Contenido del archivo CSV
+ * @returns {Array} Array de gastos extraídos
+ */
+function parseCSVExpenses(csvContent) {
+    const expenses = [];
+    const lines = csvContent.split('\n');
+
+    console.log(`📄 Procesando ${lines.length} líneas del CSV`);
+
+    // Detectar si es formato CSV estándar o formato Itaú
+    const headerLine = lines[0] || '';
+    const isStandardCSV = headerLine.includes('fecha,descripcion');
+
+    if (isStandardCSV) {
+        console.log('📄 Detectado formato CSV estándar con headers');
+        return parseStandardCSV(lines);
+    } else {
+        console.log('📄 Detectado formato Itaú o similar');
+        return parseItauCSV(lines);
+    }
+}
+
+/**
+ * Parsear CSV en formato estándar con headers
+ */
+function parseStandardCSV(lines) {
+    const expenses = [];
+
+    // Determinar el número de columnas basado en el header
+    const headerLine = lines[0].toLowerCase();
+    const isSimpleFormat = headerLine.includes('fecha,descripcion,categoria,importe_pesos,importe_dolares');
+
+    for (let i = 1; i < lines.length; i++) { // Saltar header
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        try {
+            // Parsear línea CSV
+            const columns = parseCSVLine(line);
+
+            let fecha, descripcion, categoria, importe_pesos, importe_dolares;
+
+            if (isSimpleFormat && columns.length >= 5) {
+                // Formato simple: fecha,descripcion,categoria,importe_pesos,importe_dolares
+                [fecha, descripcion, categoria, importe_pesos, importe_dolares] = columns;
+            } else if (!isSimpleFormat && columns.length >= 8) {
+                // Formato extendido: fecha,descripcion,cuotas,categoria,importe_pesos,importe_dolares,tipo,archivo_origen
+                [fecha, descripcion, , categoria, importe_pesos, importe_dolares] = columns;
+            } else {
+                continue; // Saltar líneas con formato incorrecto
+            }
+
+            // Solo procesar gastos (excluir REDIVA y otros tipos de transacción)
+            if (descripcion && descripcion.toLowerCase().includes('rediva')) continue;
+            if (descripcion && descripcion.toLowerCase().includes('debito')) continue;
+            if (descripcion && descripcion.toLowerCase().includes('credito')) continue;
+
+            // Determinar el monto y moneda a usar
+            let amount = 0;
+            let currency = 'UYU';
+
+            if (importe_dolares && parseFloat(importe_dolares) > 0) {
+                // Si hay importe en dólares, usar ese
+                amount = parseFloat(importe_dolares.replace(',', '.'));
+                currency = 'USD';
+            } else if (importe_pesos && parseFloat(importe_pesos) > 0) {
+                // Si no hay dólares pero hay pesos, usar pesos
+                amount = parseFloat(importe_pesos.replace(',', '.'));
+                currency = 'UYU';
+            }
+
+            // Aplicar lógica de detección automática de moneda según el monto
+            if (currency === 'UYU' && amount < 150) {
+                currency = 'USD'; // Si es menor a 150 pesos, probablemente sea dólares
+            } else if (currency === 'USD' && amount >= 150) {
+                currency = 'UYU'; // Si es mayor o igual a 150 dólares, probablemente sea pesos
+            }
+
+            if (!isNaN(amount) && amount > 0 && fecha) {
+                expenses.push({
+                    date: fecha,
+                    description: descripcion ? descripcion.trim() : 'Sin descripción',
+                    amount: amount,
+                    currency: currency,
+                    category: categoria || 'Otros',
+                    original_pesos: importe_pesos || '',
+                    original_dolares: importe_dolares || ''
+                });
+            }
+        } catch (parseError) {
+            console.warn(`⚠️ Error parseando línea CSV ${i + 1}: ${line}`, parseError);
+        }
+    }
+
+    console.log(`📄 Total de gastos extraídos del CSV estándar (${isSimpleFormat ? 'formato simple' : 'formato extendido'}): ${expenses.length}`);
+    return expenses;
+}
+
+/**
+ * Parsear línea CSV considerando comillas
+ */
+function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+
+    result.push(current.trim());
+    return result;
+}
+
+/**
+ * Parsear CSV en formato Itaú (el formato original)
+ */
+function parseItauCSV(lines) {
+    const expenses = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        // Saltar líneas vacías o headers
+        if (!line || line.includes('Fecha Concepto Débito') || line.includes('Saldo anterior') ||
+            line.includes('Saldo final') || line.includes('Moneda') || line.includes('Crédito acordado') ||
+            line.includes('Cheques depositados') || line.includes('T.E.A.') ||
+            line.includes('Buscar') || line.includes('Últimos 5 días') ||
+            line.startsWith('https://') || line.includes('Itaú Link')) {
+            continue;
+        }
+
+        // Buscar líneas que contengan "COMPRA" (gastos)
+        if (line.includes('COMPRA')) {
+            try {
+                // Parsear línea de gasto usando regex
+                // Formato esperado: "DD-MM-YY COMPRA DESCRIPCIÓN MONTO SALDO"
+                const expenseMatch = line.match(/"?(\d{2}-\d{2}-\d{2})\s+COMPRA\s+([^"]+)\s+([\d,.]+)\s+([\d,.]+)"?/);
+
+                if (expenseMatch) {
+                    const [, date, description, amountStr, balanceStr] = expenseMatch;
+
+                    // Limpiar y convertir el monto
+                    const amount = parseFloat(amountStr.replace(/\./g, '').replace(',', '.'));
+
+                    // Detectar moneda automáticamente según el monto
+                    const currency = amount < 150 ? 'USD' : 'UYU';
+
+                    if (!isNaN(amount) && amount > 0) {
+                        expenses.push({
+                            date: date,
+                            description: description.trim(),
+                            amount: amount,
+                            currency: currency,
+                            balance: parseFloat(balanceStr.replace(/\./g, '').replace(',', '.'))
+                        });
+                    }
+                }
+            } catch (parseError) {
+                console.warn(`⚠️ Error parseando línea ${i + 1}: ${line}`, parseError);
+            }
+        }
+    }
+
+    console.log(`📄 Total de gastos extraídos del CSV Itaú: ${expenses.length}`);
+    return expenses;
+}
 
 /**
  * POST /api/public/ai/analyze-pdf
@@ -51,34 +478,49 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
         console.log(`📄 PDF recibido: ${fileName}`);
         console.log(`📄 Ruta del archivo: ${filePath}`);
         console.log(`📄 Tamaño del archivo: ${fileSize} bytes`);
+        console.log(`📄 Directorio de trabajo actual: ${process.cwd()}`);
 
-        // Verificar que el archivo existe
-        const fs = require('fs');
-        if (!fs.existsSync(filePath)) {
-            console.error(`❌ Archivo no encontrado en el servidor: ${filePath}`);
+        // Verificar que el archivo existe usando ruta absoluta
+        const absoluteFilePath = path.resolve(filePath);
+        console.log(`📄 Ruta absoluta del archivo: ${absoluteFilePath}`);
+
+        if (!fs.existsSync(absoluteFilePath)) {
+            console.error(`❌ Archivo no encontrado en el servidor: ${absoluteFilePath}`);
+            console.error(`❌ Ruta relativa usada: ${filePath}`);
             return res.status(500).json({
                 error: 'Archivo no encontrado',
-                message: 'El archivo PDF no se guardó correctamente en el servidor'
+                message: 'El archivo PDF no se guardó correctamente en el servidor',
+                details: {
+                    rutaRelativa: filePath,
+                    rutaAbsoluta: absoluteFilePath,
+                    directorioTrabajo: process.cwd()
+                }
             });
         }
 
-        console.log('📄 Iniciando extracción de texto...');
+        console.log('🤖 Verificando funcionamiento de OpenAI antes de procesar...');
 
-        // Procesar PDF
-        const extractedText = await extractTextFromPDF(filePath);
+        // Verificar que OpenAI esté funcionando antes de proceder
+        const openaiHealth = await checkOpenAIHealth();
 
-        console.log(`📄 Texto extraído: ${extractedText.length} caracteres`);
-        console.log(`📄 Preview del texto: ${extractedText.substring(0, 200)}...`);
+        if (openaiHealth.status !== 'success') {
+            console.error('❌ OpenAI no está funcionando:', openaiHealth.message);
 
-        if (!extractedText || extractedText.trim().length === 0) {
-            console.warn('⚠️ No se pudo extraer texto del PDF');
-            return res.status(400).json({
-                error: 'No se pudo extraer texto',
-                message: 'El PDF no contiene texto legible o está corrupto'
+            // Limpiar archivo temporal
+            if (fs.existsSync(absoluteFilePath)) {
+                fs.unlinkSync(absoluteFilePath);
+                console.log('🧹 Archivo temporal eliminado por error OpenAI:', absoluteFilePath);
+            }
+
+            return res.status(503).json({
+                error: 'Servicio de IA no disponible',
+                message: 'OpenAI no está funcionando correctamente. No se puede analizar el PDF.',
+                details: openaiHealth.message,
+                timestamp: new Date().toISOString()
             });
         }
 
-        console.log('🤖 Iniciando análisis...');
+        console.log('✅ OpenAI funcionando correctamente');
 
         // Verificar API Key del usuario desde el FormData
         const userApiKey = req.body.userApiKey || req.body.apiKey; // Puede venir de diferentes campos
@@ -88,56 +530,294 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
         const serverApiKey = process.env.OPENAI_API_KEY;
         const effectiveApiKey = (userApiKey && userApiKey.startsWith('sk-')) ? userApiKey : serverApiKey;
 
+        if (!effectiveApiKey || !effectiveApiKey.startsWith('sk-')) {
+            console.error('❌ No hay API Key válida disponible');
+
+            // Limpiar archivo temporal
+            if (fs.existsSync(absoluteFilePath)) {
+                fs.unlinkSync(absoluteFilePath);
+                console.log('🧹 Archivo temporal eliminado por falta de API Key:', absoluteFilePath);
+            }
+
+            return res.status(400).json({
+                error: 'API Key requerida',
+                message: 'Se requiere una API Key válida de OpenAI para analizar PDFs.',
+                details: 'Configura OPENAI_API_KEY en el servidor o proporciona tu propia API Key',
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        console.log('📄 Iniciando procesamiento con pdfconverter.py...');
+
+        // Verificar que el archivo existe y tiene contenido
+        if (!fs.existsSync(absoluteFilePath)) {
+            console.error(`❌ Archivo no encontrado: ${absoluteFilePath}`);
+            return res.status(500).json({
+                error: 'Archivo no encontrado',
+                message: 'El archivo PDF no se guardó correctamente en el servidor',
+                details: {
+                    rutaAbsoluta: absoluteFilePath,
+                    rutaRelativa: filePath
+                }
+            });
+        }
+
+        // Ejecutar el script de Python pdfconverter.py
+        console.log('🐍 Ejecutando pdfconverter.py...');
+
+        // Ejecutar Python directamente desde el entorno virtual usando execSync
+        const pythonPath = path.join(__dirname, '../../venv/bin/python3');
+        const scriptPath = path.join(__dirname, '../../funciones/pdfconverter.py');
+
+        console.log('🐍 Python path:', pythonPath);
+        console.log('🐍 Script path:', scriptPath);
+        console.log('🐍 File path:', absoluteFilePath);
+        console.log('🐍 Working directory:', path.join(__dirname, '../../'));
+
+        let csvOutput = '';
+        let exitCode = 0;
+
+        try {
+            const command = `"${pythonPath}" "${scriptPath}" "${absoluteFilePath}"`;
+            console.log('🐍 Ejecutando comando:', command);
+
+            csvOutput = execSync(command, {
+                cwd: path.join(__dirname, '../../'),
+                encoding: 'utf-8',
+                timeout: 30000, // 30 segundos timeout
+                maxBuffer: 1024 * 1024 * 10 // 10MB buffer
+            });
+
+            console.log('✅ Script Python ejecutado exitosamente');
+            console.log('📄 Output length:', csvOutput.length);
+            console.log('📄 Output preview:', csvOutput.substring(0, 100));
+
+        } catch (error) {
+            console.error('❌ Error ejecutando Python:', error);
+            exitCode = error.status || 1;
+
+            return res.status(500).json({
+                error: 'Error procesando PDF',
+                message: 'El script de Python falló al procesar el PDF',
+                details: {
+                    exitCode: exitCode,
+                    error: error.message,
+                    stderr: error.stderr ? error.stderr.toString() : '',
+                    csvOutput: csvOutput.substring(0, 500) + (csvOutput.length > 500 ? '...' : '')
+                }
+            });
+        }
+
+        // Parsear el CSV resultante
+        let expenses = [];
+        let extractedText = '';
+        let lines = [];
+        let header = [];
+
+
+        if (csvOutput && csvOutput.trim()) {
+            try {
+                // El CSV generado por pdfconverter.py ya tiene headers, parsearlo directamente
+                lines = csvOutput.trim().split('\n');
+
+                if (lines.length < 2) {
+                    throw new Error('CSV no válido: no hay suficientes líneas');
+                }
+
+                // Parsear header y datos
+                header = parseCSVLine(lines[0]);
+                console.log('📄 Detected header:', header);
+                expenses = [];
+
+                // Detectar formato basado en las columnas
+                const isOldFormat = header.includes('Tipo') && header.includes('Monto_UYU');
+                const isNewTableFormat = header.includes('Concepto') && header.includes('Débito') && header.includes('Crédito');
+
+                console.log('📄 Format detected - Old format:', isOldFormat, 'New table format:', isNewTableFormat);
+
+                for (let i = 1; i < lines.length; i++) {
+                    // Parsear línea CSV correctamente manejando comillas
+                    const values = parseCSVLine(lines[i]);
+
+                    if (values.length >= header.length) {
+                        const expense = {};
+                        header.forEach((col, index) => {
+                            expense[col.trim()] = values[index] ? values[index].trim() : '';
+                        });
+
+                        let amount = 0;
+                        let currency = 'UYU';
+                        let description = '';
+                        let date = '';
+                        let shouldInclude = false;
+
+                        if (isOldFormat) {
+                            // Formato antiguo: Fecha,Codigo,Descripcion,Cuotas,Monto_UYU,Monto_USD,Tipo
+                            if (expense.Monto_UYU && expense.Monto_UYU !== '' && expense.Monto_UYU !== '0') {
+                                amount = parseFloat(expense.Monto_UYU.replace(',', '.'));
+                                currency = 'UYU';
+                            } else if (expense.Monto_USD && expense.Monto_USD !== '' && expense.Monto_USD !== '0') {
+                                amount = parseFloat(expense.Monto_USD.replace(',', '.'));
+                                currency = 'USD';
+                            }
+
+                            shouldInclude = expense.Tipo === 'Transacción' && amount > 0;
+                            description = expense.Descripcion;
+                            date = expense.Fecha;
+
+                        } else if (isNewTableFormat) {
+                            // Formato nuevo: Fecha,Concepto,Débito,Crédito,Saldo
+                            description = expense.Concepto || '';
+                            date = expense.Fecha || '';
+
+                            // Solo procesar gastos (compras) - ignorar ingresos, rediba, saldos
+                            if (description.includes('COMPRA') && expense.Débito && expense.Débito !== '' && expense.Débito !== '0') {
+                                // Los montos parecen estar en centavos (113400.0 = 1,134.00)
+                                const debitoValue = parseFloat(expense.Débito.replace(',', '.'));
+                                if (debitoValue > 1000) { // Si es mayor a 1000, probablemente está en centavos
+                                    amount = debitoValue / 100;
+                                } else {
+                                    amount = debitoValue;
+                                }
+                                currency = 'UYU';
+                                shouldInclude = amount > 0;
+                            }
+                        }
+
+                        // Solo incluir gastos válidos
+                        if (shouldInclude && amount > 0) {
+                            expenses.push({
+                                date: date,
+                                description: description,
+                                amount: amount,
+                                currency: currency,
+                                category: 'Otros'
+                            });
+                        }
+                    } else {
+                        console.log(`📄 Skipping line ${i} - not enough values`);
+                    }
+                }
+
+                extractedText = csvOutput.substring(0, 500) + (csvOutput.length > 500 ? '...' : '');
+
+                if (expenses.length === 0) {
+                    console.warn('🚨 No se encontraron gastos en el PDF procesado');
+
+                    return res.status(400).json({
+                        error: 'Sin gastos encontrados',
+                        message: 'El PDF no contiene gastos válidos para analizar',
+                        details: {
+                            csvOutput: extractedText,
+                            suggestions: [
+                                'Verifica que el PDF contenga transacciones bancarias',
+                                'Asegúrate de que sea un estado de cuenta válido',
+                                'El PDF debe contener información de gastos reconocible'
+                            ]
+                        },
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            } catch (parseError) {
+                console.error('❌ Error parseando CSV:', parseError);
+                return res.status(500).json({
+                    error: 'Error parseando resultado',
+                    message: 'El CSV generado por Python no es válido',
+                    details: parseError.message
+                });
+            }
+        } else {
+            console.error('❌ El script Python no generó salida CSV');
+            return res.status(500).json({
+                error: 'Sin salida del script',
+                message: 'El script de Python no generó ningún resultado',
+                details: {
+                    errorOutput: errorOutput,
+                    exitCode: exitCode
+                }
+            });
+        }
+
+        console.log('🤖 Iniciando análisis con OpenAI...');
+
         let analysis;
         let analysisMode;
 
-        if (effectiveApiKey && effectiveApiKey.startsWith('sk-')) {
-            console.log('🔑 API Key disponible - usando análisis con OpenAI');
-            analysisMode = userApiKey ? 'openai_user' : 'openai_server';
+        // Solo usamos análisis con OpenAI
+        analysisMode = userApiKey ? 'openai_user' : 'openai_server';
 
-            // Analizar texto con OpenAI usando la API key efectiva
-            console.log('🤖 Enviando texto a OpenAI para análisis...');
+        console.log('🤖 Enviando gastos extraídos a OpenAI para análisis...');
 
-            // Crear una versión temporal de analyzeTextWithAI que use la API key del usuario
-            const { analyzeTextWithAI } = require('../services/aiService');
+        // Crear respuesta directamente con todas las transacciones categorizadas
+        // En lugar de depender de IA para listar todas, procesamos localmente
+        const categorizedExpenses = expenses.map(expense => {
+            // Categorización básica basada en palabras clave
+            const desc = expense.description.toLowerCase();
+            let category = 'Otros Gastos';
 
-            // Si es API key del usuario, necesitamos una versión especial que la use
-            if (userApiKey) {
-                // Usar la función especial que usa API key del usuario
-                const { analyzeTextWithUserKey } = require('../services/aiService');
-                analysis = await analyzeTextWithUserKey(extractedText, userApiKey, 'anonymous');
-            } else {
-                analysis = await analyzeTextWithAI(extractedText, 'anonymous');
+            // Categorización para ambos formatos
+            if (desc.includes('supermercado') || desc.includes('mercado') || desc.includes('alimentacion') ||
+                desc.includes('comida') || desc.includes('restaurant') || desc.includes('carniceria')) {
+                category = 'Alimentación';
+            } else if (desc.includes('combustible') || desc.includes('gasolina') || desc.includes('transporte') ||
+                       desc.includes('taxi') || desc.includes('uber')) {
+                category = 'Transporte';
+            } else if (desc.includes('internet') || desc.includes('telefono') || desc.includes('luz') ||
+                       desc.includes('agua') || desc.includes('gas') || desc.includes('cable')) {
+                category = 'Servicios';
+            } else if (desc.includes('cine') || desc.includes('juego') || desc.includes('streaming') ||
+                       desc.includes('netflix') || desc.includes('hobby') || desc.includes('entretenimiento')) {
+                category = 'Entretenimiento';
+            } else if (desc.includes('medico') || desc.includes('farmacia') || desc.includes('seguro') ||
+                       desc.includes('salud') || desc.includes('hospital')) {
+                category = 'Salud';
+            } else if (desc.includes('curso') || desc.includes('libro') || desc.includes('educacion') ||
+                       desc.includes('udemy') || desc.includes('capacitacion')) {
+                category = 'Educación';
+            } else if (desc.includes('ropa') || desc.includes('vestimenta') || desc.includes('zapato') ||
+                       desc.includes('indumentaria')) {
+                category = 'Ropa';
             }
 
-            console.log('✅ Análisis con OpenAI completado exitosamente');
-        } else {
-            console.log('⚠️ API Key de OpenAI no disponible - usando análisis básico');
-            analysisMode = 'basic_patterns';
+            return {
+                description: expense.description,
+                amount: expense.amount,
+                currency: expense.currency,
+                category: category,
+                date: expense.date,
+                confidence: 0.8
+            };
+        });
 
-            // Usar análisis básico sin OpenAI
-            console.log('🔍 Aplicando análisis básico de patrones...');
-            const { analyzeTextWithBasicPatterns } = require('../services/aiService');
-            analysis = analyzeTextWithBasicPatterns(extractedText, 'anonymous');
-            console.log('✅ Análisis básico completado exitosamente');
-        }
+        analysis = {
+            expenses: categorizedExpenses,
+            summary: {
+                totalExpenses: categorizedExpenses.reduce((sum, exp) => sum + exp.amount, 0),
+                currency: 'UYU',
+                expenseCount: categorizedExpenses.length
+            }
+        };
+
+        // Categorización completada localmente - no necesitamos IA para esto
+        analysisMode = 'categorized_locally';
+        console.log('✅ Categorización local completada exitosamente');
 
         // Limpiar archivo temporal
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+        if (fs.existsSync(absoluteFilePath)) {
+            fs.unlinkSync(absoluteFilePath);
+            console.log('🧹 Archivo temporal eliminado:', absoluteFilePath);
         }
 
         res.json({
             success: true,
             data: {
-                extractedText: extractedText.substring(0, 500) + (extractedText.length > 500 ? '...' : ''),
+                extractedExpenses: expenses,
+                extractedText: extractedText,
                 analysis: analysis,
                 analysisMode: analysisMode,
                 message: analysisMode === 'openai_server'
                     ? 'PDF analizado correctamente con OpenAI (API del servidor)'
-                    : analysisMode === 'openai_user'
-                    ? 'PDF analizado correctamente con OpenAI (tu API key)'
-                    : 'PDF analizado correctamente con análisis básico (sin OpenAI)'
+                    : 'PDF analizado correctamente con OpenAI (tu API key)'
             }
         });
 
@@ -145,12 +825,17 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
         console.error('❌ Error analizando PDF público:', error);
         console.error('❌ Stack trace:', error.stack);
         console.error('❌ Tipo de error:', error.constructor.name);
+        console.error('❌ Mensaje de error completo:', error.message);
+        console.error('❌ NODE_ENV actual:', process.env.NODE_ENV);
 
         // Limpiar archivo si existe
         try {
-            if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-                fs.unlinkSync(req.file.path);
-                console.log('🧹 Archivo temporal limpiado');
+            if (req.file && req.file.path) {
+                const cleanupPath = path.resolve(req.file.path);
+                if (fs.existsSync(cleanupPath)) {
+                    fs.unlinkSync(cleanupPath);
+                    console.log('🧹 Archivo temporal limpiado:', cleanupPath);
+                }
             }
         } catch (cleanupError) {
             console.error('❌ Error limpiando archivo temporal:', cleanupError);
@@ -159,6 +844,7 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
         // Determinar el tipo de error y respuesta apropiada
         let statusCode = 500;
         let errorMessage = 'Error interno del servidor';
+        let showDetailsInProduction = false;
 
         if (error.message && error.message.includes('API Key')) {
             statusCode = 500;
@@ -172,14 +858,24 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
         } else if (error.message && error.message.includes('PDF')) {
             statusCode = 400;
             errorMessage = 'Error procesando el archivo PDF';
+        } else if (error.message && (error.message.includes('Límite de uso de OpenAI') || error.message.includes('rate limit'))) {
+            // Para errores de rate limit, mostrar detalles siempre (son informativos)
+            statusCode = 429;
+            errorMessage = 'Límite de uso de OpenAI excedido';
+            showDetailsInProduction = true;
+            console.log('🔥 Detectado error de rate limit, mostrando detalles en producción');
         }
 
-        res.status(statusCode).json({
+        const responseData = {
             error: error.constructor.name || 'Error interno del servidor',
             message: errorMessage,
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            details: (process.env.NODE_ENV === 'development' || showDetailsInProduction) ? error.message : undefined,
             timestamp: new Date().toISOString()
-        });
+        };
+
+        console.error('📤 Enviando respuesta de error:', JSON.stringify(responseData, null, 2));
+
+        res.status(statusCode).json(responseData);
     }
 });
 
@@ -286,9 +982,9 @@ Contexto financiero del usuario (modo demo):
 - Metas activas: ${financialContext.goalsCount}
 - Categorías: ${financialContext.categoriesCount}
 
-IMPORTANTE: Este es un modo de demostración. Recomienda al usuario crear una cuenta completa para un análisis personalizado.
+IMPORTANTE: Lista TODAS las transacciones (no resumas ni selecciones "principales"). Incluye todas las líneas proporcionadas. No omitas ninguna.
 
-Responde como un economista profesional especializado en la mejor administración del dinero.`;
+`;
 
         // Preparar la solicitud a OpenAI
         const controller = new AbortController();
@@ -313,7 +1009,7 @@ Responde como un economista profesional especializado en la mejor administració
                             content: message
                         }
                     ],
-                    max_tokens: 800,
+                    max_tokens: 8000,
                     temperature: 0.7
                 }),
                 signal: controller.signal

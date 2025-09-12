@@ -3100,7 +3100,7 @@ nav {
 /* ==================== ESTILOS PARA PDF UPLOADER ==================== */
 
 /* Sección principal del uploader */
-.pdf-uploader-section {
+.csv-uploader-section {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 15px;
     padding: 25px;
@@ -3109,7 +3109,7 @@ nav {
     box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
 }
 
-.pdf-uploader-section h4 {
+.csv-uploader-section h4 {
     color: white;
     margin-bottom: 10px;
     display: flex;
@@ -3124,7 +3124,7 @@ nav {
 }
 
 /* Área del uploader */
-.pdf-uploader {
+.csv-uploader {
     display: flex;
     align-items: center;
     gap: 15px;
@@ -3133,12 +3133,12 @@ nav {
 }
 
 /* Input de archivo (oculto) */
-.pdf-input {
+.csv-input {
     display: none;
 }
 
 /* Label del input (botón visual) */
-.pdf-label {
+.csv-label {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -3153,13 +3153,13 @@ nav {
     justify-content: center;
 }
 
-.pdf-label:hover {
+.csv-label:hover {
     background: rgba(255, 255, 255, 0.3);
     border-color: rgba(255, 255, 255, 0.5);
     transform: translateY(-2px);
 }
 
-.pdf-label.file-selected {
+.csv-label.file-selected {
     background: rgba(39, 174, 96, 0.3);
     border-color: #27ae60;
     color: #2ecc71;
@@ -3866,20 +3866,20 @@ nav {
     }
 
     /* PDF Uploader optimizado */
-    .pdf-uploader-section {
+    .csv-uploader-section {
         padding: 20px 15px;
     }
 
-    .pdf-uploader {
+    .csv-uploader {
         flex-direction: column;
         gap: 10px;
     }
 
-    .pdf-input {
+    .csv-input {
         width: 100%;
     }
 
-    .pdf-label {
+    .csv-label {
         width: 100%;
         padding: 20px;
         text-align: center;
@@ -5446,7 +5446,7 @@ nav {
 
 /* === SELECTOR DE FECHA PARA PDF === */
 
-.pdf-date-selector {
+.csv-date-selector {
     background: #f8f9fa;
     border-radius: 8px;
     padding: 15px;
@@ -5454,7 +5454,7 @@ nav {
     border-left: 4px solid #3498db;
 }
 
-.pdf-date-selector h6 {
+.csv-date-selector h6 {
     color: #333;
     margin: 0 0 10px 0;
     font-size: 1em;
@@ -5463,7 +5463,7 @@ nav {
     gap: 8px;
 }
 
-.pdf-date-selector h6 i {
+.csv-date-selector h6 i {
     color: #3498db;
 }
 
@@ -5474,7 +5474,7 @@ nav {
     line-height: 1.4;
 }
 
-.pdf-date-input {
+.csv-date-input {
     width: 100%;
     padding: 10px 12px;
     border: 2px solid #ddd;
@@ -5486,7 +5486,7 @@ nav {
     transition: border-color 0.2s ease;
 }
 
-.pdf-date-input:focus {
+.csv-date-input:focus {
     outline: none;
     border-color: #3498db;
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
@@ -5717,7 +5717,7 @@ nav {
         min-height: 70px;
     }
 
-    .pdf-date-selector {
+    .csv-date-selector {
         padding: 12px;
         margin-bottom: 15px;
     }

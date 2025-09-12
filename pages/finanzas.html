@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="format-detection" content="telephone=no">
     <title>Fede Life - Finanzas Personales</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
     <link rel="stylesheet" href="app.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- PDF.js Library para procesamiento de PDFs -->
@@ -324,54 +325,40 @@
                         </button>
                     </form>
 
-                    <!-- PDF Uploader Section -->
-                    <div class="pdf-uploader-section">
+                    <!-- CSV Uploader Section -->
+                    <div class="csv-uploader-section">
                         <h4><i class="fas fa-file-pdf"></i> Subir PDF de Gastos</h4>
-                        <p class="uploader-description">Sube un PDF (estado de cuenta, recibos, etc.) y el sistema extraerá automáticamente los gastos usando IA</p>
-                        
-                        <div class="pdf-uploader">
-                            <input type="file" id="pdfFile" accept=".pdf" class="pdf-input">
-                            <label for="pdfFile" class="pdf-label">
+                        <p class="uploader-description">Sube un PDF (estado de cuenta bancario) y el sistema extraerá automáticamente los gastos usando IA</p>
+
+                        <div class="csv-uploader">
+                            <input type="file" id="csvFile" accept=".pdf,application/pdf" class="csv-input">
+                            <label for="csvFile" class="csv-label">
                                 <i class="fas fa-cloud-upload-alt"></i>
                                 <span>Seleccionar archivo PDF</span>
                             </label>
 
-                            <!-- Campo para API Key de OpenAI -->
-                            <div class="api-key-section">
-                                <label for="openaiApiKey" class="api-key-label">
-                                    <i class="fas fa-key"></i> API Key de OpenAI (opcional)
-                                </label>
-                                <input type="password" id="openaiApiKey" class="api-key-input"
-                                       placeholder="Ingresa tu API Key de OpenAI para análisis avanzado..."
-                                       title="Si no tienes API Key, el sistema usará análisis básico">
-                                <small class="api-key-hint">
-                                    💡 Obtén tu API Key gratuita en:
-                                    <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">
-                                        platform.openai.com/api-keys
-                                    </a>
-                                </small>
-                            </div>
+                          
 
-                            <button type="button" id="processPdfBtn" class="process-btn" disabled>
+                            <button type="button" id="processCsvBtn" class="process-btn" disabled>
                                 <i class="fas fa-magic"></i> Analizar con IA
                             </button>
                         </div>
 
-                        <div id="pdfProcessingStatus" class="processing-status" style="display: none;">
+                        <div id="csvProcessingStatus" class="processing-status" style="display: none;">
                             <i class="fas fa-spinner fa-spin"></i>
-                            <span>Procesando PDF y analizando gastos...</span>
+                            <span>Procesando CSV y analizando gastos...</span>
                         </div>
 
                         <!-- Resultados del análisis -->
                         <div id="extractedExpenses" class="extracted-expenses" style="display: none;">
                             <h5><i class="fas fa-list-alt"></i> Gastos Encontrados</h5>
 
-                            <!-- Selector de fecha para transacciones del PDF -->
-                            <div class="pdf-date-selector">
+                            <!-- Selector de fecha para transacciones del CSV -->
+                            <div class="csv-date-selector">
                                 <h6><i class="fas fa-calendar-alt"></i> Fecha de los Gastos</h6>
-                                <p class="date-selector-description">Si el PDF no tiene fechas específicas, selecciona la fecha que corresponde a estos gastos:</p>
-                                <input type="date" id="pdfTransactionDate" class="pdf-date-input">
-                                <small class="date-hint">💡 Si el PDF contiene fechas específicas, se usarán esas. De lo contrario, se usará esta fecha.</small>
+                                <p class="date-selector-description">Si el CSV no tiene fechas específicas, selecciona la fecha que corresponde a estos gastos:</p>
+                                <input type="date" id="csvTransactionDate" class="csv-date-input">
+                                <small class="date-hint">💡 Si el CSV contiene fechas específicas, se usarán esas. De lo contrario, se usará esta fecha.</small>
                             </div>
 
                             <div class="expenses-actions">
@@ -593,15 +580,7 @@
 
     <footer class="footer">
         <p>&copy; Desde 1992 Fede Life. Todos los derechos reservados.</p>
-    </footer>
-
-    <!-- PDF.js para extracción de texto -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-        // Configurar PDF.js
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
-    
+    </footer>    
     <!-- config-local.js no se carga desde el cliente por seguridad -->
     <script src="/funciones/config-production-fixed.js"></script>
     <script src="/funciones/finanzas.js"></script>

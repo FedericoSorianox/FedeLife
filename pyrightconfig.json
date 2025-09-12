@@ -1,0 +1,20 @@
+{
+  "python": {
+    "pythonPath": "./venv/bin/python",
+    "venvPath": "./venv",
+    "venv": "venv"
+  },
+  "include": [
+    "funciones/",
+    "server/",
+    "pages/",
+    "scripts/"
+  ],
+  "exclude": [
+    "node_modules/",
+    "dist/",
+    "venv/"
+  ],
+  "reportMissingImports": "error",
+  "reportMissingTypeStubs": "warning"
+}

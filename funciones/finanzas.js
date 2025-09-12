@@ -20,7 +20,7 @@ const FINANCE_API_CONFIG = {
     endpoints: {
         transactions: '/public/transactions',
         categories: '/public/categories',
-        ai: '/public/ai/analyze-pdf'
+        ai: '/public/ai/analyze-csv'
     }
 };
 
@@ -401,16 +401,16 @@ class FinanceApp {
             transactionType.addEventListener('change', () => this.populateTransactionCategories());
         }
 
-        // PDF Uploader
-        const pdfFile = document.getElementById('pdfFile');
-        const processPdfBtn = document.getElementById('processPdfBtn');
+        // CSV Uploader
+        const csvFile = document.getElementById('csvFile');
+        const processCsvBtn = document.getElementById('processCsvBtn');
 
-        if (pdfFile) {
-            pdfFile.addEventListener('change', (e) => this.handlePdfFileSelection(e));
+        if (csvFile) {
+            csvFile.addEventListener('change', (e) => this.handleCsvFileSelection(e));
         }
 
-        if (processPdfBtn) {
-            processPdfBtn.addEventListener('click', () => this.processPdfFile());
+        if (processCsvBtn) {
+            processCsvBtn.addEventListener('click', () => this.processCsvFile());
         }
 
         // Chat de IA en metas
@@ -2156,44 +2156,44 @@ class FinanceApp {
     /**
      * Maneja la selección de archivo PDF
      */
-    handlePdfFileSelection(event) {
+    handleCsvFileSelection(event) {
         const file = event.target.files[0];
-        const processPdfBtn = document.getElementById('processPdfBtn');
+        const processCsvBtn = document.getElementById('processCsvBtn');
 
-        if (file && file.type === 'application/pdf') {
-            processPdfBtn.disabled = false;
+        if (file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) {
+            processCsvBtn.disabled = false;
             this.showNotification(`PDF seleccionado: ${file.name}`, 'info');
         } else {
-            processPdfBtn.disabled = true;
+            processCsvBtn.disabled = true;
             this.showNotification('Por favor selecciona un archivo PDF válido', 'error');
         }
     }
 
     /**
-     * Procesa el archivo PDF usando OpenAI directamente
+     * Procesa el archivo PDF usando pdfconverter.py y OpenAI
      */
-    async processPdfFile() {
-        const pdfFile = document.getElementById('pdfFile');
-        const processPdfBtn = document.getElementById('processPdfBtn');
-        const processingStatus = document.getElementById('pdfProcessingStatus');
+    async processCsvFile() {
+        const csvFile = document.getElementById('csvFile');
+        const processCsvBtn = document.getElementById('processCsvBtn');
+        const processingStatus = document.getElementById('csvProcessingStatus');
         const extractedExpenses = document.getElementById('extractedExpenses');
 
-        if (!pdfFile.files[0]) {
+        if (!csvFile.files[0]) {
             this.showNotification('Por favor selecciona un archivo PDF', 'error');
             return;
         }
 
         try {
             // Mostrar estado de procesamiento
-            processPdfBtn.disabled = true;
+            processCsvBtn.disabled = true;
             processingStatus.style.display = 'block';
             extractedExpenses.style.display = 'none';
 
-            console.log('📄 Iniciando procesamiento de PDF con OpenAI...');
+            console.log('📄 Iniciando procesamiento de PDF con pdfconverter.py...');
 
             // Verificar que el archivo PDF sea válido
-            const file = pdfFile.files[0];
-            if (!file || file.type !== 'application/pdf') {
+            const file = csvFile.files[0];
+            if (!file || (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf'))) {
                 throw new Error('Por favor selecciona un archivo PDF válido');
             }
 
@@ -2201,8 +2201,9 @@ class FinanceApp {
                 throw new Error('El archivo PDF es demasiado grande. Máximo 10MB permitido.');
             }
 
-            // Analizar con OpenAI enviando el archivo PDF completo al servidor
-            console.log('🤖 Enviando archivo PDF al servidor para análisis con OpenAI...');
+            // Analizar con pdfconverter.py enviando el archivo PDF completo al servidor
+            console.log('🤖 Enviando archivo PDF al servidor para análisis...');
+            console.log('🔑 Usando API Key configurada en el servidor (.env)');
 
             // Crear FormData para enviar el archivo PDF
             const formData = new FormData();
@@ -2219,9 +2220,9 @@ class FinanceApp {
 
             if (!analysisResponse.ok) {
                 if (analysisResponse.status === 400) {
-                    throw new Error('Archivo PDF no válido o corrupto. Verifica que el archivo sea un PDF legible.');
+                    throw new Error('Archivo CSV no válido o corrupto. Verifica que el archivo sea un CSV legible.');
                 } else if (analysisResponse.status === 413) {
-                    throw new Error('El archivo PDF es demasiado grande. Intenta con un archivo más pequeño.');
+                    throw new Error('El archivo CSV es demasiado grande. Intenta con un archivo más pequeño.');
                 } else if (analysisResponse.status === 500) {
                     throw new Error('Error interno del servidor. Intenta nuevamente en unos minutos.');
                 } else if (analysisResponse.status === 503) {
@@ -2238,25 +2239,27 @@ class FinanceApp {
                 console.log('✅ Análisis completado:', analysisResult.data);
 
                 // Procesar resultados del servidor
-                const processedData = this.processOpenAIResults(analysisResult.data);
+                // El servidor devuelve la estructura: { data: { analysis: { expenses: [...] } } }
+                const analysisData = analysisResult.data.analysis || analysisResult.data;
+                const processedData = this.processOpenAIResults(analysisData);
 
                 const expensesCount = processedData.expenses ? processedData.expenses.length : 0;
                 console.log(`📊 Resultados procesados: ${expensesCount} gastos encontrados`);
 
                 // Alertas y estadísticas del procesamiento
                 if (expensesCount === 0) {
-                    console.warn('🚨 No se encontraron gastos en el PDF procesado');
+                    console.warn('🚨 No se encontraron gastos en el CSV procesado');
                     console.log('💡 Posibles causas:');
-                    console.log('   - El PDF puede no contener texto legible');
-                    console.log('   - El documento puede contener solo imágenes');
-                    console.log('   - El formato del PDF puede ser incompatible');
-                    console.log('   - Intenta con un PDF diferente o re-escanea el documento');
+                    console.log('   - El CSV puede no contener transacciones de gastos');
+                    console.log('   - El formato del CSV puede ser incompatible');
+                    console.log('   - Las columnas pueden no estar en el formato esperado');
+                    console.log('   - Intenta con un CSV de estado de cuenta bancario');
                 } else if (expensesCount < 20) {
                     console.warn(`⚠️ Solo se encontraron ${expensesCount} gastos`);
                     console.log('💡 Para documentos bancarios típicos se esperan más transacciones');
-                    console.log('   - Verifica que el PDF contenga extractos bancarios');
-                    console.log('   - Asegúrate de que el texto sea legible');
-                    console.log('   - Algunos PDFs pueden requerir OCR previo');
+                    console.log('   - Verifica que el CSV contenga extractos bancarios');
+                    console.log('   - Asegúrate de que contenga transacciones COMPRA');
+                    console.log('   - El CSV debe tener el formato de Itaú o similar');
                 } else if (expensesCount >= 50) {
                     console.log(`✅ Excelente! Se encontraron ${expensesCount} gastos - esto parece correcto para un documento bancario`);
                 }
@@ -2288,32 +2291,12 @@ class FinanceApp {
                 }
 
                 // Mostrar resultados
-                this.displayPdfResults(processedData);
+                this.displayCsvResults(processedData);
                 extractedExpenses.style.display = 'block';
 
-                this.showNotification(`PDF procesado exitosamente. ${processedData.expenses ? processedData.expenses.length : 0} gastos encontrados.`, 'success');
+                this.showNotification(`CSV procesado exitosamente. ${processedData.expenses ? processedData.expenses.length : 0} gastos encontrados.`, 'success');
             } else {
-                // Si falla OpenAI, intentar extracción manual como respaldo
-                console.log('⚠️ OpenAI falló, intentando extracción manual como respaldo...');
-
-                if (this.lastExtractedPdfText) {
-                    const manualExpenses = this.extractBankingExpenses(this.lastExtractedPdfText);
-                    console.log(`✅ Extracción manual encontró ${manualExpenses.length} gastos`);
-
-                    if (manualExpenses.length > 0) {
-                        // Procesar los gastos encontrados manualmente
-                        const processedData = this.processOpenAIResults({ expenses: manualExpenses });
-
-                        // Mostrar resultados
-                        this.displayPdfResults(processedData);
-                        extractedExpenses.style.display = 'block';
-
-                        this.showNotification(`PDF procesado con extracción manual. ${processedData.expenses ? processedData.expenses.length : 0} gastos encontrados.`, 'warning');
-                        return;
-                    }
-                }
-
-                throw new Error(analysisResult?.error || 'Error en el análisis con OpenAI y sin respaldo disponible');
+                throw new Error(analysisResult?.error || 'Error en el análisis con OpenAI');
             }
 
         } catch (error) {
@@ -2322,7 +2305,7 @@ class FinanceApp {
         } finally {
             // Ocultar estado de procesamiento
             processingStatus.style.display = 'none';
-            processPdfBtn.disabled = false;
+            processCsvBtn.disabled = false;
         }
     }
 
@@ -2404,6 +2387,7 @@ class FinanceApp {
         let expenses = [];
 
         console.log('🔄 Procesando resultados de OpenAI...');
+        console.log('📋 Estructura de datos recibida:', JSON.stringify(data, null, 2));
 
         // Si la respuesta es un array de gastos directo
         if (Array.isArray(data)) {
@@ -2421,6 +2405,13 @@ class FinanceApp {
         else if (typeof data === 'string') {
             console.log('📋 Respuesta es texto, intentando extracción manual...');
             expenses = this.extractExpensesFromText(data);
+            console.log(`📋 Extracción de texto encontró: ${expenses.length} gastos`);
+        }
+
+        // Si no se reconoce la estructura
+        else {
+            console.warn('⚠️ Estructura de datos no reconocida para procesamiento de gastos');
+            console.log('🔍 Propiedades disponibles:', Object.keys(data || {}));
         }
 
         // Siempre intentar extracción adicional, incluso si OpenAI encontró algunos gastos
@@ -2465,6 +2456,7 @@ class FinanceApp {
         expenses = this.enhanceExtractedExpenses(expenses);
 
         console.log(`✅ Gastos finales después de mejora: ${expenses.length}`);
+        console.log('📋 Resumen de gastos encontrados:', expenses.map(exp => `${exp.description}: $${exp.amount}`).slice(0, 5));
 
         return { expenses };
     }
@@ -3087,9 +3079,9 @@ class FinanceApp {
     }
 
     /**
-     * Muestra los resultados del análisis de PDF
+     * Muestra los resultados del análisis de CSV
      */
-    displayPdfResults(data) {
+    displayCsvResults(data) {
         const expensesList = document.getElementById('expensesList');
 
         if (data.expenses && data.expenses.length > 0) {
@@ -3145,13 +3137,13 @@ class FinanceApp {
                 }
             });
 
-            // Inicializar fecha por defecto para transacciones del PDF
-            this.initializePdfDateSelector();
+            // Inicializar fecha por defecto para transacciones del CSV
+            this.initializeCsvDateSelector();
 
             // Agregar funcionalidad para agregar gastos seleccionados
             this.setupExpenseSelection();
         } else {
-            expensesList.innerHTML = '<p>No se encontraron gastos en el PDF</p>';
+            expensesList.innerHTML = '<p>No se encontraron gastos en el CSV</p>';
         }
     }
 
@@ -3177,10 +3169,10 @@ class FinanceApp {
     }
 
     /**
-     * Inicializa el selector de fecha para transacciones del PDF
+     * Inicializa el selector de fecha para transacciones del CSV
      */
-    initializePdfDateSelector() {
-        const dateInput = document.getElementById('pdfTransactionDate');
+    initializeCsvDateSelector() {
+        const dateInput = document.getElementById('csvTransactionDate');
         if (dateInput) {
             // Establecer fecha por defecto (hoy)
             const today = new Date().toISOString().split('T')[0];
@@ -3188,16 +3180,16 @@ class FinanceApp {
 
             // Agregar listener para cambios en la fecha
             dateInput.addEventListener('change', () => {
-                console.log('📅 Fecha de PDF cambiada a:', dateInput.value);
+                console.log('📅 Fecha de CSV cambiada a:', dateInput.value);
             });
         }
     }
 
     /**
-     * Obtiene la fecha seleccionada para transacciones del PDF
+     * Obtiene la fecha seleccionada para transacciones del CSV
      */
-    getPdfSelectedDate() {
-        const dateInput = document.getElementById('pdfTransactionDate');
+    getCsvSelectedDate() {
+        const dateInput = document.getElementById('csvTransactionDate');
         if (dateInput && dateInput.value) {
             try {
                 const selectedDate = new Date(dateInput.value);
@@ -3856,7 +3848,7 @@ Responde como un economista profesional especializado en la mejor administració
                                 transactionDate = new Date(cb.dataset.date);
                                 // Verificar que la fecha sea válida
                                 if (isNaN(transactionDate.getTime())) {
-                                    transactionDate = this.getPdfSelectedDate();
+                                    transactionDate = this.getCsvSelectedDate();
                                 }
                             } catch (error) {
                                 console.warn('Fecha inválida en dataset, usando fecha seleccionada:', cb.dataset.date);

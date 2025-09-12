@@ -5,18 +5,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bruce - Fede Life</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
     <link rel="stylesheet" href="app.css">
 </head>
 
 <body>
-    <nav class="navbar">
-        <ul>
-            <li><a href="index.html">Inicio</a></li>
-            <li><a href="finanzas.html">Finanzas</a></li>
-            <li><a href="ideas.html">Ideas</a></li>
-            <li><a href="tareas.html">Tareas</a></li>
-            <li><a href="bruce.html">Bruce</a></li>
-        </ul>
+       <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="nav-title">Fede Life</span>
+            </div>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="finanzas.html" >Finanzas</a></li>
+                <li><a href="ideas.html" >Ideas</a></li>
+                <li><a href="tareas.html">Tareas</a></li>
+                <li><a href="bruce.html" class="active">Bruce</a></li>
+            </ul>
+        </div>
     </nav>
     <header>
         <h1>Preguntale a Bruce</h1>
