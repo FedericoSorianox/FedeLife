@@ -141,6 +141,7 @@ router.get('/', authenticateToken, async (req, res) => {
             data: {
                 transactions: transactions.map(t => ({
                     ...t,
+                    id: t._id.toString(), // Convertir _id de MongoDB a id para el frontend
                     formattedAmount: new Intl.NumberFormat('es-UY', {
                         style: 'currency',
                         currency: t.currency,
@@ -194,6 +195,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
             data: {
                 transaction: {
                     ...transaction,
+                    id: transaction._id.toString(), // Convertir _id de MongoDB a id para el frontend
                     formattedAmount: new Intl.NumberFormat('es-UY', {
                         style: 'currency',
                         currency: transaction.currency,
@@ -275,6 +277,7 @@ router.post('/', authenticateToken, validateTransaction, async (req, res) => {
             data: {
                 transaction: {
                     ...transaction.toObject(),
+                    id: transaction._id.toString(), // Convertir _id de MongoDB a id para el frontend
                     formattedAmount: transaction.formattedAmount,
                     typeLabel: transaction.typeLabel
                 }
@@ -346,6 +349,7 @@ router.put('/:id', authenticateToken, validateTransaction, async (req, res) => {
             data: {
                 transaction: {
                     ...transaction.toObject(),
+                    id: transaction._id.toString(), // Convertir _id de MongoDB a id para el frontend
                     formattedAmount: transaction.formattedAmount,
                     typeLabel: transaction.typeLabel
                 }
@@ -577,6 +581,7 @@ router.post('/search', authenticateToken, async (req, res) => {
             data: {
                 transactions: transactions.map(t => ({
                     ...t,
+                    id: t._id.toString(), // Convertir _id de MongoDB a id para el frontend
                     formattedAmount: new Intl.NumberFormat('es-UY', {
                         style: 'currency',
                         currency: t.currency,
@@ -815,6 +820,7 @@ router.post('/', authenticateToken, validateTransaction, async (req, res) => {
             data: {
                 transaction: {
                     ...transaction.toObject(),
+                    id: transaction._id.toString(), // Convertir _id de MongoDB a id para el frontend
                     formattedAmount: transaction.formattedAmount,
                     typeLabel: transaction.typeLabel
                 }
@@ -914,7 +920,10 @@ router.get('/', authenticateToken, async (req, res) => {
         res.json({
             success: true,
             data: {
-                transactions,
+                transactions: transactions.map(t => ({
+                    ...t,
+                    id: t._id.toString() // Convertir _id de MongoDB a id para el frontend
+                })),
                 pagination: {
                     currentPage: parseInt(page),
                     totalPages: Math.ceil(total / parseInt(limit)),

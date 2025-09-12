@@ -164,6 +164,7 @@ class FinanceApp {
                     // Cargar transacciones desde el backend
                     this.transactions = result.data.transactions.map(transaction => ({
                         ...transaction,
+                        id: transaction._id ? transaction._id.toString() : transaction.id, // Convertir _id de MongoDB a id
                         date: new Date(transaction.date),
                         createdAt: transaction.createdAt ? new Date(transaction.createdAt) : new Date(),
                         updatedAt: transaction.updatedAt ? new Date(transaction.updatedAt) : new Date()
@@ -1048,7 +1049,7 @@ class FinanceApp {
                     console.log('✅ Transacción guardada en backend:', result);
 
                     // Agregar a la lista local
-                    transaction.id = result.data.transaction.id;
+                    transaction.id = result.data.transaction._id ? result.data.transaction._id.toString() : result.data.transaction.id;
                     transaction.createdAt = new Date();
                     this.transactions.push(transaction);
 
