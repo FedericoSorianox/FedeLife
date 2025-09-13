@@ -445,6 +445,115 @@ function setupRoutes() {
         }
     });
 
+    // Endpoint PUT para transacciones públicas (transferencias)
+    app.put('/api/public/transactions', async (req, res) => {
+        try {
+            console.log('🔄 PUT /api/public/transactions - Request received');
+            console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
+
+            const { transactions } = req.body;
+
+            if (!Array.isArray(transactions) || transactions.length === 0) {
+                console.log('❌ No transactions array provided');
+                return res.status(400).json({
+                    success: false,
+                    error: 'Datos inválidos',
+                    message: 'Debes proporcionar un array de transacciones'
+                });
+            }
+
+            if (transactions.length > 100) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Límite excedido',
+                    message: 'No puedes actualizar más de 100 transacciones a la vez'
+                });
+            }
+
+            // Crear transacciones públicas (userId: null)
+            const createdTransactions = [];
+            const errors = [];
+
+            for (const transactionData of transactions) {
+                try {
+                    // Validar datos básicos
+                    if (!transactionData.type || !transactionData.amount || !transactionData.description) {
+                        errors.push({
+                            transaction: transactionData,
+                            error: 'Datos incompletos'
+                        });
+                        continue;
+                    }
+
+                    const transaction = new Transaction({
+                        userId: null, // Usuario público
+                        type: transactionData.type,
+                        amount: parseFloat(transactionData.amount),
+                        description: transactionData.description.trim(),
+                        category: transactionData.category || 'Sin categoría',
+                        date: new Date(transactionData.date || Date.now()),
+                        currency: transactionData.currency || 'UYU',
+                        tags: transactionData.tags?.filter(tag => tag.trim()) || [],
+                        notes: transactionData.notes?.trim(),
+                        status: transactionData.status || 'completed'
+                    });
+
+                    // Establecer valores por defecto para moneda
+                    transaction.convertedAmount = transaction.amount;
+                    transaction.userBaseCurrency = transaction.currency;
+                    transaction.exchangeRate = 1;
+                    transaction.exchangeRateDate = new Date();
+
+                    await transaction.save();
+                    createdTransactions.push(transaction);
+
+                } catch (error) {
+                    console.error('❌ Error procesando transacción:', error);
+                    errors.push({
+                        transaction: transactionData,
+                        error: error.message
+                    });
+                }
+            }
+
+            console.log(`✅ ${createdTransactions.length} transacciones públicas creadas/actualizadas`);
+
+            res.status(200).json({
+                success: true,
+                message: `Se procesaron ${createdTransactions.length} transacciones exitosamente`,
+                data: {
+                    transactions: createdTransactions.map(t => ({
+                        ...t.toObject(),
+                        id: t._id.toString()
+                    })),
+                    created: createdTransactions.length,
+                    total: transactions.length,
+                    errors: errors.length > 0 ? errors : undefined
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error en PUT público de transacciones:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Error interno del servidor',
+                message: 'No se pudieron procesar las transacciones'
+            });
+        }
+    });
+
+    // Endpoint de prueba para verificar que PUT funciona
+    app.put('/api/test', (req, res) => {
+        console.log('🧪 PUT /api/test - Test endpoint called');
+        res.json({
+            success: true,
+            message: 'PUT endpoint is working',
+            method: req.method,
+            path: req.path,
+            body: req.body
+        });
+    });
+
     // Rutas públicas específicas para categorías (sin autenticación)
     app.use('/api/public/categories', (req, res, next) => {
         delete req.headers.authorization;

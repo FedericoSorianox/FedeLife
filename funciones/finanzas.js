@@ -800,7 +800,7 @@ class FinanceApp {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(transferData)
+                body: JSON.stringify({ transactions: transferData })
             });
 
             if (!response.ok) {
