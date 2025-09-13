@@ -67,16 +67,6 @@ const transactionSchema = new mongoose.Schema({
         index: true
     },
     
-    // Método de pago
-    paymentMethod: {
-        type: String,
-        required: [true, 'El método de pago es requerido'],
-        enum: {
-            values: ['cash', 'card', 'transfer', 'check'],
-            message: 'Método de pago inválido'
-        },
-        default: 'card'
-    },
     
     // Moneda de la transacción
     currency: {
@@ -231,7 +221,6 @@ transactionSchema.index({ userId: 1, date: -1 }); // Transacciones por usuario o
 transactionSchema.index({ userId: 1, type: 1, date: -1 }); // Transacciones por tipo
 transactionSchema.index({ userId: 1, category: 1, date: -1 }); // Transacciones por categoría
 transactionSchema.index({ userId: 1, month: 1 }); // Transacciones por mes
-transactionSchema.index({ userId: 1, paymentMethod: 1 }); // Transacciones por método de pago
 transactionSchema.index({ userId: 1, status: 1 }); // Transacciones por estado
 
 // Índice de texto para búsquedas
@@ -301,7 +290,6 @@ transactionSchema.methods.getSummary = function() {
         description: this.description,
         category: this.category,
         date: this.date,
-        paymentMethod: this.paymentMethod,
         currency: this.currency,
         status: this.status,
         month: this.month,

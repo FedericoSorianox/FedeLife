@@ -120,10 +120,10 @@ app.post('/api/public/transactions/public', async (req, res) => {
     try {
         console.log('📝 Transacción pública recibida:', req.body);
         
-        const { type, amount, description, category, date, paymentMethod } = req.body;
-        
+        const { type, amount, description, category, date } = req.body;
+
         // Validaciones básicas
-        if (!type || !amount || !description || !category || !paymentMethod) {
+        if (!type || !amount || !description || !category) {
             return res.status(400).json({
                 error: 'Datos incompletos',
                 message: 'Todos los campos son requeridos'
@@ -139,7 +139,6 @@ app.post('/api/public/transactions/public', async (req, res) => {
             description: description.trim(),
             category: category.trim(),
             date: new Date(date),
-            paymentMethod,
             currency: 'UYU',
             status: 'completed',
             createdAt: new Date()

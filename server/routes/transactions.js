@@ -18,7 +18,7 @@ const router = express.Router();
  * Valida datos de transacción
  */
 const validateTransaction = (req, res, next) => {
-    const { type, amount, description, category, date, paymentMethod, currency } = req.body;
+    const { type, amount, description, category, date, currency } = req.body;
     
     const errors = [];
     
@@ -41,11 +41,7 @@ const validateTransaction = (req, res, next) => {
     if (date && isNaN(new Date(date).getTime())) {
         errors.push('La fecha debe ser válida');
     }
-    
-    if (paymentMethod && !['cash', 'card', 'transfer', 'check'].includes(paymentMethod)) {
-        errors.push('Método de pago inválido');
-    }
-    
+
     if (currency && !['UYU', 'USD'].includes(currency)) {
         errors.push('Moneda inválida');
     }
@@ -74,7 +70,6 @@ router.get('/', authenticateToken, async (req, res) => {
             limit = 20,
             type,
             category,
-            paymentMethod,
             startDate,
             endDate,
             month,
@@ -83,13 +78,12 @@ router.get('/', authenticateToken, async (req, res) => {
             sortBy = 'date',
             sortOrder = 'desc'
         } = req.query;
-        
+
         // Construir filtros
         const filters = { userId };
-        
+
         if (type) filters.type = type;
         if (category) filters.category = category;
-        if (paymentMethod) filters.paymentMethod = paymentMethod;
         
         // Filtros de fecha
         if (startDate || endDate) {
@@ -237,13 +231,12 @@ router.post('/', authenticateToken, validateTransaction, async (req, res) => {
             description,
             category,
             date = new Date(),
-            paymentMethod = 'card',
             currency = 'UYU',
             tags = [],
             notes,
             status = 'completed'
         } = req.body;
-        
+
         // Crear transacción
         const transaction = new Transaction({
             userId,
@@ -252,7 +245,6 @@ router.post('/', authenticateToken, validateTransaction, async (req, res) => {
             description: description.trim(),
             category: category.trim(),
             date: new Date(date),
-            paymentMethod,
             currency,
             tags: tags.filter(tag => tag.trim()),
             notes: notes?.trim(),
@@ -330,7 +322,6 @@ router.put('/:id', authenticateToken, validateTransaction, async (req, res) => {
         if (updates.description) transaction.description = updates.description.trim();
         if (updates.category) transaction.category = updates.category.trim();
         if (updates.date) transaction.date = new Date(updates.date);
-        if (updates.paymentMethod) transaction.paymentMethod = updates.paymentMethod;
         if (updates.tags) transaction.tags = updates.tags.filter(tag => tag.trim());
         if (updates.notes !== undefined) transaction.notes = updates.notes?.trim();
         if (updates.status) transaction.status = updates.status;
@@ -649,7 +640,6 @@ router.post('/bulk', authenticateToken, async (req, res) => {
                     description: transactionData.description.trim(),
                     category: transactionData.category?.trim() || 'Otros',
                     date: transactionData.date ? new Date(transactionData.date) : new Date(),
-                    paymentMethod: transactionData.paymentMethod || 'card',
                     currency: transactionData.currency || 'UYU',
                     tags: transactionData.tags?.filter(tag => tag.trim()) || [],
                     notes: transactionData.notes?.trim(),
@@ -731,7 +721,6 @@ router.post('/sync', authenticateToken, async (req, res) => {
                     description: transactionData.description.trim(),
                     category: transactionData.category || 'Sin categoría',
                     date: new Date(transactionData.date || Date.now()),
-                    paymentMethod: transactionData.paymentMethod || 'card',
                     currency: transactionData.currency || 'UYU',
                     createdAt: new Date(transactionData.createdAt || Date.now())
                 });
@@ -784,13 +773,12 @@ router.post('/', authenticateToken, validateTransaction, async (req, res) => {
             description,
             category,
             date = new Date(),
-            paymentMethod = 'card',
             currency = 'UYU',
             tags = [],
             notes,
             status = 'completed'
         } = req.body;
-        
+
         // Crear transacción con usuario demo
         const transaction = new Transaction({
             userId: null, // Usuario demo para transacciones públicas
@@ -799,7 +787,6 @@ router.post('/', authenticateToken, validateTransaction, async (req, res) => {
             description: description.trim(),
             category: category.trim(),
             date: new Date(date),
-            paymentMethod,
             currency,
             tags: tags.filter(tag => tag.trim()),
             notes: notes?.trim(),
@@ -859,7 +846,6 @@ router.get('/', authenticateToken, async (req, res) => {
             limit = 20,
             type,
             category,
-            paymentMethod,
             startDate,
             endDate,
             month,
@@ -874,7 +860,6 @@ router.get('/', authenticateToken, async (req, res) => {
 
         if (type) filters.type = type;
         if (category) filters.category = category;
-        if (paymentMethod) filters.paymentMethod = paymentMethod;
 
         // Filtros de fecha
         if (startDate || endDate || month || year) {

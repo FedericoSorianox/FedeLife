@@ -32,15 +32,6 @@ const TransactionType = {
     EXPENSE: 'expense'
 };
 
-/**
- * Métodos de pago disponibles
- */
-const PaymentMethod = {
-    CASH: 'cash',
-    CARD: 'card',
-    TRANSFER: 'transfer',
-    CHECK: 'check'
-};
 
 /**
  * Períodos para reportes
@@ -787,8 +778,7 @@ class FinanceApp {
                 amount: amount,
                 currency: fromCurrency,
                 category: 'Transferencias',
-                date: new Date().toISOString().split('T')[0],
-                paymentMethod: 'transfer'
+                date: new Date().toISOString().split('T')[0]
             };
 
             // Crear transacción de ingreso para la moneda de destino
@@ -798,8 +788,7 @@ class FinanceApp {
                 amount: equivalentAmount,
                 currency: toCurrency,
                 category: 'Transferencias',
-                date: new Date().toISOString().split('T')[0],
-                paymentMethod: 'transfer'
+                date: new Date().toISOString().split('T')[0]
             };
 
             // Enviar las transacciones al backend usando PUT (actualización/creación)
@@ -1049,10 +1038,9 @@ class FinanceApp {
             const category = document.getElementById('transactionCategory').value;
             const date = document.getElementById('transactionDate').value;
             const currency = document.getElementById('transactionCurrency').value;
-            const paymentMethod = document.getElementById('paymentMethod').value;
 
             // Validaciones
-            if (!type || !amount || !description || !category || !currency || !paymentMethod) {
+            if (!type || !amount || !description || !category || !currency) {
                 throw new Error('Todos los campos son requeridos');
             }
 
@@ -1063,8 +1051,7 @@ class FinanceApp {
                 description,
                 category,
                 date: new Date(date),
-                currency,
-                paymentMethod
+                currency
             };
 
             // Intentar guardar en el backend
@@ -3436,8 +3423,7 @@ class FinanceApp {
                 description: description,
                 category: category,
                 currency: currency,
-                date: transactionDate,
-                paymentMethod: 'pdf'
+                date: transactionDate
             };
 
             if (transactionType === 'income') {
@@ -4266,7 +4252,6 @@ Responde como un economista profesional especializado en la mejor administració
                             category: category,
                             currency: cb.dataset.currency || 'UYU',
                             date: transactionDate,
-                            paymentMethod: 'pdf',
                             comments: comments
                         };
                     });
