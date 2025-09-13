@@ -4769,9 +4769,9 @@ Responde como un economista profesional especializado en la mejor administració
     }
 
     /**
-     * Elimina una transacción
+     * Elimina una transacción usando la API DELETE al _id en MongoDB
      */
-    deleteTransaction(transactionId) {
+    async deleteTransaction(transactionId) {
         console.log(`🗑️ ===== INICIANDO ELIMINACIÓN DE TRANSACCIÓN =====`);
         console.log(`🗑️ ID de transacción a eliminar: ${transactionId}`);
         console.log(`📊 Total de transacciones antes: ${this.transactions.length}`);
@@ -4793,7 +4793,7 @@ Responde como un economista profesional especializado en la mejor administració
             return;
         }
 
-        // Encontrar el índice de la transacción
+        // Encontrar la transacción en el array local
         const transactionIndex = this.transactions.findIndex(t => t && t.id === transactionId);
 
         if (transactionIndex === -1) {
@@ -4807,15 +4807,48 @@ Responde como un economista profesional especializado en la mejor administració
         const transaction = this.transactions[transactionIndex];
         console.log(`📝 Eliminando: ${transaction.description} - ${transaction.type === 'income' ? '+' : '-'}${transaction.currency === 'UYU' ? '$U' : '$'}${transaction.amount}`);
 
-        // Eliminar la transacción del array
+        try {
+            // Intentar eliminar del backend primero usando la API DELETE
+            console.log('🔄 Eliminando transacción del backend...');
+            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}/${transactionId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('❌ Error eliminando del backend:', response.status, errorData);
+                this.showNotification('Error: No se pudo eliminar la transacción del servidor', 'error');
+                return;
+            }
+
+            const result = await response.json();
+            if (!result.success) {
+                console.error('❌ Respuesta del backend no exitosa:', result);
+                this.showNotification('Error: La eliminación no fue confirmada por el servidor', 'error');
+                return;
+            }
+
+            console.log('✅ Transacción eliminada exitosamente del backend');
+
+        } catch (backendError) {
+            console.error('❌ Error de conexión con el backend:', backendError);
+            this.showNotification('Error: No se pudo conectar con el servidor. La transacción no se eliminó.', 'error');
+            return;
+        }
+
+        // Si la eliminación del backend fue exitosa, eliminar del array local
+        console.log('🗑️ Eliminando transacción del estado local...');
         this.transactions.splice(transactionIndex, 1);
         console.log(`📊 Total de transacciones después: ${this.transactions.length}`);
 
-        // Verificar que la transacción fue eliminada
+        // Verificar que la transacción fue eliminada del array local
         const stillExists = this.transactions.find(t => t.id === transactionId);
         if (stillExists) {
-            console.error('❌ ERROR: La transacción aún existe después de eliminarla');
-            this.showNotification('Error: No se pudo eliminar la transacción', 'error');
+            console.error('❌ ERROR: La transacción aún existe en el array local después de eliminarla');
+            this.showNotification('Error: Problema interno al eliminar la transacción', 'error');
             return;
         }
 
@@ -4839,7 +4872,7 @@ Responde como un economista profesional especializado en la mejor administració
         // Mostrar notificación de éxito
         this.showNotification(`Transacción eliminada: ${transaction.description}`, 'success');
 
-        console.log('✅ Transacción eliminada exitosamente');
+        console.log('✅ Transacción eliminada exitosamente del backend y del estado local');
     }
 
     /**

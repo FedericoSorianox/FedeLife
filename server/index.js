@@ -394,6 +394,59 @@ function setupRoutes() {
         }
     });
 
+    app.delete('/api/public/transactions/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+
+            // Verificar que el ID sea válido
+            if (!id || typeof id !== 'string') {
+                return res.status(400).json({
+                    success: false,
+                    error: 'ID inválido',
+                    message: 'El ID de la transacción no es válido'
+                });
+            }
+
+            // Buscar y eliminar la transacción (solo transacciones públicas con userId: null)
+            const transaction = await Transaction.findOneAndDelete({
+                _id: id,
+                userId: null // Solo permitir eliminar transacciones públicas
+            });
+
+            if (!transaction) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Transacción no encontrada',
+                    message: 'La transacción especificada no existe o no es pública'
+                });
+            }
+
+            res.json({
+                success: true,
+                message: 'Transacción eliminada exitosamente'
+            });
+
+            console.log(`🗑️ Transacción pública eliminada: ${transaction.type} - $${transaction.amount} - ${transaction.description}`);
+
+        } catch (error) {
+            console.error('❌ Error eliminando transacción pública:', error);
+
+            if (error.name === 'CastError') {
+                return res.status(400).json({
+                    success: false,
+                    error: 'ID inválido',
+                    message: 'El ID de la transacción no es válido'
+                });
+            }
+
+            res.status(500).json({
+                success: false,
+                error: 'Error interno del servidor',
+                message: 'No se pudo eliminar la transacción'
+            });
+        }
+    });
+
     // Rutas públicas específicas para categorías (sin autenticación)
     app.use('/api/public/categories', (req, res, next) => {
         delete req.headers.authorization;
