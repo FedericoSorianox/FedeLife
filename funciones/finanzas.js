@@ -766,9 +766,9 @@ class FinanceApp {
     }
 
     /**
-     * Realiza la transferencia entre monedas
+     * Realiza la transferencia entre monedas usando PUT para actualizar la base de datos
      */
-    performCurrencyTransfer(fromCurrency, toCurrency, amount, exchangeRate) {
+    async performCurrencyTransfer(fromCurrency, toCurrency, amount, exchangeRate) {
         console.log(`💱 Realizando transferencia: ${amount} ${fromCurrency} → ${toCurrency} (tasa: ${exchangeRate})`);
 
         try {
@@ -782,31 +782,64 @@ class FinanceApp {
 
             // Crear transacción de gasto para la moneda de origen
             const expenseTransaction = {
-                id: this.generateId(),
                 type: 'expense',
                 description: `Transferencia ${fromCurrency} → ${toCurrency}`,
                 amount: amount,
                 currency: fromCurrency,
                 category: 'Transferencias',
                 date: new Date().toISOString().split('T')[0],
-                createdAt: new Date().toISOString()
+                paymentMethod: 'transfer'
             };
 
             // Crear transacción de ingreso para la moneda de destino
             const incomeTransaction = {
-                id: this.generateId(),
                 type: 'income',
                 description: `Transferencia ${fromCurrency} → ${toCurrency}`,
                 amount: equivalentAmount,
                 currency: toCurrency,
                 category: 'Transferencias',
                 date: new Date().toISOString().split('T')[0],
-                createdAt: new Date().toISOString()
+                paymentMethod: 'transfer'
             };
 
-            // Agregar las transacciones
-            this.transactions.push(expenseTransaction);
-            this.transactions.push(incomeTransaction);
+            // Enviar las transacciones al backend usando PUT (actualización/creación)
+            console.log('🔄 Enviando transacciones de transferencia al backend...');
+
+            const transferData = [expenseTransaction, incomeTransaction];
+            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(transferData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('❌ Error creando transferencias en backend:', response.status, errorData);
+                this.showNotification('Error: No se pudo registrar la transferencia en el servidor', 'error');
+                return;
+            }
+
+            const result = await response.json();
+            if (!result.success) {
+                console.error('❌ Respuesta del backend no exitosa:', result);
+                this.showNotification('Error: La transferencia no fue registrada correctamente', 'error');
+                return;
+            }
+
+            console.log('✅ Transferencias registradas en backend exitosamente');
+
+            // Agregar las transacciones al estado local con los IDs del backend
+            const createdTransactions = result.data?.transactions || [];
+            createdTransactions.forEach(transaction => {
+                this.transactions.push({
+                    ...transaction,
+                    id: transaction._id ? transaction._id.toString() : this.generateId(),
+                    date: new Date(transaction.date),
+                    createdAt: transaction.createdAt ? new Date(transaction.createdAt) : new Date()
+                });
+            });
 
             // Guardar en localStorage
             this.saveDataToStorage();
@@ -2242,13 +2275,13 @@ class FinanceApp {
                 // Procesar resultados del servidor
                 // El servidor devuelve la estructura: { data: { analysis: { expenses: [...] } } }
                 const analysisData = analysisResult.data.analysis || analysisResult.data;
-                const processedData = this.processOpenAIResults(analysisData);
+            const processedData = this.processOpenAIResults(analysisData);
 
-                const expensesCount = processedData.expenses ? processedData.expenses.length : 0;
-                console.log(`📊 Resultados procesados: ${expensesCount} gastos encontrados`);
+            const processedExpensesCount = processedData.expenses ? processedData.expenses.length : 0;
+            console.log(`📊 Resultados procesados: ${processedExpensesCount} gastos encontrados`);
 
                 // Alertas y estadísticas del procesamiento
-                if (expensesCount === 0) {
+                if (processedExpensesCount === 0) {
                     console.warn('🚨 No se encontraron gastos en el CSV procesado');
                     console.log('💡 Posibles causas:');
                     console.log('   - El CSV puede no contener transacciones de gastos');
@@ -2295,7 +2328,10 @@ class FinanceApp {
                 this.displayCsvResults(processedData);
                 extractedExpenses.style.display = 'block';
 
-                this.showNotification(`CSV procesado exitosamente. ${processedData.expenses ? processedData.expenses.length : 0} gastos encontrados.`, 'success');
+                const totalTransactions = (processedData.expenses ? processedData.expenses.length : 0) + (processedData.incomes ? processedData.incomes.length : 0);
+                const expensesCount = processedData.expenses ? processedData.expenses.length : 0;
+                const incomesCount = processedData.incomes ? processedData.incomes.length : 0;
+                this.showNotification(`PDF procesado exitosamente. ${totalTransactions} transacciones encontradas (${expensesCount} gastos, ${incomesCount} ingresos).`, 'success');
             } else {
                 throw new Error(analysisResult?.error || 'Error en el análisis con OpenAI');
             }
@@ -2386,20 +2422,41 @@ class FinanceApp {
      */
     processOpenAIResults(data) {
         let expenses = [];
+        let incomes = [];
 
         console.log('🔄 Procesando resultados de OpenAI...');
         console.log('📋 Estructura de datos recibida:', JSON.stringify(data, null, 2));
 
-        // Si la respuesta es un array de gastos directo
+        // Si la respuesta es un array directo
         if (Array.isArray(data)) {
-            expenses = data;
-            console.log(`📋 Respuesta es array directo: ${expenses.length} gastos`);
+            // Clasificar automáticamente como gastos o ingresos basados en el monto
+            data.forEach(transaction => {
+                if (transaction.amount && transaction.amount > 0) {
+                    expenses.push(transaction);
+                } else if (transaction.amount && transaction.amount < 0) {
+                    // Convertir montos negativos a positivos para ingresos
+                    incomes.push({
+                        ...transaction,
+                        amount: Math.abs(transaction.amount)
+                    });
+                } else {
+                    // Si no hay monto claro, asumir gasto
+                    expenses.push(transaction);
+                }
+            });
+            console.log(`📋 Respuesta es array directo: ${expenses.length} gastos, ${incomes.length} ingresos`);
         }
 
         // Si la respuesta tiene estructura de análisis
         else if (data.expenses && Array.isArray(data.expenses)) {
             expenses = data.expenses;
             console.log(`📋 Respuesta tiene estructura expenses: ${expenses.length} gastos`);
+
+            // Verificar si también hay ingresos
+            if (data.incomes && Array.isArray(data.incomes)) {
+                incomes = data.incomes;
+                console.log(`📋 Respuesta tiene estructura incomes: ${incomes.length} ingresos`);
+            }
         }
 
         // Si la respuesta es texto, intentar extraer gastos
@@ -2411,55 +2468,90 @@ class FinanceApp {
 
         // Si no se reconoce la estructura
         else {
-            console.warn('⚠️ Estructura de datos no reconocida para procesamiento de gastos');
+            console.warn('⚠️ Estructura de datos no reconocida para procesamiento de transacciones');
             console.log('🔍 Propiedades disponibles:', Object.keys(data || {}));
         }
 
-        // Siempre intentar extracción adicional, incluso si OpenAI encontró algunos gastos
-        console.log(`🔄 Intentando extracción adicional para encontrar más gastos...`);
+        // Siempre intentar extracción adicional, incluso si OpenAI encontró algunas transacciones
+        console.log(`🔄 Intentando extracción adicional para encontrar más transacciones...`);
 
         if (this.lastExtractedPdfText) {
             const additionalExpenses = this.extractBankingExpenses(this.lastExtractedPdfText);
 
             if (additionalExpenses.length > 0) {
-                console.log(`✅ Extracción adicional encontró ${additionalExpenses.length} gastos potenciales`);
+                console.log(`✅ Extracción adicional encontró ${additionalExpenses.length} transacciones potenciales`);
 
                 // Combinar resultados, evitando duplicados
                 const combinedExpenses = this.combineExpenseResults(expenses, additionalExpenses);
-                console.log(`📊 Total combinado: ${combinedExpenses.length} gastos únicos`);
+                console.log(`📊 Total gastos combinados: ${combinedExpenses.length} gastos únicos`);
 
                 expenses = combinedExpenses;
             } else {
-                console.log('⚠️ La extracción adicional no encontró gastos adicionales');
+                console.log('⚠️ La extracción adicional no encontró transacciones adicionales');
             }
         }
 
         // Validaciones finales
-        if (!expenses || expenses.length === 0) {
-            console.log('🚨 No se encontraron gastos ni con OpenAI ni con extracción manual');
+        const totalTransactions = expenses.length + incomes.length;
+        if (totalTransactions === 0) {
+            console.log('🚨 No se encontraron transacciones ni con OpenAI ni con extracción manual');
             console.log('💡 Posibles causas:');
             console.log('   - El PDF puede contener imágenes en lugar de texto');
             console.log('   - El formato del PDF puede ser incompatible');
             console.log('   - El documento puede no contener extractos bancarios');
-        } else if (expenses.length < 20) {
-            console.log(`⚠️ Solo se encontraron ${expenses.length} gastos totales`);
+        } else if (totalTransactions < 20) {
+            console.log(`⚠️ Solo se encontraron ${totalTransactions} transacciones totales (${expenses.length} gastos, ${incomes.length} ingresos)`);
             console.log('💡 Para documentos bancarios típicos se esperan más transacciones');
             console.log('   - Verifica que el PDF contenga extractos bancarios');
             console.log('   - Asegúrate de que el texto sea legible');
             console.log('   - Algunos PDFs pueden requerir OCR previo');
-        } else if (expenses.length >= 50) {
-            console.log(`✅ ¡Excelente! Se encontraron ${expenses.length} gastos - esto parece correcto para un documento bancario`);
+        } else if (totalTransactions >= 50) {
+            console.log(`✅ ¡Excelente! Se encontraron ${totalTransactions} transacciones - esto parece correcto para un documento bancario`);
         }
 
-        console.log(`📊 Gastos finales antes de mejora: ${expenses.length}`);
+        console.log(`📊 Transacciones finales antes de mejora: ${expenses.length} gastos, ${incomes.length} ingresos`);
 
-        // Procesar y mejorar los gastos extraídos
+        // Procesar y mejorar los gastos e ingresos extraídos
         expenses = this.enhanceExtractedExpenses(expenses);
+        incomes = this.enhanceExtractedIncomes(incomes);
 
-        console.log(`✅ Gastos finales después de mejora: ${expenses.length}`);
+        console.log(`✅ Transacciones finales después de mejora: ${expenses.length} gastos, ${incomes.length} ingresos`);
         console.log('📋 Resumen de gastos encontrados:', expenses.map(exp => `${exp.description}: $${exp.amount}`).slice(0, 5));
+        console.log('📋 Resumen de ingresos encontrados:', incomes.map(inc => `${inc.description}: $${inc.amount}`).slice(0, 5));
 
-        return { expenses };
+        return { expenses, incomes };
+    }
+
+    /**
+     * Mejora los ingresos extraídos con validaciones y mejoras
+     */
+    enhanceExtractedIncomes(incomes) {
+        return incomes.map(income => {
+            // Asegurar que la moneda esté en mayúsculas
+            if (income.currency) {
+                income.currency = income.currency.toUpperCase();
+            }
+
+            // Si no hay moneda definida, intentar determinarla por contexto
+            if (!income.currency) {
+                income.currency = this.detectCurrencyFromContext(income);
+            }
+
+            // Mejorar categoría si es necesario
+            if (!income.category) {
+                income.category = 'Otros Ingresos';
+            }
+
+            // Para categoría "Otros Ingresos", asegurarse de que la descripción sea detallada
+            if (income.category === 'Otros Ingresos' && (!income.description || income.description.length < 10)) {
+                income.description = `Ingreso: ${income.description || 'Sin descripción'}`;
+            }
+
+            // Asegurar que el tipo sea 'income'
+            income.type = 'income';
+
+            return income;
+        });
     }
 
     /**
@@ -3085,9 +3177,16 @@ class FinanceApp {
     displayCsvResults(data) {
         const expensesList = document.getElementById('expensesList');
 
+        // Mostrar gastos e ingresos
+        let html = '';
+        let totalExpenses = data.expenses ? data.expenses.length : 0;
+        let totalIncomes = data.incomes ? data.incomes.length : 0;
+
+        // Mostrar gastos
         if (data.expenses && data.expenses.length > 0) {
-            // Generar opciones de categorías
-            const categoryOptions = this.generateCategoryOptions();
+            html += '<h3>💸 Gastos Encontrados</h3>';
+            // Generar opciones de categorías de gastos
+            const expenseCategoryOptions = this.generateCategoryOptions();
 
             const expensesHTML = data.expenses.map((expense, index) => {
                 const symbol = expense.currency === 'UYU' ? '$U' : '$';
@@ -3100,7 +3199,8 @@ class FinanceApp {
                                data-description="${expense.description}"
                                data-currency="${expense.currency}"
                                data-category="${defaultCategory}"
-                               data-date="${expense.date || ''}">
+                               data-date="${expense.date || ''}"
+                               data-type="expense">
                         <div class="expense-info">
                             <div class="expense-header">
                                 <span class="expense-description">${expense.description}</span>
@@ -3109,7 +3209,7 @@ class FinanceApp {
                             <div class="expense-category-selector">
                                 <label>Categoría:</label>
                                 <select class="expense-category-dropdown" data-index="${index}" onchange="window.financeApp.updateExpenseCategory(${index}, this.value)">
-                                    ${categoryOptions}
+                                    ${expenseCategoryOptions}
                                 </select>
                                 <div class="expense-currency-selector">
                                     <label>Moneda:</label>
@@ -3128,24 +3228,107 @@ class FinanceApp {
                 `;
             }).join('');
 
-            expensesList.innerHTML = expensesHTML;
+            html += expensesHTML;
+        }
 
-            // Establecer valores por defecto en los dropdowns
+        // Mostrar ingresos
+        if (data.incomes && data.incomes.length > 0) {
+            html += '<h3>💰 Ingresos Encontrados</h3>';
+            // Generar opciones de categorías de ingresos
+            const incomeCategoryOptions = this.generateIncomeCategoryOptions();
+
+            const incomesHTML = data.incomes.map((income, index) => {
+                const symbol = income.currency === 'UYU' ? '$U' : '$';
+                const defaultCategory = income.category || 'Otros Ingresos';
+                const expenseIndex = totalExpenses + index; // Offset para ingresos
+                return `
+                    <div class="expense-item income-item">
+                        <input type="checkbox" class="expense-checkbox income-checkbox"
+                               data-index="${expenseIndex}"
+                               data-amount="${income.amount}"
+                               data-description="${income.description}"
+                               data-currency="${income.currency}"
+                               data-category="${defaultCategory}"
+                               data-date="${income.date || ''}"
+                               data-type="income">
+                        <div class="expense-info">
+                            <div class="expense-header">
+                                <span class="expense-description">${income.description}</span>
+                                <span class="expense-amount income-amount">+${symbol}${income.amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div class="expense-category-selector">
+                                <label>Categoría:</label>
+                                <select class="expense-category-dropdown income-category-dropdown" data-index="${expenseIndex}" onchange="window.financeApp.updateExpenseCategory(${expenseIndex}, this.value)">
+                                    ${incomeCategoryOptions}
+                                </select>
+                                <div class="expense-currency-selector">
+                                    <label>Moneda:</label>
+                                    <select class="expense-currency-dropdown" data-index="${expenseIndex}" onchange="window.financeApp.updateExpenseCurrency(${expenseIndex}, this.value)">
+                                        <option value="UYU" ${income.currency === 'UYU' ? 'selected' : ''}>UYU (Pesos)</option>
+                                        <option value="USD" ${income.currency === 'USD' ? 'selected' : ''}>USD (Dólares)</option>
+                                    </select>
+                                </div>
+                                <div class="expense-comments" id="comments-${expenseIndex}" style="display: ${defaultCategory === 'Otros Ingresos' ? 'block' : 'none'};">
+                                    <label>Comentarios:</label>
+                                    <textarea class="expense-comment-textarea" data-index="${expenseIndex}" placeholder="Agrega comentarios sobre este ingreso..." rows="2">${defaultCategory === 'Otros Ingresos' ? income.description : ''}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            html += incomesHTML;
+        }
+
+        // Mostrar mensaje si no hay transacciones
+        if (totalExpenses === 0 && totalIncomes === 0) {
+            html = '<p>No se encontraron transacciones en el PDF</p>';
+        }
+
+        expensesList.innerHTML = html;
+
+        // Establecer valores por defecto en los dropdowns de gastos
+        if (data.expenses) {
             data.expenses.forEach((expense, index) => {
                 const dropdown = expensesList.querySelector(`select[data-index="${index}"]`);
                 if (dropdown) {
                     dropdown.value = expense.category || 'Otros';
                 }
             });
-
-            // Inicializar fecha por defecto para transacciones del CSV
-            this.initializeCsvDateSelector();
-
-            // Agregar funcionalidad para agregar gastos seleccionados
-            this.setupExpenseSelection();
-        } else {
-            expensesList.innerHTML = '<p>No se encontraron gastos en el CSV</p>';
         }
+
+        // Establecer valores por defecto en los dropdowns de ingresos
+        if (data.incomes) {
+            data.incomes.forEach((income, index) => {
+                const expenseIndex = totalExpenses + index;
+                const dropdown = expensesList.querySelector(`select[data-index="${expenseIndex}"]`);
+                if (dropdown) {
+                    dropdown.value = income.category || 'Otros Ingresos';
+                }
+            });
+        }
+
+        // Inicializar fecha por defecto para transacciones del PDF
+        this.initializePdfDateSelector();
+
+        // Agregar funcionalidad para agregar transacciones seleccionadas
+        this.setupExpenseSelection();
+    }
+
+    /**
+     * Genera las opciones de categorías de ingresos para el dropdown
+     */
+    generateIncomeCategoryOptions() {
+        const categories = [
+            'Salario',
+            'Freelance',
+            'Inversiones',
+            'Transferencias',
+            'Otros Ingresos'
+        ];
+
+        return categories.map(category => `<option value="${category}">${category}</option>`).join('');
     }
 
     /**
@@ -3167,6 +3350,191 @@ class FinanceApp {
         return categories.map(category =>
             `<option value="${category}">${category}</option>`
         ).join('');
+    }
+
+    /**
+     * Inicializa el selector de fecha para transacciones del PDF
+     */
+    initializePdfDateSelector() {
+        // Crear selector de fecha si no existe
+        let dateSelector = document.getElementById('pdfDateSelector');
+        if (!dateSelector) {
+            dateSelector = document.createElement('div');
+            dateSelector.id = 'pdfDateSelector';
+            dateSelector.className = 'date-selector';
+            dateSelector.innerHTML = `
+                <label for="pdfTransactionDate">Fecha para las transacciones del PDF:</label>
+                <input type="date" id="pdfTransactionDate" value="${new Date().toISOString().split('T')[0]}">
+                <button id="addPdfTransactionsBtn" class="btn btn-success">Agregar Transacciones Seleccionadas</button>
+            `;
+
+            const expensesList = document.getElementById('expensesList');
+            if (expensesList) {
+                expensesList.parentNode.insertBefore(dateSelector, expensesList.nextSibling);
+            }
+        }
+
+        // Configurar cambio de fecha
+        const dateInput = document.getElementById('pdfTransactionDate');
+        if (dateInput) {
+            dateInput.addEventListener('change', () => {
+                console.log('📅 Fecha de PDF cambiada a:', dateInput.value);
+            });
+        }
+
+        // Configurar botón de agregar
+        const addBtn = document.getElementById('addPdfTransactionsBtn');
+        if (addBtn) {
+            addBtn.addEventListener('click', () => this.addSelectedPdfTransactions());
+        }
+    }
+
+    /**
+     * Agrega las transacciones seleccionadas del PDF usando POST para ingresos y PUT para gastos
+     */
+    async addSelectedPdfTransactions() {
+        console.log('📝 Agregando transacciones seleccionadas del PDF...');
+
+        const checkboxes = document.querySelectorAll('.expense-checkbox:checked');
+        if (checkboxes.length === 0) {
+            this.showNotification('Por favor selecciona al menos una transacción', 'warning');
+            return;
+        }
+
+        const selectedExpenses = [];
+        const selectedIncomes = [];
+
+        // Procesar transacciones seleccionadas
+        checkboxes.forEach(cb => {
+            // Intentar usar la fecha del PDF si existe, sino usar fecha seleccionada o actual
+            let transactionDate = new Date();
+            if (cb.dataset.date && cb.dataset.date !== 'undefined' && cb.dataset.date !== '') {
+                try {
+                    transactionDate = new Date(cb.dataset.date);
+                    // Verificar que la fecha sea válida
+                    if (isNaN(transactionDate.getTime())) {
+                        transactionDate = this.getPdfSelectedDate();
+                    }
+                } catch (error) {
+                    console.warn('Fecha inválida en dataset, usando fecha seleccionada:', cb.dataset.date);
+                    transactionDate = this.getPdfSelectedDate();
+                }
+            } else {
+                // No hay fecha en el PDF, usar fecha seleccionada por el usuario
+                transactionDate = this.getPdfSelectedDate();
+            }
+
+            const transactionType = cb.dataset.type || 'expense';
+            const category = cb.dataset.category || (transactionType === 'income' ? 'Otros Ingresos' : 'Otros');
+            const currency = cb.dataset.currency || 'UYU';
+            const amount = parseFloat(cb.dataset.amount);
+            const description = cb.dataset.description || `Transacción ${transactionType}`;
+
+            const transaction = {
+                type: transactionType,
+                amount: amount,
+                description: description,
+                category: category,
+                currency: currency,
+                date: transactionDate,
+                paymentMethod: 'pdf'
+            };
+
+            if (transactionType === 'income') {
+                selectedIncomes.push(transaction);
+            } else {
+                selectedExpenses.push(transaction);
+            }
+        });
+
+        console.log(`📊 ${selectedExpenses.length} gastos y ${selectedIncomes.length} ingresos seleccionados para agregar`);
+
+        try {
+            let expensesAdded = 0;
+            let incomesAdded = 0;
+
+            // Agregar gastos usando PUT (como antes)
+            if (selectedExpenses.length > 0) {
+                console.log('🔄 Enviando gastos al backend...');
+                const expenseResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(selectedExpenses)
+                });
+
+                if (!expenseResponse.ok) {
+                    const errorData = await expenseResponse.json().catch(() => ({}));
+                    console.error('❌ Error agregando gastos:', expenseResponse.status, errorData);
+                    this.showNotification('Error: No se pudieron agregar los gastos', 'error');
+                } else {
+                    const result = await expenseResponse.json();
+                    if (result.success) {
+                        expensesAdded = selectedExpenses.length;
+                        console.log('✅ Gastos agregados exitosamente al backend');
+                    }
+                }
+            }
+
+            // Agregar ingresos usando POST
+            if (selectedIncomes.length > 0) {
+                console.log('🔄 Enviando ingresos al backend...');
+                const incomeResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ transactions: selectedIncomes })
+                });
+
+                if (!incomeResponse.ok) {
+                    const errorData = await incomeResponse.json().catch(() => ({}));
+                    console.error('❌ Error agregando ingresos:', incomeResponse.status, errorData);
+                    this.showNotification('Error: No se pudieron agregar los ingresos', 'error');
+                } else {
+                    const result = await incomeResponse.json();
+                    if (result.success) {
+                        incomesAdded = selectedIncomes.length;
+                        console.log('✅ Ingresos agregados exitosamente al backend');
+                    }
+                }
+            }
+
+            // Actualizar estado local si se agregaron transacciones
+            if (expensesAdded > 0 || incomesAdded > 0) {
+                // Agregar a transacciones locales con IDs generados
+                [...selectedExpenses, ...selectedIncomes].forEach(transaction => {
+                    transaction.id = this.generateId();
+                    transaction.createdAt = new Date();
+                    this.transactions.push(transaction);
+                });
+
+                // Guardar en localStorage
+                this.saveDataToStorage();
+
+                // Actualizar interfaz
+                this.renderDashboard();
+                this.renderTransactions();
+                this.updateCharts();
+
+                // Notificación de éxito
+                const totalAdded = expensesAdded + incomesAdded;
+                this.showNotification(`${totalAdded} transacciones agregadas exitosamente (${expensesAdded} gastos, ${incomesAdded} ingresos)`, 'success');
+
+                // Ocultar/ocultar resultados del PDF
+                const expensesList = document.getElementById('expensesList');
+                if (expensesList) {
+                    expensesList.style.display = 'none';
+                }
+
+                console.log('✅ Todas las transacciones del PDF agregadas exitosamente');
+            }
+
+        } catch (error) {
+            console.error('❌ Error agregando transacciones del PDF:', error);
+            this.showNotification('Error interno al agregar las transacciones', 'error');
+        }
     }
 
     /**
@@ -3196,6 +3564,35 @@ class FinanceApp {
                 const selectedDate = new Date(dateInput.value);
                 if (!isNaN(selectedDate.getTime())) {
                     return selectedDate;
+                }
+            } catch (error) {
+                console.warn('Fecha seleccionada inválida, usando fecha actual');
+            }
+        }
+        return new Date();
+    }
+
+    /**
+     * Obtiene la fecha seleccionada para transacciones del PDF
+     */
+    getPdfSelectedDate() {
+        const dateInput = document.getElementById('pdfTransactionDate');
+        if (dateInput && dateInput.value) {
+            try {
+                const selectedDate = new Date(dateInput.value);
+                if (!isNaN(selectedDate.getTime())) {
+                    // CORRECCIÓN: Si es el 1ro del mes, no lo convierta al último día del mes anterior
+                    // El problema era que new Date() interpretaba "2024-01-01" como "2023-12-31" en algunas zonas horarias
+                    // Usamos una fecha específica para evitar problemas de zona horaria
+                    const year = selectedDate.getFullYear();
+                    const month = selectedDate.getMonth();
+                    const day = selectedDate.getDate();
+
+                    // Crear fecha con hora 12:00:00 para evitar problemas de zona horaria
+                    const correctedDate = new Date(year, month, day, 12, 0, 0, 0);
+
+                    console.log(`📅 Fecha PDF corregida: ${selectedDate.toISOString().split('T')[0]} → ${correctedDate.toISOString().split('T')[0]}`);
+                    return correctedDate;
                 }
             } catch (error) {
                 console.warn('Fecha seleccionada inválida, usando fecha actual');
@@ -3849,7 +4246,7 @@ Responde como un economista profesional especializado en la mejor administració
                                 transactionDate = new Date(cb.dataset.date);
                                 // Verificar que la fecha sea válida
                                 if (isNaN(transactionDate.getTime())) {
-                                    transactionDate = this.getCsvSelectedDate();
+                                    transactionDate = this.getPdfSelectedDate();
                                 }
                             } catch (error) {
                                 console.warn('Fecha inválida en dataset, usando fecha seleccionada:', cb.dataset.date);
