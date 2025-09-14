@@ -346,592 +346,6 @@ nav {
     color: white;
 }
 
-/* Estilos específicos para la página de Ideas */
-.ideas-title {
-    text-align: center;
-    color: #333;
-    margin-bottom: 30px;
-}
-
-/* Formulario para agregar ideas */
-.add-idea-container {
-    max-width: 800px;
-    margin: 0 auto 30px auto;
-    padding: 20px;
-    background-color: #f8f9fa;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.idea-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.idea-form input,
-.idea-form textarea,
-.idea-form select {
-    padding: 12px;
-    border: 2px solid #e1e5e9;
-    border-radius: 8px;
-    font-size: 16px;
-    outline: none;
-    transition: border-color 0.3s ease;
-}
-
-.idea-form input:focus,
-.idea-form textarea:focus,
-.idea-form select:focus {
-    border-color: #87ccd8;
-    box-shadow: 0 0 5px rgba(135, 204, 216, 0.3);
-}
-
-.form-row {
-    display: flex;
-    gap: 15px;
-}
-
-.form-row>* {
-    flex: 1;
-}
-
-#addIdeaBtn {
-    padding: 12px 24px;
-    background-color: #87ccd8;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-#addIdeaBtn:hover {
-    background-color: #007bff;
-}
-
-/* Filtros y búsqueda */
-.ideas-filters {
-    max-width: 800px;
-    margin: 0 auto 30px auto;
-    display: flex;
-    gap: 15px;
-    padding: 0 20px;
-}
-
-.ideas-filters input,
-.ideas-filters select {
-    padding: 10px;
-    border: 2px solid #e1e5e9;
-    border-radius: 8px;
-    font-size: 14px;
-    outline: none;
-}
-
-.ideas-filters input {
-    flex: 2;
-}
-
-.ideas-filters select {
-    flex: 1;
-}
-
-/* Container de ideas */
-.ideas-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 20px;
-}
-
-/* Tarjetas de ideas */
-.idea-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    overflow: hidden;
-    border: 1px solid #e1e5e9;
-}
-
-.idea-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-.idea-header {
-    padding: 20px 20px 10px 20px;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.idea-title {
-    margin: 0 0 10px 0;
-    font-size: 1.3em;
-    color: #333;
-    font-weight: 600;
-}
-
-.idea-badges {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.category-badge,
-.priority-badge {
-    padding: 4px 8px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.category-badge {
-    background-color: #e3f2fd;
-    color: #1976d2;
-}
-
-.priority-badge.priority-alta {
-    background-color: #ffebee;
-    color: #d32f2f;
-}
-
-.priority-badge.priority-media {
-    background-color: #fff3e0;
-    color: #f57c00;
-}
-
-.priority-badge.priority-baja {
-    background-color: #e8f5e8;
-    color: #388e3c;
-}
-
-.idea-content {
-    padding: 15px 20px;
-}
-
-.idea-description {
-    color: #666;
-    line-height: 1.5;
-    margin-bottom: 15px;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.idea-meta {
-    margin-bottom: 15px;
-}
-
-.status-info {
-    margin-bottom: 10px;
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 4px 8px;
-    background-color: #f0f0f0;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.progress-bar {
-    position: relative;
-    background-color: #e9ecef;
-    border-radius: 10px;
-    height: 8px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #87ccd8, #007bff);
-    transition: width 0.3s ease;
-}
-
-.progress-text {
-    position: absolute;
-    top: -20px;
-    right: 0;
-    font-size: 11px;
-    color: #666;
-    font-weight: 600;
-}
-
-.idea-stats {
-    display: flex;
-    gap: 15px;
-    font-size: 12px;
-    color: #666;
-}
-
-.idea-footer {
-    padding: 15px 20px;
-    background-color: #f8f9fa;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.created-date {
-    font-size: 12px;
-    color: #999;
-}
-
-.view-details-btn {
-    padding: 8px 16px;
-    background-color: #87ccd8;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.view-details-btn:hover {
-    background-color: #007bff;
-}
-
-/* Estado vacío */
-.empty-state {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 60px 20px;
-    color: #666;
-}
-
-.empty-state h3 {
-    color: #333;
-    margin-bottom: 10px;
-}
-
-/* Modal para detalles */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    overflow-y: auto;
-}
-
-.modal-content {
-    background-color: white;
-    margin: 2% auto;
-    padding: 0;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 800px;
-    max-height: 90vh;
-    overflow-y: auto;
-    position: relative;
-}
-
-.close {
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    color: #999;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    z-index: 1001;
-}
-
-.close:hover {
-    color: #333;
-}
-
-#modalTitle {
-    padding: 20px 20px 10px 20px;
-    margin: 0;
-    border-bottom: 1px solid #e1e5e9;
-}
-
-/* Pestañas del modal */
-.modal-tabs {
-    display: flex;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #e1e5e9;
-}
-
-.tab-button {
-    flex: 1;
-    padding: 15px 10px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: background-color 0.3s ease;
-}
-
-.tab-button:hover {
-    background-color: #e9ecef;
-}
-
-.tab-button.active {
-    background-color: white;
-    border-bottom: 2px solid #87ccd8;
-}
-
-.tab-content {
-    display: none;
-    padding: 20px;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* Formulario de edición */
-.edit-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.edit-form label {
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 5px;
-}
-
-.edit-form input,
-.edit-form textarea,
-.edit-form select {
-    padding: 10px;
-    border: 2px solid #e1e5e9;
-    border-radius: 6px;
-    font-size: 14px;
-    outline: none;
-}
-
-.edit-form input:focus,
-.edit-form textarea:focus,
-.edit-form select:focus {
-    border-color: #87ccd8;
-}
-
-#editProgress {
-    width: 100%;
-}
-
-/* Sección de notas */
-.notes-section h3 {
-    margin-top: 0;
-}
-
-#ideaNotes {
-    width: 100%;
-    min-height: 200px;
-    resize: vertical;
-}
-
-/* Sección de tareas */
-.tasks-section h3 {
-    margin-top: 0;
-}
-
-.add-task-form {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.add-task-form input {
-    flex: 1;
-    padding: 8px;
-    border: 2px solid #e1e5e9;
-    border-radius: 6px;
-}
-
-.add-task-form button {
-    padding: 8px 16px;
-    background-color: #87ccd8;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.task-list-modal {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.task-item-modal {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    border: 1px solid #e1e5e9;
-    border-radius: 6px;
-    margin-bottom: 8px;
-    background-color: #f8f9fa;
-}
-
-.task-item-modal input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-}
-
-.task-item-modal span {
-    flex: 1;
-}
-
-.task-item-modal .completed {
-    text-decoration: line-through;
-    color: #999;
-}
-
-.remove-task {
-    background: none;
-    border: none;
-    color: #999;
-    font-size: 18px;
-    cursor: pointer;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-}
-
-.remove-task:hover {
-    background-color: #ff4757;
-    color: white;
-}
-
-/* Sección de recursos */
-.resources-section h3 {
-    margin-top: 0;
-}
-
-.add-resource-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.add-resource-form input {
-    padding: 8px;
-    border: 2px solid #e1e5e9;
-    border-radius: 6px;
-}
-
-.add-resource-form button {
-    padding: 10px;
-    background-color: #87ccd8;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.resources-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.resource-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px;
-    border: 1px solid #e1e5e9;
-    border-radius: 6px;
-    margin-bottom: 8px;
-    background-color: #f8f9fa;
-}
-
-.resource-info {
-    flex: 1;
-}
-
-.resource-link {
-    display: block;
-    color: #007bff;
-    text-decoration: none;
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.resource-link:hover {
-    text-decoration: underline;
-}
-
-.resource-url {
-    font-size: 12px;
-    color: #666;
-    word-break: break-all;
-}
-
-.remove-resource {
-    background: none;
-    border: none;
-    color: #999;
-    font-size: 18px;
-    cursor: pointer;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-}
-
-.remove-resource:hover {
-    background-color: #ff4757;
-    color: white;
-}
-
-/* Acciones del modal */
-.modal-actions {
-    padding: 20px;
-    border-top: 1px solid #e1e5e9;
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    background-color: #f8f9fa;
-}
-
-.save-btn {
-    padding: 10px 20px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.delete-btn {
-    padding: 10px 20px;
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.cancel-btn {
-    padding: 10px 20px;
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
 
 /* ===== ESTILOS PARA FINANZAS PERSONALES ===== */
 
@@ -6996,4 +6410,610 @@ nav {
 .notification span {
     font-weight: 500;
     line-height: 1.4;
+}
+
+/* ========== DIAGNÓSTICO FINANCIERO ========== */
+
+/* Contenedor principal del diagnóstico */
+.diagnosis-message {
+    margin: 20px 0;
+}
+
+.diagnosis-message .message-content {
+    max-width: 85%;
+    background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+    border: 2px solid #e3f2fd;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(33, 150, 243, 0.1);
+}
+
+/* Header del diagnóstico */
+.diagnosis-header {
+    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+    color: white;
+    padding: 16px 20px;
+    border-radius: 12px 12px 0 0;
+    margin: -12px -16px 20px -16px;
+}
+
+.diagnosis-header h4 {
+    margin: 0 0 8px 0;
+    font-size: 1.3em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.diagnosis-header h4 i {
+    font-size: 1.4em;
+    opacity: 0.9;
+}
+
+.diagnosis-timestamp {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.85em;
+    font-weight: 400;
+}
+
+/* Contenido del diagnóstico */
+.diagnosis-content {
+    padding: 0 20px 20px 20px;
+    color: #37474f;
+    line-height: 1.6;
+}
+
+/* Títulos de secciones */
+.diagnosis-title {
+    font-size: 1.4em;
+    font-weight: 700;
+    color: #1565c0;
+    margin: 24px 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 3px solid #2196f3;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.diagnosis-section-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #1976d2;
+    margin: 20px 0 12px 0;
+    padding: 8px 12px;
+    background: linear-gradient(90deg, #e3f2fd 0%, rgba(227, 242, 253, 0.3) 100%);
+    border-left: 4px solid #2196f3;
+    border-radius: 0 8px 8px 0;
+}
+
+/* Párrafos */
+.diagnosis-content p {
+    margin: 12px 0;
+    color: #37474f;
+    font-size: 1em;
+    line-height: 1.6;
+}
+
+/* Negritas y cursivas */
+.diagnosis-content strong {
+    color: #0d47a1;
+    font-weight: 700;
+    background: linear-gradient(120deg, #e3f2fd 0%, rgba(227, 242, 253, 0.5) 100%);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 1.05em;
+}
+
+.diagnosis-content em {
+    color: #455a64;
+    font-style: italic;
+    background: rgba(69, 90, 100, 0.1);
+    padding: 0 4px;
+    border-radius: 3px;
+}
+
+/* Listas */
+.diagnosis-list {
+    margin: 16px 0;
+    padding-left: 20px;
+}
+
+.diagnosis-list:not(.numbered) {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.diagnosis-list:not(.numbered) .diagnosis-list-item:before {
+    content: "✓";
+    color: #4caf50;
+    font-weight: bold;
+    margin-right: 8px;
+    font-size: 1.1em;
+}
+
+.diagnosis-list.numbered {
+    list-style-type: decimal;
+}
+
+.diagnosis-list-item {
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: rgba(33, 150, 243, 0.05);
+    border-left: 3px solid #2196f3;
+    border-radius: 0 8px 8px 0;
+    transition: all 0.3s ease;
+}
+
+.diagnosis-list-item:hover {
+    background: rgba(33, 150, 243, 0.1);
+    transform: translateX(4px);
+}
+
+.diagnosis-list-item.numbered {
+    border-left-color: #ff9800;
+    background: rgba(255, 152, 0, 0.05);
+}
+
+.diagnosis-list-item.numbered:before {
+    color: #ff9800;
+}
+
+/* Footer del diagnóstico */
+.diagnosis-footer {
+    background: #f5f5f5;
+    padding: 12px 20px;
+    border-radius: 0 0 12px 12px;
+    margin: 16px -16px -12px -16px;
+    border-top: 1px solid #e0e0e0;
+    text-align: center;
+}
+
+.diagnosis-footer small {
+    color: #666;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.diagnosis-footer i {
+    color: #2196f3;
+    font-size: 1.1em;
+}
+
+/* ========== FORMULARIO DE METAS DE AHORRO ========== */
+
+/* Secciones del formulario */
+.form-section {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: rgba(33, 150, 243, 0.02);
+    border-radius: 8px;
+    border-left: 3px solid #2196f3;
+}
+
+.form-section h4 {
+    margin: 0 0 12px 0;
+    color: #1976d2;
+    font-size: 1.1em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-section h4 i {
+    color: #2196f3;
+    font-size: 1em;
+}
+
+/* Grupos de entrada con etiquetas */
+.date-input-group,
+.amount-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.date-input-group label,
+.amount-input-group label {
+    font-weight: 500;
+    color: #37474f;
+    font-size: 0.9em;
+}
+
+.date-input-group input,
+.amount-input-group input {
+    padding: 8px 12px;
+    border: 2px solid #e1e5e9;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.date-input-group input:focus,
+.amount-input-group input:focus {
+    outline: none;
+    border-color: #2196f3;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.amount-input-group.full-width {
+    width: 100%;
+}
+
+.amount-input-group.full-width input {
+    width: 100%;
+}
+
+/* Formulario de metas mejorado */
+.goal-form textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e1e5e9;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.3s ease;
+    margin-top: 4px;
+}
+
+.goal-form textarea:focus {
+    outline: none;
+    border-color: #2196f3;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.goal-form select {
+    padding: 10px 12px;
+    border: 2px solid #e1e5e9;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+.goal-form select:focus {
+    outline: none;
+    border-color: #2196f3;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .diagnosis-message .message-content {
+        max-width: 95%;
+    }
+
+    .diagnosis-header {
+        padding: 12px 16px;
+    }
+
+    .diagnosis-header h4 {
+        font-size: 1.1em;
+    }
+
+    .diagnosis-content {
+        padding: 0 16px 16px 16px;
+    }
+
+    .diagnosis-section-title {
+        font-size: 1.1em;
+    }
+
+    /* Responsive para formulario de metas */
+    .form-section {
+        margin-bottom: 16px;
+        padding: 12px;
+    }
+
+    .form-section h4 {
+        font-size: 1em;
+    }
+
+    .date-input-group,
+    .amount-input-group {
+        width: 100%;
+        margin-bottom: 12px;
+    }
+}
+
+/* ========== ESTILOS PARA METAS ========== */
+
+/* Botón para crear nueva meta */
+.create-goal-section {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.create-goal-btn {
+    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 16px 32px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 20px rgba(33, 150, 243, 0.3);
+    transition: all 0.3s ease;
+    min-width: 200px;
+    justify-content: center;
+}
+
+.create-goal-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(33, 150, 243, 0.4);
+}
+
+.create-goal-btn i {
+    font-size: 1.2em;
+}
+
+.create-goal-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 15px rgba(33, 150, 243, 0.3);
+}
+
+/* Estilos para el modal de metas */
+.goal-modal-content {
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.goal-modal-content .modal-header {
+    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px 12px 0 0;
+    margin: -20px -20px 20px -20px;
+}
+
+.goal-modal-content .modal-header h3 {
+    margin: 0;
+    font-size: 1.4em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.goal-modal-content .modal-body {
+    padding: 20px;
+}
+
+/* Botones del modal */
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.form-actions .btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 100px;
+}
+
+.form-actions .btn-secondary {
+    background: #f5f5f5;
+    color: #666;
+    border: 2px solid #e0e0e0;
+}
+
+.form-actions .btn-secondary:hover {
+    background: #e0e0e0;
+    color: #333;
+    border-color: #ccc;
+}
+
+.form-actions .add-btn {
+    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+    color: white;
+    border: none;
+}
+
+.form-actions .add-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.form-actions .add-btn:active {
+    transform: translateY(0);
+}
+
+/* Prioridad de metas */
+.goal-priority {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+    margin-left: 8px;
+    text-transform: uppercase;
+}
+
+.priority-low {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+
+.priority-medium {
+    background: #fff3e0;
+    color: #ef6c00;
+}
+
+.priority-high {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.priority-urgent {
+    background: #ffebee;
+    color: #b71c1c;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Etiquetas de metas */
+.goal-tags {
+    margin-top: 8px;
+}
+
+.goal-tag {
+    display: inline-block;
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    margin: 2px 4px 2px 0;
+    border: 1px solid #bbdefb;
+}
+
+/* Monto esperado */
+.goal-expected-amount {
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: rgba(255, 152, 0, 0.1);
+    border-left: 3px solid #ff9800;
+    border-radius: 0 8px 8px 0;
+}
+
+.expected-amount-label {
+    font-weight: 500;
+    color: #e65100;
+    margin-right: 8px;
+}
+
+.expected-amount-value {
+    font-weight: 600;
+    color: #bf360c;
+}
+
+/* Monto actual (sin objetivo) */
+.goal-current-amount {
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: rgba(76, 175, 80, 0.1);
+    border-left: 3px solid #4caf50;
+    border-radius: 0 8px 8px 0;
+}
+
+.current-amount-label {
+    font-weight: 500;
+    color: #2e7d32;
+    margin-right: 8px;
+}
+
+.current-amount-value {
+    font-weight: 600;
+    color: #1b5e20;
+}
+
+/* Fecha actual */
+.goal-current-date {
+    margin-top: 8px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Categoría */
+.goal-category {
+    background: #f3e5f5;
+    color: #7b1fa2;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 0.85em;
+    margin-left: 8px;
+}
+
+/* Estados de metas */
+.goal-item.completed .goal-name {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.goal-item.completed .goal-progress {
+    opacity: 0.6;
+}
+
+/* Botón pequeño para agregar meta */
+.add-goal-small {
+    text-align: center;
+    margin: 20px 0;
+    padding: 16px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.add-goal-small-btn {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    color: #1976d2;
+    border: 2px solid #2196f3;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.add-goal-small-btn:hover {
+    background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(33, 150, 243, 0.2);
+}
+
+.add-goal-small-btn i {
+    font-size: 0.9em;
+}
+
+/* Hover effects */
+.goal-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+@media (max-width: 480px) {
+    .diagnosis-message .message-content {
+        max-width: 100%;
+        border-radius: 12px;
+    }
+
+    .diagnosis-header {
+        margin: -8px -12px 16px -12px;
+        border-radius: 8px 8px 0 0;
+    }
+
+    .diagnosis-content {
+        padding: 0 12px 12px 12px;
+    }
+
+    .diagnosis-footer {
+        margin: 12px -12px -8px -12px;
+        padding: 10px 16px;
+    }
 }

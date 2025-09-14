@@ -670,14 +670,6 @@ function setupPageRoutes() {
     });
 
     // Rutas para otras páginas
-    app.get('/ideas', (req, res) => {
-        res.sendFile(path.join(process.cwd(), 'dist/pages/ideas.html'));
-    });
-
-    app.get('/ideas.html', (req, res) => {
-        res.sendFile(path.join(process.cwd(), 'dist/pages/ideas.html'));
-    });
-
     app.get('/tareas', (req, res) => {
         res.sendFile(path.join(process.cwd(), 'dist/pages/tareas.html'));
     });

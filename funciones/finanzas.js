@@ -113,6 +113,9 @@ class FinanceApp {
             // Cargar categorías del backend (de finanzas-simple)
             await this.loadCategoriesFromBackend();
 
+            // Cargar metas desde la API de MongoDB
+            await this.loadGoals();
+
             // Configurar event listeners
             this.setupEventListeners();
 
@@ -127,7 +130,6 @@ class FinanceApp {
             // Renderizar datos iniciales
             this.renderDashboard();
             this.renderCategories();
-            this.renderGoals();
             this.updateCharts();
 
         } catch (error) {
@@ -385,6 +387,34 @@ class FinanceApp {
         const goalForm = document.getElementById('goalForm');
         if (goalForm) {
             goalForm.addEventListener('submit', (e) => this.handleGoalSubmit(e));
+        }
+
+        // Botón para abrir modal de crear meta
+        const createGoalBtn = document.getElementById('createGoalBtn');
+        if (createGoalBtn) {
+            createGoalBtn.addEventListener('click', () => this.openGoalModal());
+        }
+
+        // Botón de cancelar en el modal
+        const cancelGoalBtn = document.getElementById('cancelGoalBtn');
+        if (cancelGoalBtn) {
+            cancelGoalBtn.addEventListener('click', () => this.closeGoalModal());
+        }
+
+        // Cerrar modal con la X
+        const goalModal = document.getElementById('goalModal');
+        if (goalModal) {
+            const closeBtn = goalModal.querySelector('.close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => this.closeGoalModal());
+            }
+
+            // Cerrar modal haciendo clic fuera
+            goalModal.addEventListener('click', (e) => {
+                if (e.target === goalModal) {
+                    this.closeGoalModal();
+                }
+            });
         }
 
         // Cambio de tipo de transacción
@@ -1133,63 +1163,193 @@ class FinanceApp {
     /**
      * Maneja el envío del formulario de metas
      */
-    handleGoalSubmit(event) {
+    async handleGoalSubmit(event) {
         event.preventDefault();
 
         try {
+            // Mostrar indicador de carga
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando Meta...';
+            submitBtn.disabled = true;
+
+            // Obtener valores del formulario
             const name = document.getElementById('goalName').value.trim();
-            const amountInput = document.getElementById('goalAmount').value;
-            const deadlineInput = document.getElementById('goalDeadline').value;
-            const currentSavedInput = document.getElementById('currentSaved').value;
             const description = document.getElementById('goalDescription').value?.trim();
 
-            // Solo el nombre es requerido
+            // Información básica
+            const currency = document.getElementById('goalCurrency').value;
+            const category = document.getElementById('goalCategory').value?.trim();
+            const priority = document.getElementById('goalPriority').value;
+
+            // Fechas opcionales
+            const currentDateInput = document.getElementById('currentDate').value;
+            const targetDateInput = document.getElementById('goalDeadline').value;
+
+            // Montos opcionales
+            const currentAmountInput = document.getElementById('currentSaved').value;
+            const targetAmountInput = document.getElementById('goalAmount').value;
+            const expectedAmountInput = document.getElementById('expectedAmount').value;
+
+            // Etiquetas y notas opcionales
+            const tagsInput = document.getElementById('goalTags').value?.trim();
+            const notes = document.getElementById('goalNotes').value?.trim();
+
+            // Validación básica
             if (!name) {
                 throw new Error('El nombre de la meta es requerido');
             }
 
-            // Monto objetivo (opcional)
-            const amount = amountInput ? parseFloat(amountInput) : null;
-
-            // Fecha límite (opcional)
-            const deadline = deadlineInput ? new Date(deadlineInput) : null;
-
-            // Monto ya ahorrado (opcional)
-            const currentSaved = currentSavedInput ? parseFloat(currentSavedInput) : 0;
-
-            // Crear nueva meta
-            const newGoal = {
-                id: this.generateId(),
+            // Preparar datos para enviar a la API
+            const goalData = {
                 name: name,
-                amount: amount,
-                deadline: deadline,
-                currentSaved: currentSaved,
-                description: description || '',
-                createdAt: new Date(),
-                status: 'active'
+                description: description,
+                currency: currency,
+                category: category,
+                priority: priority
             };
 
-            // Agregar al array de metas
-            this.goals.push(newGoal);
+            // Agregar campos opcionales solo si tienen valores
+            if (currentDateInput) {
+                goalData.currentDate = currentDateInput;
+            }
+            if (targetDateInput) {
+                goalData.targetDate = targetDateInput;
+            }
+            if (currentAmountInput) {
+                goalData.currentAmount = parseFloat(currentAmountInput);
+            }
+            if (targetAmountInput) {
+                goalData.targetAmount = parseFloat(targetAmountInput);
+            }
+            if (expectedAmountInput) {
+                goalData.expectedAmount = parseFloat(expectedAmountInput);
+            }
+            if (tagsInput) {
+                goalData.tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag);
+            }
+            if (notes) {
+                goalData.notes = notes;
+            }
 
-            // Guardar en localStorage
-            this.saveDataToStorage();
+            console.log('📤 Enviando datos de meta a API:', goalData);
 
-            console.log('🎯 Nueva meta creada y guardada:', newGoal);
+            // Enviar a la API
+            const response = await fetch('/api/goals', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(goalData)
+            });
 
-            // Limpiar formulario
-            const form = event.target;
-            form.reset();
-            this.setDefaultDates();
+            const result = await response.json();
 
-            // Mostrar metas actualizadas
-            this.renderGoals();
+            if (!response.ok) {
+                throw new Error(result.message || 'Error al crear la meta');
+            }
 
-            this.showNotification(`Meta "${name}" guardada correctamente`, 'success');
+            if (result.success) {
+                console.log('✅ Meta creada exitosamente:', result.data.goal);
+
+                // Limpiar formulario
+                const form = event.target;
+                form.reset();
+
+                // Establecer valores por defecto
+                this.setDefaultDates();
+
+                // Cerrar modal
+                this.closeGoalModal();
+
+                // Recargar metas desde la API
+                this.loadGoals();
+
+                this.showNotification(`🎯 Meta "${name}" creada correctamente`, 'success');
+            } else {
+                throw new Error(result.message || 'Error desconocido al crear la meta');
+            }
 
         } catch (error) {
             console.error('❌ Error creando meta:', error);
-            this.showNotification(error.message, 'error');
+            this.showNotification(`❌ Error: ${error.message}`, 'error');
+        } finally {
+            // Restaurar botón
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Crear Meta';
+                submitBtn.disabled = false;
+            }
+        }
+    }
+
+    /**
+     * Carga las metas desde la API
+     */
+    async loadGoals() {
+        try {
+            console.log('📥 Cargando metas desde API...');
+
+            const response = await fetch('/api/goals');
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'Error al cargar metas');
+            }
+
+            if (result.success) {
+                this.goals = result.data.goals || [];
+                console.log(`✅ ${this.goals.length} metas cargadas desde API`);
+                this.renderGoals();
+            } else {
+                throw new Error(result.message || 'Error desconocido al cargar metas');
+            }
+
+        } catch (error) {
+            console.error('❌ Error cargando metas:', error);
+            this.showNotification(`❌ Error al cargar metas: ${error.message}`, 'error');
+
+            // Fallback: mostrar mensaje vacío
+            const goalsContainer = document.getElementById('goalsList');
+            if (goalsContainer) {
+                goalsContainer.innerHTML = `
+                    <div class="no-goals">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Error al cargar metas</h3>
+                        <p>No se pudieron cargar las metas. Inténtalo de nuevo más tarde.</p>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    /**
+     * Abre el modal para crear una nueva meta
+     */
+    openGoalModal() {
+        const modal = document.getElementById('goalModal');
+        if (modal) {
+            modal.style.display = 'block';
+            // Establecer fecha actual por defecto
+            const currentDateInput = document.getElementById('currentDate');
+            if (currentDateInput && !currentDateInput.value) {
+                currentDateInput.valueAsDate = new Date();
+            }
+        }
+    }
+
+    /**
+     * Cierra el modal de crear meta
+     */
+    closeGoalModal() {
+        const modal = document.getElementById('goalModal');
+        if (modal) {
+            modal.style.display = 'none';
+            // Limpiar formulario
+            const form = modal.querySelector('#goalForm');
+            if (form) {
+                form.reset();
+            }
         }
     }
 
@@ -1198,59 +1358,95 @@ class FinanceApp {
      */
     renderGoals() {
         const goalsContainer = document.getElementById('goalsList');
+        const createGoalSection = document.querySelector('.create-goal-section');
+
         if (!goalsContainer) {
             console.warn('⚠️ Contenedor de metas no encontrado');
             return;
         }
 
-        if (this.goals.length === 0) {
-            goalsContainer.innerHTML = `
-                <div class="no-goals">
-                    <i class="fas fa-bullseye"></i>
-                    <h3>No tienes metas guardadas</h3>
-                    <p>Crea tu primera meta financiera usando el formulario de arriba</p>
-                </div>
-            `;
+        // La sección de crear meta siempre está visible
+
+        if (!this.goals || this.goals.length === 0) {
+            goalsContainer.innerHTML = '';
             return;
         }
 
         const goalsHTML = this.goals.map(goal => {
-            const progress = goal.amount ? (goal.currentSaved / goal.amount) * 100 : 0;
+            const progress = goal.targetAmount ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
             const progressClass = progress >= 100 ? 'completed' : progress >= 75 ? 'high' : progress >= 50 ? 'medium' : 'low';
 
-            const deadlineDisplay = goal.deadline ? new Date(goal.deadline).toLocaleDateString('es-AR') : 'Sin fecha límite';
-            const daysLeft = goal.deadline ? Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24)) : null;
-            const deadlineStatus = daysLeft !== null ? (daysLeft < 0 ? 'expired' : daysLeft <= 7 ? 'urgent' : 'normal') : 'no-deadline';
+            const targetDateDisplay = goal.targetDate ? new Date(goal.targetDate).toLocaleDateString('es-UY') : 'Sin fecha objetivo';
+            const currentDateDisplay = goal.currentDate ? new Date(goal.currentDate).toLocaleDateString('es-UY') : null;
+            const daysLeft = goal.targetDate ? Math.ceil((new Date(goal.targetDate) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+            const targetDateStatus = daysLeft !== null ? (daysLeft < 0 ? 'expired' : daysLeft <= 7 ? 'urgent' : 'normal') : 'no-deadline';
+
+            // Formatear montos
+            const formattedCurrentAmount = new Intl.NumberFormat('es-UY', {
+                style: 'currency',
+                currency: goal.currency || 'UYU'
+            }).format(goal.currentAmount || 0);
+
+            const formattedTargetAmount = goal.targetAmount ? new Intl.NumberFormat('es-UY', {
+                style: 'currency',
+                currency: goal.currency || 'UYU'
+            }).format(goal.targetAmount) : null;
+
+            const formattedExpectedAmount = goal.expectedAmount ? new Intl.NumberFormat('es-UY', {
+                style: 'currency',
+                currency: goal.currency || 'UYU'
+            }).format(goal.expectedAmount) : null;
 
             return `
-                <div class="goal-item" data-goal-id="${goal.id}">
+                <div class="goal-item" data-goal-id="${goal._id}">
                     <div class="goal-header">
                         <div class="goal-info">
-                            <h3 class="goal-name">${goal.name}</h3>
+                            <h3 class="goal-name">
+                                ${goal.name}
+                                ${goal.priority !== 'medium' ? `<span class="goal-priority priority-${goal.priority}">${goal.priorityLabel}</span>` : ''}
+                            </h3>
                             <div class="goal-meta">
-                                ${goal.amount ? `<span class="goal-amount">Objetivo: $${goal.amount.toLocaleString('es-AR')}</span>` : '<span class="goal-amount">Sin monto objetivo</span>'}
-                                <span class="goal-deadline ${deadlineStatus}">📅 ${deadlineDisplay}</span>
+                                ${goal.targetAmount ? `<span class="goal-amount">Objetivo: ${formattedTargetAmount}</span>` : '<span class="goal-amount">Sin monto objetivo</span>'}
+                                <span class="goal-deadline ${targetDateStatus}">📅 ${targetDateDisplay}</span>
+                                ${goal.category ? `<span class="goal-category">🏷️ ${goal.category}</span>` : ''}
                             </div>
                         </div>
                         <div class="goal-actions">
-                            <button onclick="window.financeApp.editGoal('${goal.id}')" title="Editar meta">
+                            <button onclick="editGoalGlobal('${goal._id}')" title="Editar meta">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button onclick="window.financeApp.deleteGoal('${goal.id}')" title="Eliminar meta">
+                            <button onclick="deleteGoalGlobal('${goal._id}')" title="Eliminar meta">
                                 <i class="fas fa-trash"></i>
                             </button>
+                            ${goal.targetAmount && goal.currentAmount < goal.targetAmount ? `
+                                <button onclick="addToGoalGlobal('${goal._id}')" title="Agregar ahorro">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
 
-                    ${goal.amount ? `
+                    ${goal.targetAmount ? `
                         <div class="goal-progress">
                             <div class="progress-info">
-                                <span class="progress-text">Ahorrado: $${goal.currentSaved.toLocaleString('es-AR')} / $${goal.amount.toLocaleString('es-AR')}</span>
+                                <span class="progress-text">Ahorrado: ${formattedCurrentAmount} / ${formattedTargetAmount}</span>
                                 <span class="progress-percentage">${progress.toFixed(1)}%</span>
                             </div>
                             <div class="progress-bar">
                                 <div class="progress-fill ${progressClass}" style="width: ${Math.min(progress, 100)}%"></div>
                             </div>
+                        </div>
+                    ` : `
+                        <div class="goal-current-amount">
+                            <span class="current-amount-label">Monto actual:</span>
+                            <span class="current-amount-value">${formattedCurrentAmount}</span>
+                        </div>
+                    `}
+
+                    ${goal.expectedAmount ? `
+                        <div class="goal-expected-amount">
+                            <span class="expected-amount-label">Monto esperado:</span>
+                            <span class="expected-amount-value">${formattedExpectedAmount}</span>
                         </div>
                     ` : ''}
 
@@ -1260,24 +1456,38 @@ class FinanceApp {
                         </div>
                     ` : ''}
 
+                    ${(goal.tags && goal.tags.length > 0) ? `
+                        <div class="goal-tags">
+                            ${goal.tags.map(tag => `<span class="goal-tag">${tag}</span>`).join('')}
+                        </div>
+                    ` : ''}
+
+                    ${currentDateDisplay ? `
+                        <div class="goal-current-date">
+                            <small>📅 Fecha actual: ${currentDateDisplay}</small>
+                        </div>
+                    ` : ''}
+
                     ${daysLeft !== null && daysLeft >= 0 ? `
                         <div class="goal-time-left">
-                            ${daysLeft === 0 ? '¡Hoy es la fecha límite!' : `Quedan ${daysLeft} día${daysLeft !== 1 ? 's' : ''}`}
+                            ${daysLeft === 0 ? '¡Hoy es la fecha objetivo!' : `Quedan ${daysLeft} día${daysLeft !== 1 ? 's' : ''}`}
                         </div>
                     ` : ''}
                 </div>
             `;
         }).join('');
 
-        goalsContainer.innerHTML = `
-            <div class="goals-header">
-                <h3><i class="fas fa-bullseye"></i> Tus Metas Financieras</h3>
-                <span class="goals-count">${this.goals.length} meta${this.goals.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div class="goals-grid">
-                ${goalsHTML}
+        // Agregar botón pequeño al final cuando hay metas
+        const addGoalButton = `
+            <div class="add-goal-small">
+                <button type="button" onclick="window.financeApp.openGoalModal()" class="add-goal-small-btn">
+                    <i class="fas fa-plus"></i>
+                    <span>Agregar Nueva Meta</span>
+                </button>
             </div>
         `;
+
+        goalsContainer.innerHTML = goalsHTML + addGoalButton;
 
         console.log(`🎯 Renderizadas ${this.goals.length} metas`);
     }
@@ -3770,12 +3980,60 @@ class FinanceApp {
     }
 
     /**
+     * Formatea el texto del diagnóstico financiero para mejor legibilidad
+     */
+    formatDiagnosisText(text) {
+        if (!text) return 'Análisis completado';
+
+        // Reemplazar markdown básico con HTML
+        let formattedText = text
+            // Headers principales
+            .replace(/^### (.+)$/gm, '<h3 class="diagnosis-section-title">$1</h3>')
+            .replace(/^## (.+)$/gm, '<h2 class="diagnosis-section-title">$1</h2>')
+            .replace(/^# (.+)$/gm, '<h1 class="diagnosis-title">$1</h1>')
+
+            // Negritas y cursivas
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+
+            // Listas numeradas
+            .replace(/^\d+\.\s+(.+)$/gm, '<li class="diagnosis-list-item numbered">$1</li>')
+
+            // Listas con viñetas
+            .replace(/^- (.+)$/gm, '<li class="diagnosis-list-item">$1</li>')
+            .replace(/^\* (.+)$/gm, '<li class="diagnosis-list-item">$1</li>')
+
+            // Convertir párrafos
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br>')
+
+            // Manejar listas consecutivas
+            .replace(/(<li class="diagnosis-list-item[^>]*">.+?<\/li>)\s*(<li class="diagnosis-list-item[^>]*">.+?<\/li>)+/gs, '<ul class="diagnosis-list">$&</ul>')
+
+            // Manejar listas numeradas consecutivas
+            .replace(/(<li class="diagnosis-list-item numbered">.+?<\/li>)\s*(<li class="diagnosis-list-item numbered">.+?<\/li>)+/gs, '<ol class="diagnosis-list numbered">$&</ol>');
+
+        // Asegurar que el texto esté envuelto en párrafos si no hay otras etiquetas
+        if (!formattedText.includes('<p>') && !formattedText.includes('<h') && !formattedText.includes('<ul') && !formattedText.includes('<ol')) {
+            formattedText = `<p>${formattedText.replace(/\n/g, '</p><p>')}</p>`;
+        }
+
+        // Limpiar párrafos vacíos
+        formattedText = formattedText.replace(/<p><\/p>/g, '');
+
+        return formattedText;
+    }
+
+    /**
      * Muestra los resultados del diagnóstico en el chat
      */
     displayDiagnosisResults(diagnosisData) {
         const chatMessages = document.getElementById('chatMessages');
 
         if (!chatMessages) return;
+
+        // Formatear el texto del diagnóstico
+        const formattedAnalysis = this.formatDiagnosisText(diagnosisData.analysis || diagnosisData.response || 'Análisis completado');
 
         // Crear mensaje de diagnóstico
         const diagnosisMessageDiv = document.createElement('div');
@@ -3790,7 +4048,7 @@ class FinanceApp {
                     <small class="diagnosis-timestamp">${new Date().toLocaleString('es-UY')}</small>
                 </div>
                 <div class="diagnosis-content">
-                    ${diagnosisData.analysis || diagnosisData.response || 'Análisis completado'}
+                    ${formattedAnalysis}
                 </div>
                 <div class="diagnosis-footer">
                     <small><i class="fas fa-robot"></i> Análisis generado por IA especializada en finanzas personales</small>
@@ -6203,6 +6461,7 @@ function showCategoryDetailsGlobal(categoryId) {
             console.log('🔍 Métodos disponibles:', Object.getOwnPropertyNames(window.financeApp).filter(name => typeof window.financeApp[name] === 'function'));
         }
     }
+
 }
 
 /**
@@ -6234,6 +6493,41 @@ function deleteCategoryGlobal(categoryId) {
         if (window.financeApp) {
             window.financeApp.showNotification('Función de eliminación próximamente', 'info');
         }
+    }
+}
+
+// ==================== FUNCIONES GLOBALES PARA METAS ====================
+
+/**
+ * Función global para editar una meta
+ * @param {string} goalId - ID de la meta a editar
+ */
+function editGoalGlobal(goalId) {
+    console.log(`🎯 Editando meta: ${goalId}`);
+    if (window.financeApp) {
+        window.financeApp.showNotification('Función de edición de metas próximamente', 'info');
+    }
+}
+
+/**
+ * Función global para eliminar una meta
+ * @param {string} goalId - ID de la meta a eliminar
+ */
+function deleteGoalGlobal(goalId) {
+    console.log(`🗑️ Eliminando meta: ${goalId}`);
+    if (window.financeApp) {
+        window.financeApp.showNotification('Función de eliminación de metas próximamente', 'info');
+    }
+}
+
+/**
+ * Función global para agregar monto a una meta
+ * @param {string} goalId - ID de la meta
+ */
+function addToGoalGlobal(goalId) {
+    console.log(`💰 Agregando a meta: ${goalId}`);
+    if (window.financeApp) {
+        window.financeApp.showNotification('Función de agregar monto próximamente', 'info');
     }
 }
 

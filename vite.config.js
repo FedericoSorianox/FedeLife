@@ -14,7 +14,6 @@ export default defineConfig({
       input: {
         index: 'pages/Index.html',
         finanzas: 'pages/finanzas.html',
-        ideas: 'pages/ideas.html',
         tareas: 'pages/tareas.html',
         bruce: 'pages/bruce.html'
       }
