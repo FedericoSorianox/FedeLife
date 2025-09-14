@@ -641,21 +641,68 @@ function setupRoutes() {
     console.log('🛣️ Rutas API configuradas');
 }
 
-// ==================== RUTA PARA SPA (SINGLE PAGE APPLICATION) ====================
+// ==================== RUTAS PARA PÁGINAS ESTÁTICAS ====================
 
 /**
- * Configura ruta para servir la aplicación frontend
+ * Configura rutas para servir páginas específicas del frontend
  */
-function setupSPARoute() {
-    // Para todas las demás rutas que no sean API, servir el finanzas.html como página principal
+function setupPageRoutes() {
+    // Ruta específica para index - servir Index.ejs (desde dist/pages)
+    app.get('/', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/Index.ejs'));
+    });
+
+    app.get('/index', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/Index.ejs'));
+    });
+
+    app.get('/index.ejs', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/Index.ejs'));
+    });
+
+    // Ruta específica para finanzas
+    app.get('/finanzas', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/finanzas.ejs'));
+    });
+
+    app.get('/finanzas.ejs', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/finanzas.ejs'));
+    });
+
+    // Rutas para otras páginas
+    app.get('/ideas', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/ideas.ejs'));
+    });
+
+    app.get('/ideas.ejs', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/ideas.ejs'));
+    });
+
+    app.get('/tareas', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/tareas.ejs'));
+    });
+
+    app.get('/tareas.ejs', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/tareas.ejs'));
+    });
+
+    app.get('/bruce', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/bruce.ejs'));
+    });
+
+    app.get('/bruce.ejs', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/bruce.ejs'));
+    });
+
+    // Para cualquier otra ruta que no sea API, redirigir a index
     app.get('*', (req, res) => {
         // Si es una ruta de API, devolver 404
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ error: 'Endpoint no encontrado' });
         }
-        
-        // Para rutas del frontend, servir el finanzas.html como página principal
-        res.sendFile(path.join(__dirname, '../pages/finanzas.html'));
+
+        // Para cualquier otra ruta del frontend, redirigir al index
+        res.redirect('/');
     });
 }
 
@@ -731,7 +778,7 @@ async function initializeServer() {
         
         // Configurar rutas
         setupRoutes();
-        setupSPARoute();
+        setupPageRoutes();
         
         // Configurar manejo de errores
         setupErrorHandling();
