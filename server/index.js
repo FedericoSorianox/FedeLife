@@ -647,51 +647,51 @@ function setupRoutes() {
  * Configura rutas para servir páginas específicas del frontend
  */
 function setupPageRoutes() {
-    // Ruta específica para index - servir Index.ejs (desde dist/pages)
+    // Ruta específica para index - servir Index.html (desde dist/pages)
     app.get('/', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/Index.ejs'));
+        res.sendFile(path.join(__dirname, '../dist/pages/Index.html'));
     });
 
     app.get('/index', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/Index.ejs'));
+        res.sendFile(path.join(__dirname, '../dist/pages/Index.html'));
     });
 
-    app.get('/index.ejs', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/Index.ejs'));
+    app.get('/index.html', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/Index.html'));
     });
 
     // Ruta específica para finanzas
     app.get('/finanzas', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/finanzas.ejs'));
+        res.sendFile(path.join(__dirname, '../dist/pages/finanzas.html'));
     });
 
-    app.get('/finanzas.ejs', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/finanzas.ejs'));
+    app.get('/finanzas.html', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/finanzas.html'));
     });
 
     // Rutas para otras páginas
     app.get('/ideas', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/ideas.ejs'));
+        res.sendFile(path.join(__dirname, '../dist/pages/ideas.html'));
     });
 
-    app.get('/ideas.ejs', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/ideas.ejs'));
+    app.get('/ideas.html', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/ideas.html'));
     });
 
     app.get('/tareas', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/tareas.ejs'));
+        res.sendFile(path.join(__dirname, '../dist/pages/tareas.html'));
     });
 
-    app.get('/tareas.ejs', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/tareas.ejs'));
+    app.get('/tareas.html', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/tareas.html'));
     });
 
     app.get('/bruce', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/bruce.ejs'));
+        res.sendFile(path.join(__dirname, '../dist/pages/bruce.html'));
     });
 
-    app.get('/bruce.ejs', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/bruce.ejs'));
+    app.get('/bruce.html', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist/pages/bruce.html'));
     });
 
     // Para cualquier otra ruta que no sea API, redirigir a index
