@@ -2260,9 +2260,25 @@ class FinanceApp {
                 console.log('✅ Análisis completado:', analysisResult.data);
 
                 // Procesar resultados del servidor
-                // El servidor devuelve la estructura: { data: { analysis: { expenses: [...] } } }
-                const analysisData = analysisResult.data.analysis || analysisResult.data;
-            const processedData = this.processOpenAIResults(analysisData);
+                // El servidor puede devolver diferentes estructuras
+                let analysisData;
+
+                if (analysisResult.data.extractedExpenses) {
+                    // Usar extractedExpenses si está disponible (prioridad)
+                    console.log('📋 Usando extractedExpenses del servidor');
+                    analysisData = { expenses: analysisResult.data.extractedExpenses };
+                } else if (analysisResult.data.analysis && analysisResult.data.analysis.expenses) {
+                    // Usar analysis.expenses
+                    console.log('📋 Usando analysis.expenses del servidor');
+                    analysisData = analysisResult.data.analysis;
+                } else {
+                    // Fallback
+                    console.log('📋 Usando data directamente del servidor');
+                    analysisData = analysisResult.data;
+                }
+
+                console.log('📋 Datos a procesar:', analysisData);
+                const processedData = this.processOpenAIResults(analysisData);
 
             const processedExpensesCount = processedData.expenses ? processedData.expenses.length : 0;
             console.log(`📊 Resultados procesados: ${processedExpensesCount} gastos encontrados`);
@@ -2275,14 +2291,14 @@ class FinanceApp {
                     console.log('   - El formato del CSV puede ser incompatible');
                     console.log('   - Las columnas pueden no estar en el formato esperado');
                     console.log('   - Intenta con un CSV de estado de cuenta bancario');
-                } else if (expensesCount < 20) {
-                    console.warn(`⚠️ Solo se encontraron ${expensesCount} gastos`);
+                } else if (processedExpensesCount < 20) {
+                    console.warn(`⚠️ Solo se encontraron ${processedExpensesCount} gastos`);
                     console.log('💡 Para documentos bancarios típicos se esperan más transacciones');
                     console.log('   - Verifica que el CSV contenga extractos bancarios');
                     console.log('   - Asegúrate de que contenga transacciones COMPRA');
                     console.log('   - El CSV debe tener el formato de Itaú o similar');
-                } else if (expensesCount >= 50) {
-                    console.log(`✅ Excelente! Se encontraron ${expensesCount} gastos - esto parece correcto para un documento bancario`);
+                } else if (processedExpensesCount >= 50) {
+                    console.log(`✅ Excelente! Se encontraron ${processedExpensesCount} gastos - esto parece correcto para un documento bancario`);
                 }
 
                 // Mostrar estadísticas detalladas del procesamiento
@@ -2316,9 +2332,15 @@ class FinanceApp {
                 extractedExpenses.style.display = 'block';
 
                 const totalTransactions = (processedData.expenses ? processedData.expenses.length : 0) + (processedData.incomes ? processedData.incomes.length : 0);
-                const expensesCount = processedData.expenses ? processedData.expenses.length : 0;
                 const incomesCount = processedData.incomes ? processedData.incomes.length : 0;
-                this.showNotification(`PDF procesado exitosamente. ${totalTransactions} transacciones encontradas (${expensesCount} gastos, ${incomesCount} ingresos).`, 'success');
+
+                console.log('📊 Mostrando resultados procesados:', {
+                    expenses: processedExpensesCount,
+                    incomes: incomesCount,
+                    processedDataKeys: Object.keys(processedData)
+                });
+
+                this.showNotification(`PDF procesado exitosamente. ${totalTransactions} transacciones encontradas (${processedExpensesCount} gastos, ${incomesCount} ingresos).`, 'success');
             } else {
                 throw new Error(analysisResult?.error || 'Error en el análisis con OpenAI');
             }
@@ -3162,6 +3184,13 @@ class FinanceApp {
      * Muestra los resultados del análisis de CSV
      */
     displayCsvResults(data) {
+        console.log('🎨 displayCsvResults called with data:', {
+            dataKeys: Object.keys(data),
+            expensesCount: data.expenses ? data.expenses.length : 0,
+            incomesCount: data.incomes ? data.incomes.length : 0,
+            firstExpense: data.expenses && data.expenses[0] ? data.expenses[0] : null
+        });
+
         const expensesList = document.getElementById('expensesList');
 
         // Mostrar gastos e ingresos
