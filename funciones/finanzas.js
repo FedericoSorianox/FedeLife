@@ -415,7 +415,7 @@ class FinanceApp {
         }
 
         if (diagnoseBtn) {
-            diagnoseBtn.addEventListener('click', () => this.diagnoseOpenAIConnection());
+            diagnoseBtn.addEventListener('click', () => this.diagnoseGoalsWithAI());
         }
 
         if (sendChatBtn && chatInput) {
@@ -3619,6 +3619,189 @@ class FinanceApp {
     /**
      * Diagnostica el estado de la conexión con OpenAI
      */
+    /**
+     * Diagnóstico financiero con IA - Analiza la situación económica del usuario y da consejos
+     */
+    async diagnoseGoalsWithAI() {
+        try {
+            console.log('🏥 Iniciando diagnóstico financiero con IA...');
+
+            // Obtener contexto financiero completo del usuario
+            const financialData = this.getFinancialContextForDiagnosis();
+
+            if (!financialData || Object.keys(financialData).length === 0) {
+                throw new Error('No hay datos financieros suficientes para realizar el diagnóstico');
+            }
+
+            // Mostrar indicador de procesamiento
+            const diagnoseBtn = document.getElementById('diagnoseBtn');
+            const originalText = diagnoseBtn.innerHTML;
+            diagnoseBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Diagnosticando...';
+            diagnoseBtn.disabled = true;
+
+            // Preparar datos para enviar a la API
+            const diagnosisData = {
+                financialData: financialData,
+                diagnosisType: 'goals_financial_advisor'
+            };
+
+            console.log('📊 Enviando datos financieros para diagnóstico:', diagnosisData);
+
+            // Usar el mismo endpoint de análisis de PDF pero con contexto de diagnóstico financiero
+            const diagnosisResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/public/ai/diagnose-goals`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(diagnosisData)
+            });
+
+            if (!diagnosisResponse.ok) {
+                if (diagnosisResponse.status === 400) {
+                    throw new Error('Datos insuficientes para el diagnóstico');
+                } else if (diagnosisResponse.status === 503) {
+                    throw new Error('Servicio de IA temporalmente no disponible');
+                } else {
+                    throw new Error(`Error del servidor: ${diagnosisResponse.status}`);
+                }
+            }
+
+            const diagnosisResult = await diagnosisResponse.json();
+
+            if (diagnosisResult.success && diagnosisResult.data) {
+                console.log('✅ Diagnóstico completado exitosamente');
+
+                // Mostrar resultados en el chat
+                this.displayDiagnosisResults(diagnosisResult.data);
+
+                this.showNotification('✅ Diagnóstico financiero completado', 'success');
+            } else {
+                throw new Error(diagnosisResult.message || 'Error en el diagnóstico');
+            }
+
+        } catch (error) {
+            console.error('❌ Error en diagnóstico financiero:', error);
+            this.showNotification(`❌ Error en diagnóstico: ${error.message}`, 'error');
+        } finally {
+            // Restaurar botón
+            const diagnoseBtn = document.getElementById('diagnoseBtn');
+            if (diagnoseBtn) {
+                diagnoseBtn.innerHTML = '<i class="fas fa-stethoscope"></i> Diagnosticar con IA';
+                diagnoseBtn.disabled = false;
+            }
+        }
+    }
+
+    /**
+     * Obtiene el contexto financiero completo para diagnóstico
+     */
+    getFinancialContextForDiagnosis() {
+        const context = {
+            transactions: [],
+            goals: [],
+            categories: [],
+            summary: {
+                totalIncomeUYU: 0,
+                totalExpensesUYU: 0,
+                totalIncomeUSD: 0,
+                totalExpensesUSD: 0,
+                balanceUYU: 0,
+                balanceUSD: 0,
+                currentPeriod: this.currentPeriod || 'Diciembre 2024'
+            },
+            userInfo: {
+                timestamp: new Date().toISOString()
+            }
+        };
+
+        // Obtener transacciones del localStorage
+        try {
+            const transactionsData = localStorage.getItem('transactions');
+            if (transactionsData) {
+                context.transactions = JSON.parse(transactionsData);
+            }
+        } catch (error) {
+            console.warn('Error obteniendo transacciones:', error);
+        }
+
+        // Obtener metas del localStorage
+        try {
+            const goalsData = localStorage.getItem('goals');
+            if (goalsData) {
+                context.goals = JSON.parse(goalsData);
+            }
+        } catch (error) {
+            console.warn('Error obteniendo metas:', error);
+        }
+
+        // Obtener categorías del localStorage
+        try {
+            const categoriesData = localStorage.getItem('categories');
+            if (categoriesData) {
+                context.categories = JSON.parse(categoriesData);
+            }
+        } catch (error) {
+            console.warn('Error obteniendo categorías:', error);
+        }
+
+        // Calcular resumen financiero
+        if (context.transactions && context.transactions.length > 0) {
+            context.transactions.forEach(transaction => {
+                if (transaction.currency === 'UYU') {
+                    if (transaction.type === 'income') {
+                        context.summary.totalIncomeUYU += transaction.amount;
+                    } else {
+                        context.summary.totalExpensesUYU += transaction.amount;
+                    }
+                } else if (transaction.currency === 'USD') {
+                    if (transaction.type === 'income') {
+                        context.summary.totalIncomeUSD += transaction.amount;
+                    } else {
+                        context.summary.totalExpensesUSD += transaction.amount;
+                    }
+                }
+            });
+
+            context.summary.balanceUYU = context.summary.totalIncomeUYU - context.summary.totalExpensesUYU;
+            context.summary.balanceUSD = context.summary.totalIncomeUSD - context.summary.totalExpensesUSD;
+        }
+
+        return context;
+    }
+
+    /**
+     * Muestra los resultados del diagnóstico en el chat
+     */
+    displayDiagnosisResults(diagnosisData) {
+        const chatMessages = document.getElementById('chatMessages');
+
+        if (!chatMessages) return;
+
+        // Crear mensaje de diagnóstico
+        const diagnosisMessageDiv = document.createElement('div');
+        diagnosisMessageDiv.className = 'chat-message ai-message diagnosis-message';
+        diagnosisMessageDiv.innerHTML = `
+            <div class="message-avatar">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <div class="message-content">
+                <div class="diagnosis-header">
+                    <h4><i class="fas fa-chart-line"></i> Diagnóstico Financiero Profesional</h4>
+                    <small class="diagnosis-timestamp">${new Date().toLocaleString('es-UY')}</small>
+                </div>
+                <div class="diagnosis-content">
+                    ${diagnosisData.analysis || diagnosisData.response || 'Análisis completado'}
+                </div>
+                <div class="diagnosis-footer">
+                    <small><i class="fas fa-robot"></i> Análisis generado por IA especializada en finanzas personales</small>
+                </div>
+            </div>
+        `;
+
+        chatMessages.appendChild(diagnosisMessageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
     async diagnoseOpenAIConnection() {
         try {
             console.log('🔍 Iniciando diagnóstico de OpenAI...');

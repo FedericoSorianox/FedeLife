@@ -1056,6 +1056,270 @@ IMPORTANTE: Lista TODAS las transacciones (no resumas ni selecciones "principale
     }
 });
 
+/**
+ * POST /api/public/ai/diagnose-goals
+ * Diagnóstico financiero con IA - análisis profesional de finanzas personales
+ */
+router.post('/diagnose-goals', async (req, res) => {
+    try {
+       
+        const { financialData, diagnosisType } = req.body;
+
+        if (!financialData) {
+            return res.status(400).json({
+                error: 'Datos financieros requeridos',
+                message: 'Debes proporcionar datos financieros para el diagnóstico'
+            });
+        }
+
+        // Verificar que OpenAI esté funcionando antes de proceder
+        const openaiHealth = await checkOpenAIHealth();
+
+        if (openaiHealth.status !== 'success') {
+            return res.status(503).json({
+                error: 'Servicio de IA no disponible',
+                message: 'OpenAI no está funcionando correctamente. No se puede realizar el diagnóstico.',
+                details: openaiHealth.message,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+
+        // Verificar API Key del servidor
+        const serverApiKey = process.env.OPENAI_API_KEY;
+
+        if (!serverApiKey || !serverApiKey.startsWith('sk-')) {
+            
+            return res.status(500).json({
+                error: 'API Key requerida',
+                message: 'Se requiere una API Key válida de OpenAI para el diagnóstico.',
+                details: 'Configura OPENAI_API_KEY en el servidor',
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // Preparar contexto financiero para el diagnóstico
+        const financialContext = formatFinancialDataForDiagnosis(financialData);
+
+        // Crear prompt específico para diagnóstico financiero
+        const systemPrompt = `Eres un Profesional en Finanzas Personales con más de 15 años de experiencia asesorando a individuos y familias en Uruguay.
+
+Tu especialización incluye:
+- Diagnóstico completo de situaciones financieras
+- Identificación de patrones de gasto problemáticos
+- Recomendaciones personalizadas de ahorro e inversión
+- Estrategias de reducción de deudas
+- Planificación financiera a corto y largo plazo
+- Optimización de presupuestos familiares
+- Asesoramiento en metas de ahorro
+
+INSTRUCCIONES ESPECÍFICAS PARA ESTE DIAGNÓSTICO:
+1. Analiza la situación financiera actual del usuario de manera profesional y detallada
+2. Identifica fortalezas y áreas de mejora en su economía
+3. Proporciona consejos prácticos y accionables para mejorar su situación financiera
+4. Prioriza estrategias conservadoras y realistas para el contexto uruguayo
+5. Incluye recomendaciones específicas sobre ahorro, inversión y reducción de gastos
+6. Considera el contexto económico local (tasas de cambio, inflación, etc.)
+7. Sé específico con números, porcentajes y plazos realistas
+8. Mantén un tono profesional pero accesible y motivador
+
+IMPORTANTE:
+- Estructura tu respuesta de manera clara: Diagnóstico, Fortalezas, Áreas de Mejora, Recomendaciones Específicas
+- Incluye metas SMART (Specific, Measurable, Achievable, Relevant, Time-bound)
+- Considera la situación económica actual de Uruguay
+- Sé realista pero optimista en tus proyecciones
+
+Responde como un asesor financiero profesional especializado en finanzas personales en Uruguay.`;
+
+        const userPrompt = `Por favor, realiza un diagnóstico completo de mi situación financiera basado en los siguientes datos:
+
+${financialContext}
+
+Necesito que me ayudes a:
+1. Analizar mi situación financiera actual
+2. Identificar oportunidades de mejora
+3. Darme consejos específicos para ahorrar más dinero
+4. Recomendar metas de ahorro realistas
+5. Sugerir estrategias para optimizar mis finanzas
+
+Por favor, sé específico y incluye recomendaciones prácticas que pueda implementar inmediatamente.`;
+
+        // Preparar la solicitud a OpenAI
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 segundos timeout para diagnósticos más complejos
+
+        try {
+            const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${serverApiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: systemPrompt
+                        },
+                        {
+                            role: 'user',
+                            content: userPrompt
+                        }
+                    ],
+                    max_tokens: 12000,
+                    temperature: 0.7
+                }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!openaiResponse.ok) {
+                throw new Error(`Error en OpenAI API: ${openaiResponse.status}`);
+            }
+
+            const data = await openaiResponse.json();
+            const diagnosis = data.choices[0].message.content;
+
+         
+
+            res.json({
+                success: true,
+                data: {
+                    analysis: diagnosis,
+                    diagnosisType: diagnosisType || 'financial_advisor',
+                    timestamp: new Date().toISOString(),
+                    message: 'Diagnóstico financiero completado exitosamente'
+                }
+            });
+
+        } catch (innerError) {
+          
+
+            if (innerError.name === 'AbortError') {
+                throw new Error('Timeout en el procesamiento del diagnóstico');
+            }
+
+            res.status(500).json({
+                success: false,
+                message: 'Error procesando el diagnóstico con IA',
+                data: {
+                    response: 'Lo siento, no pude completar el diagnóstico en este momento. Por favor, verifica tu conexión e intenta nuevamente.',
+                    timestamp: new Date().toISOString(),
+                    diagnosisType: diagnosisType || 'financial_advisor'
+                }
+            });
+        }
+
+    } catch (error) {
+
+        // Determinar el tipo de error y respuesta apropiada
+        let statusCode = 500;
+        let errorMessage = 'Error interno del servidor';
+
+        if (error.message && error.message.includes('API Key')) {
+            statusCode = 500;
+            errorMessage = 'Configuración de API incompleta';
+        } else if (error.message && error.message.includes('fetch')) {
+            statusCode = 503;
+            errorMessage = 'Error de conexión con el servicio de IA';
+        } else if (error.message && error.message.includes('timeout')) {
+            statusCode = 504;
+            errorMessage = 'Timeout en el procesamiento del diagnóstico';
+        } else if (error.message && error.message.includes('AbortError')) {
+            statusCode = 504;
+            errorMessage = 'Timeout en el procesamiento del diagnóstico';
+        }
+
+        const responseData = {
+            error: error.constructor.name || 'Error interno del servidor',
+            message: errorMessage,
+            details: (process.env.NODE_ENV === 'development') ? error.message : undefined,
+            timestamp: new Date().toISOString()
+        };
+
+
+        res.status(statusCode).json(responseData);
+    }
+});
+
+/**
+ * Función auxiliar para formatear datos financieros para diagnóstico
+ */
+function formatFinancialDataForDiagnosis(financialData) {
+    let formattedText = '';
+
+    try {
+        // Resumen financiero
+        if (financialData.summary) {
+            formattedText += `RESUMEN FINANCIERO ACTUAL:\n`;
+            formattedText += `- Ingresos UYU: $${financialData.summary.totalIncomeUYU?.toFixed(2) || '0.00'}\n`;
+            formattedText += `- Gastos UYU: $${financialData.summary.totalExpensesUYU?.toFixed(2) || '0.00'}\n`;
+            formattedText += `- Balance UYU: $${financialData.summary.balanceUYU?.toFixed(2) || '0.00'}\n`;
+            formattedText += `- Ingresos USD: $${financialData.summary.totalIncomeUSD?.toFixed(2) || '0.00'}\n`;
+            formattedText += `- Gastos USD: $${financialData.summary.totalExpensesUSD?.toFixed(2) || '0.00'}\n`;
+            formattedText += `- Balance USD: $${financialData.summary.balanceUSD?.toFixed(2) || '0.00'}\n`;
+            formattedText += `- Período actual: ${financialData.summary.currentPeriod || 'No especificado'}\n\n`;
+        }
+
+        // Metas activas
+        if (financialData.goals && financialData.goals.length > 0) {
+            formattedText += `METAS DE AHORRO ACTIVAS:\n`;
+            financialData.goals.forEach((goal, index) => {
+                formattedText += `${index + 1}. ${goal.name || 'Sin nombre'}\n`;
+                formattedText += `   - Monto objetivo: $${goal.amount?.toFixed(2) || '0.00'}\n`;
+                formattedText += `   - Ya ahorrado: $${goal.currentSaved?.toFixed(2) || '0.00'}\n`;
+                formattedText += `   - Fecha límite: ${goal.deadline ? new Date(goal.deadline).toLocaleDateString('es-UY') : 'Sin fecha'}\n`;
+                if (goal.description) {
+                    formattedText += `   - Descripción: ${goal.description}\n`;
+                }
+                formattedText += '\n';
+            });
+        } else {
+            formattedText += `METAS DE AHORRO: No hay metas activas registradas.\n\n`;
+        }
+
+        // Transacciones recientes (últimas 20)
+        if (financialData.transactions && financialData.transactions.length > 0) {
+            formattedText += `TRANSACCIONES RECIENTES:\n`;
+            const recentTransactions = financialData.transactions.slice(-20); // Últimas 20 transacciones
+
+            recentTransactions.forEach((transaction, index) => {
+                const type = transaction.type === 'income' ? 'INGRESO' : 'GASTO';
+                const currency = transaction.currency || 'UYU';
+                formattedText += `${index + 1}. ${type} - ${transaction.description || 'Sin descripción'}\n`;
+                formattedText += `   - Monto: ${currency} $${transaction.amount?.toFixed(2) || '0.00'}\n`;
+                formattedText += `   - Fecha: ${transaction.date ? new Date(transaction.date).toLocaleDateString('es-UY') : 'Sin fecha'}\n`;
+                if (transaction.category) {
+                    formattedText += `   - Categoría: ${transaction.category}\n`;
+                }
+                formattedText += '\n';
+            });
+        } else {
+            formattedText += `TRANSACCIONES: No hay transacciones registradas.\n\n`;
+        }
+
+        // Categorías
+        if (financialData.categories && financialData.categories.length > 0) {
+            formattedText += `CATEGORÍAS CONFIGURADAS:\n`;
+            financialData.categories.forEach((category, index) => {
+                formattedText += `${index + 1}. ${category.name || 'Sin nombre'} (${category.type || 'No especificado'})\n`;
+                if (category.description) {
+                    formattedText += `   - Descripción: ${category.description}\n`;
+                }
+            });
+            formattedText += '\n';
+        }
+
+    } catch (error) {
+        console.warn('Error formateando datos financieros:', error);
+        formattedText = 'Error procesando datos financieros proporcionados.';
+    }
+
+    return formattedText;
+}
+
 // ==================== EXPORTAR ROUTER ====================
 
 module.exports = router;
