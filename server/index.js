@@ -218,12 +218,12 @@ function setupGeneralMiddleware() {
     });
     
     // Servir archivos estáticos desde la raíz del proyecto
-    app.use(express.static(path.join(__dirname, '..')));
+    app.use(express.static(path.join(process.cwd(), 'dist')));
 
     // Servir archivos estáticos desde pages y funciones
-    app.use(express.static(path.join(__dirname, '../pages')));
-    app.use('/pages', express.static(path.join(__dirname, '../pages')));
-    app.use('/funciones', express.static(path.join(__dirname, '../funciones')));
+    app.use(express.static(path.join(process.cwd(), 'pages')));
+    app.use('/pages', express.static(path.join(process.cwd(), 'pages')));
+    app.use('/funciones', express.static(path.join(process.cwd(), 'funciones')));
     
     console.log('⚙️ Middleware general configurado');
 }
@@ -649,49 +649,49 @@ function setupRoutes() {
 function setupPageRoutes() {
     // Ruta específica para index - servir Index.html (desde dist/pages)
     app.get('/', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/Index.html'));
+        res.sendFile(path.join(process.cwd(), 'dist/pages/Index.html'));
     });
 
     app.get('/index', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/Index.html'));
+        res.sendFile(path.join(process.cwd(), 'dist/pages/Index.html'));
     });
 
     app.get('/index.html', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/Index.html'));
+        res.sendFile(path.join(process.cwd(), 'dist/pages/Index.html'));
     });
 
     // Ruta específica para finanzas
     app.get('/finanzas', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/finanzas.html'));
+        res.sendFile(path.join(process.cwd(), 'dist/pages/finanzas.html'));
     });
 
     app.get('/finanzas.html', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/finanzas.html'));
+        res.sendFile(path.join(process.cwd(), 'dist/pages/finanzas.html'));
     });
 
     // Rutas para otras páginas
     app.get('/ideas', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/ideas.html'));
+        res.sendFile(path.join(process.cwd(), 'dist/pages/ideas.html'));
     });
 
     app.get('/ideas.html', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/ideas.html'));
+        res.sendFile(path.join(process.cwd(), 'dist/pages/ideas.html'));
     });
 
     app.get('/tareas', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/tareas.html'));
+        res.sendFile(path.join(process.cwd(), 'dist/pages/tareas.html'));
     });
 
     app.get('/tareas.html', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/tareas.html'));
+        res.sendFile(path.join(process.cwd(), 'dist/pages/tareas.html'));
     });
 
     app.get('/bruce', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/bruce.html'));
+        res.sendFile(path.join(process.cwd(), 'dist/pages/bruce.html'));
     });
 
     app.get('/bruce.html', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist/pages/bruce.html'));
+        res.sendFile(path.join(process.cwd(), 'dist/pages/bruce.html'));
     });
 
     // Para cualquier otra ruta que no sea API, redirigir a index

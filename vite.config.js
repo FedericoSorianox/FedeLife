@@ -1,21 +1,12 @@
-/**
- * 🔧 CONFIGURACIÓN DE VITE - FEDE LIFE
- * 
- * Configuración del servidor de desarrollo para servir
- * los archivos desde la raíz del proyecto
- */
-
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  // Configuración del servidor de desarrollo
   server: {
     port: 5173,
-    open: '/pages/finanzas.html', // Abrir automáticamente la página de finanzas
+    open: '/pages/finanzas.html',
     host: 'localhost'
   },
-  
-  // Configuración de build para producción
+
   build: {
     outDir: 'dist',
     emptyOutDir: true,
@@ -29,19 +20,16 @@ export default defineConfig({
       }
     }
   },
-  
-  // Configuración de resolución de rutas
+
   resolve: {
     alias: {
-      '@funciones': '/funciones', // Alias para importar desde funciones/
+      '@funciones': '/funciones'
     }
   },
-  
-  // Configuración para TypeScript
+
   esbuild: {
     target: 'es2020'
   },
-  
-  // Configuración de archivos públicos
-  publicDir: false // No usar directorio public por defecto
+
+  publicDir: false
 })
