@@ -1413,9 +1413,7 @@ class FinanceApp {
             // Enviar a la API
             const response = await fetch('/api/goals', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify(goalData)
             });
 
