@@ -37,6 +37,7 @@ const goalRoutes = require('./routes/goals');
 const reportRoutes = require('./routes/reports');
 const aiRoutes = require('./routes/ai');
 const exchangeRateRoutes = require('./routes/exchangeRates');
+const cultivoRoutes = require('./routes/cultivos');
 
 // Importar middleware de autenticación
 const { authenticateToken } = require('./middleware/auth');
@@ -266,7 +267,7 @@ function setupRoutes() {
     
     // Rutas públicas
     app.use('/api/auth', authRoutes);
-    
+
     // Rutas protegidas (requieren autenticación)
     app.use('/api/transactions', authenticateToken, transactionRoutes);
     app.use('/api/tasks', authenticateToken, taskRoutes);
@@ -276,6 +277,7 @@ function setupRoutes() {
     app.use('/api/reports', authenticateToken, reportRoutes);
     app.use('/api/ai', authenticateToken, aiRoutes);
     app.use('/api/exchange-rates', authenticateToken, exchangeRateRoutes);
+    app.use('/api/cultivos', authenticateToken, cultivoRoutes);
     
     // Rutas públicas (sin autenticación) - para modo demo
     // Rutas públicas de tareas (sin middleware de autenticación)

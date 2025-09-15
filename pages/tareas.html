@@ -942,7 +942,8 @@
                 this.classList.remove('drag-over');
 
                 if (draggedElement && draggedElement !== e.target && draggedTaskId) {
-                    const newStatus = this.dataset.status;
+                    // Obtener el status desde la columna padre (kanban-column)
+                    const newStatus = this.closest('.kanban-column').dataset.status;
                     const newOrder = calculateNewOrder(this, e.clientY);
 
                     // Solo mover si cambió de columna o posición
