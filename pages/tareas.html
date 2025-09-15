@@ -1102,17 +1102,17 @@
                     <form class="edit-form" onsubmit="handleEditSubmit(event, '${taskData.id}')">
                         <div class="form-group">
                             <label for="edit-title">Título *</label>
-                            <input type="text" id="edit-title" value="${taskData.title}" required maxlength="200">
+                            <input type="text" id="edit-title" name="edit-title" value="${taskData.title}" required maxlength="200">
                         </div>
 
                         <div class="form-group">
                             <label for="edit-description">Descripción</label>
-                            <textarea id="edit-description" rows="3" maxlength="1000">${taskData.description}</textarea>
+                            <textarea id="edit-description" name="edit-description" rows="3" maxlength="1000">${taskData.description}</textarea>
                         </div>
 
                         <div class="form-group">
                             <label for="edit-priority">Prioridad</label>
-                            <select id="edit-priority">
+                            <select id="edit-priority" name="edit-priority">
                                 <option value="low" ${taskData.priority === 'low' ? 'selected' : ''}>Baja</option>
                                 <option value="medium" ${taskData.priority === 'medium' ? 'selected' : ''}>Media</option>
                                 <option value="high" ${taskData.priority === 'high' ? 'selected' : ''}>Alta</option>
@@ -1121,12 +1121,12 @@
 
                         <div class="form-group">
                             <label for="edit-due-date">Fecha de vencimiento</label>
-                            <input type="datetime-local" id="edit-due-date" value="${taskData.dueDate ? new Date(taskData.dueDate).toISOString().slice(0, 16) : ''}">
+                            <input type="datetime-local" id="edit-due-date" name="edit-due-date" value="${taskData.dueDate ? new Date(taskData.dueDate).toISOString().slice(0, 16) : ''}">
                         </div>
 
                         <div class="form-group">
                             <label for="edit-tags">Etiquetas (separadas por coma)</label>
-                            <input type="text" id="edit-tags" value="${taskData.tags}" placeholder="trabajo, urgente, personal">
+                            <input type="text" id="edit-tags" name="edit-tags" value="${taskData.tags}" placeholder="trabajo, urgente, personal">
                         </div>
 
                         <div class="form-actions">
@@ -1154,12 +1154,16 @@
             event.preventDefault();
 
             const formData = new FormData(event.target);
+            const title = formData.get('edit-title');
+            const description = formData.get('edit-description');
+            const tags = formData.get('edit-tags');
+
             const updates = {
-                title: formData.get('edit-title').trim(),
-                description: formData.get('edit-description').trim(),
+                title: title ? title.trim() : '',
+                description: description ? description.trim() : '',
                 priority: formData.get('edit-priority'),
                 dueDate: formData.get('edit-due-date') || null,
-                tags: formData.get('edit-tags').split(',').map(tag => tag.trim()).filter(tag => tag)
+                tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : []
             };
 
             // Validar datos
