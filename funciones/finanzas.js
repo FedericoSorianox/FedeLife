@@ -1408,11 +1408,19 @@ class FinanceApp {
                 goalData.notes = notes;
             }
 
-            console.log('📤 Enviando datos de meta a API:', goalData);
+            // Determinar si estamos editando o creando
+            const editingGoalId = document.getElementById('editingGoalId')?.value;
+            const isEditing = !!editingGoalId;
+
+            console.log(`${isEditing ? '📝' : '📤'} ${isEditing ? 'Actualizando' : 'Enviando'} datos de meta a API:`, goalData);
+
+            // Preparar la petición
+            const apiUrl = isEditing ? `/api/goals/${editingGoalId}` : '/api/goals';
+            const method = isEditing ? 'PUT' : 'POST';
 
             // Enviar a la API
-            const response = await fetch('/api/goals', {
-                method: 'POST',
+            const response = await fetch(apiUrl, {
+                method: method,
                 headers: this.getAuthHeaders(),
                 body: JSON.stringify(goalData)
             });
@@ -1420,11 +1428,11 @@ class FinanceApp {
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.message || 'Error al crear la meta');
+                throw new Error(result.message || `Error al ${isEditing ? 'actualizar' : 'crear'} la meta`);
             }
 
             if (result.success) {
-                console.log('✅ Meta creada exitosamente:', result.data.goal);
+                console.log(`✅ Meta ${isEditing ? 'actualizada' : 'creada'} exitosamente:`, result.data.goal);
 
                 // Limpiar formulario
                 const form = event.target;
@@ -1439,9 +1447,9 @@ class FinanceApp {
                 // Recargar metas desde la API
                 this.loadGoals();
 
-                this.showNotification(`🎯 Meta "${name}" creada correctamente`, 'success');
+                this.showNotification(`🎯 Meta "${name}" ${isEditing ? 'actualizada' : 'creada'} correctamente`, 'success');
             } else {
-                throw new Error(result.message || 'Error desconocido al crear la meta');
+                throw new Error(result.message || `Error desconocido al ${isEditing ? 'actualizar' : 'crear'} la meta`);
             }
 
         } catch (error) {
@@ -1547,6 +1555,9 @@ class FinanceApp {
             modal.style.setProperty('display', 'flex', 'important');
             modal.style.zIndex = '10000'; // Asegurar que esté por encima de otros elementos
 
+            // Resetear campos para nueva meta
+            this.resetGoalModal();
+
             // Establecer fecha actual por defecto
             const currentDateInput = document.getElementById('currentDate');
             if (currentDateInput && !currentDateInput.value) {
@@ -1557,6 +1568,31 @@ class FinanceApp {
         } else {
             console.error('❌ No se encontró el modal de metas (goalModal)');
         }
+    }
+
+    /**
+     * Resetea el modal de metas para crear una nueva meta
+     */
+    resetGoalModal() {
+        // Cambiar el título del modal
+        const modalTitle = document.querySelector('#goalModal .modal-header h3');
+        if (modalTitle) {
+            modalTitle.innerHTML = '<i class="fas fa-target"></i> Nueva Meta de Ahorro';
+        }
+
+        // Limpiar el ID de edición
+        const editingGoalIdField = document.getElementById('editingGoalId');
+        if (editingGoalIdField) {
+            editingGoalIdField.value = '';
+        }
+
+        // Cambiar el texto del botón
+        const submitBtn = document.querySelector('#goalForm button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-plus"></i> Crear Meta';
+        }
+
+        console.log('🔄 Modal de metas reseteado para nueva meta');
     }
 
     /**
@@ -1875,11 +1911,100 @@ class FinanceApp {
     }
 
     /**
-     * Función placeholder para editar meta
+     * Edita una meta existente
      */
     editGoal(goalId) {
-        console.log(`✏️ Función editar meta ${goalId} - Implementar próximamente`);
-        this.showNotification('Función de edición próximamente', 'info');
+        console.log(`✏️ Editando meta: ${goalId}`);
+
+        // Buscar la meta por ID
+        const goal = this.goals.find(g => g._id === goalId || g.id === goalId);
+        if (!goal) {
+            this.showNotification('Meta no encontrada', 'error');
+            return;
+        }
+
+        // Abrir el modal
+        this.openGoalModal();
+
+        // Cambiar el título del modal
+        const modalTitle = document.querySelector('#goalModal .modal-header h3');
+        if (modalTitle) {
+            modalTitle.innerHTML = '<i class="fas fa-edit"></i> Editar Meta de Ahorro';
+        }
+
+        // Establecer el ID de la meta en edición
+        const editingGoalIdField = document.getElementById('editingGoalId');
+        if (editingGoalIdField) {
+            editingGoalIdField.value = goalId;
+        }
+
+        // Completar los campos del formulario con los datos de la meta
+        this.populateGoalForm(goal);
+
+        // Cambiar el texto del botón
+        const submitBtn = document.querySelector('#goalForm button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Actualizar Meta';
+        }
+
+        console.log(`✅ Modal de edición abierto para meta: ${goal.name}`);
+    }
+
+    /**
+     * Completa el formulario con los datos de una meta existente
+     */
+    populateGoalForm(goal) {
+        // Información básica
+        const nameField = document.getElementById('goalName');
+        const descriptionField = document.getElementById('goalDescription');
+        const currencyField = document.getElementById('goalCurrency');
+        const categoryField = document.getElementById('goalCategory');
+        const priorityField = document.getElementById('goalPriority');
+
+        if (nameField) nameField.value = goal.name || '';
+        if (descriptionField) descriptionField.value = goal.description || '';
+        if (currencyField) currencyField.value = goal.currency || 'UYU';
+        if (categoryField) categoryField.value = goal.category || '';
+        if (priorityField) priorityField.value = goal.priority || 'medium';
+
+        // Fechas
+        const currentDateField = document.getElementById('currentDate');
+        const targetDateField = document.getElementById('goalDeadline');
+
+        if (currentDateField && goal.currentDate) {
+            const currentDate = new Date(goal.currentDate);
+            currentDateField.value = currentDate.toISOString().split('T')[0];
+        } else if (currentDateField) {
+            currentDateField.value = '';
+        }
+
+        if (targetDateField && goal.targetDate) {
+            const targetDate = new Date(goal.targetDate);
+            targetDateField.value = targetDate.toISOString().split('T')[0];
+        } else if (targetDateField) {
+            targetDateField.value = '';
+        }
+
+        // Montos
+        const currentAmountField = document.getElementById('currentSaved');
+        const targetAmountField = document.getElementById('goalAmount');
+        const expectedAmountField = document.getElementById('expectedAmount');
+
+        if (currentAmountField) currentAmountField.value = goal.currentAmount || '';
+        if (targetAmountField) targetAmountField.value = goal.targetAmount || '';
+        if (expectedAmountField) expectedAmountField.value = goal.expectedAmount || '';
+
+        // Etiquetas y notas
+        const tagsField = document.getElementById('goalTags');
+        const notesField = document.getElementById('goalNotes');
+
+        if (tagsField) {
+            const tags = goal.tags ? goal.tags.join(', ') : '';
+            tagsField.value = tags;
+        }
+        if (notesField) notesField.value = goal.notes || '';
+
+        console.log('📝 Formulario completado con datos de la meta');
     }
 
     /**
@@ -7061,7 +7186,7 @@ function deleteCategoryGlobal(categoryId) {
 function editGoalGlobal(goalId) {
     console.log(`🎯 Editando meta: ${goalId}`);
     if (window.financeApp) {
-        window.financeApp.showNotification('Función de edición de metas próximamente', 'info');
+        window.financeApp.editGoal(goalId);
     }
 }
 
