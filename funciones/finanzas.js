@@ -90,6 +90,8 @@ class FinanceApp {
      * Inicializa la aplicación de finanzas
      */
     async initializeApp() {
+
+
         try {
             console.log('🚀 Inicializando sistema de finanzas unificado...');
 
@@ -130,6 +132,7 @@ class FinanceApp {
             // Renderizar datos iniciales
             this.renderDashboard();
             this.renderCategories();
+            this.renderBudgets();
             this.updateCharts();
 
         } catch (error) {
@@ -447,6 +450,15 @@ class FinanceApp {
         if (diagnoseBtn) {
             diagnoseBtn.addEventListener('click', () => this.diagnoseGoalsWithAI());
         }
+
+        // Modal de presupuesto
+        const addBudgetBtn = document.getElementById('addBudgetBtn');
+        if (addBudgetBtn) {
+            addBudgetBtn.addEventListener('click', () => this.openBudgetModal());
+        }
+
+        // Configurar event listeners del modal de presupuesto
+        this.setupBudgetModalListeners();
 
         if (sendChatBtn && chatInput) {
             chatInput.addEventListener('input', () => {
@@ -1306,20 +1318,27 @@ class FinanceApp {
             }
 
         } catch (error) {
-            console.error('❌ Error cargando metas:', error);
-            this.showNotification(`❌ Error al cargar metas: ${error.message}`, 'error');
+            console.warn('⚠️ API no disponible, usando localStorage:', error.message);
 
-            // Fallback: mostrar mensaje vacío
-            const goalsContainer = document.getElementById('goalsList');
-            if (goalsContainer) {
-                goalsContainer.innerHTML = `
-                    <div class="no-goals">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Error al cargar metas</h3>
-                        <p>No se pudieron cargar las metas. Inténtalo de nuevo más tarde.</p>
-                    </div>
-                `;
+            // Fallback: cargar desde localStorage
+            try {
+                const storedGoals = localStorage.getItem('fede_life_goals');
+                if (storedGoals) {
+                    this.goals = JSON.parse(storedGoals);
+                    console.log(`📦 ${this.goals.length} metas cargadas desde localStorage`);
+                    this.renderGoals();
+                } else {
+                    this.goals = [];
+                    this.renderGoals();
+                }
+            } catch (storageError) {
+                console.error('❌ Error cargando desde localStorage:', storageError);
+                this.goals = [];
+                this.renderGoals();
             }
+
+            // Mostrar notificación informativa en lugar de error
+            this.showNotification('🔄 Modo offline: usando datos locales', 'info');
         }
     }
 
@@ -1351,6 +1370,165 @@ class FinanceApp {
                 form.reset();
             }
         }
+    }
+
+    /**
+     * Abre el modal para configurar presupuesto
+     */
+    openBudgetModal() {
+        const modal = document.getElementById('budgetModal');
+        if (modal) {
+            modal.style.display = 'block';
+            // Limpiar formulario
+            const form = modal.querySelector('#budgetForm');
+            if (form) {
+                form.reset();
+            }
+        }
+    }
+
+    /**
+     * Cierra el modal de presupuesto
+     */
+    closeBudgetModal() {
+        const modal = document.getElementById('budgetModal');
+        if (modal) {
+            modal.style.display = 'none';
+            // Limpiar formulario
+            const form = modal.querySelector('#budgetForm');
+            if (form) {
+                form.reset();
+            }
+        }
+    }
+
+    /**
+     * Configura los event listeners del modal de presupuesto
+     */
+    setupBudgetModalListeners() {
+        // Formulario de presupuesto
+        const budgetForm = document.getElementById('budgetForm');
+        if (budgetForm) {
+            budgetForm.addEventListener('submit', (e) => this.handleBudgetSubmit(e));
+        }
+
+        // Cerrar modal con la X
+        const budgetModal = document.getElementById('budgetModal');
+        if (budgetModal) {
+            const closeBtn = budgetModal.querySelector('.close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => this.closeBudgetModal());
+            }
+
+            // Cerrar modal haciendo clic fuera
+            budgetModal.addEventListener('click', (e) => {
+                if (e.target === budgetModal) {
+                    this.closeBudgetModal();
+                }
+            });
+        }
+    }
+
+    /**
+     * Maneja el envío del formulario de presupuesto
+     */
+    async handleBudgetSubmit(e) {
+        e.preventDefault();
+
+        const budgetCategory = document.getElementById('budgetCategory').value;
+        const budgetAmount = parseFloat(document.getElementById('budgetAmount').value);
+
+        if (!budgetCategory || isNaN(budgetAmount) || budgetAmount <= 0) {
+            this.showNotification('Por favor, complete todos los campos correctamente', 'error');
+            return;
+        }
+
+        try {
+            // Crear nuevo presupuesto
+            const newBudget = {
+                id: Date.now().toString(),
+                category: budgetCategory,
+                amount: budgetAmount,
+                spent: 0,
+                createdAt: new Date().toISOString()
+            };
+
+            // Agregar a la lista de presupuestos
+            this.budgets.push(newBudget);
+
+            // Guardar en localStorage
+            localStorage.setItem('fede_life_budgets', JSON.stringify(this.budgets));
+
+            // Cerrar modal
+            this.closeBudgetModal();
+
+            // Mostrar notificación de éxito
+            this.showNotification('Presupuesto configurado correctamente', 'success');
+
+            // Renderizar presupuestos actualizados
+            this.renderBudgets();
+
+        } catch (error) {
+            console.error('Error al guardar presupuesto:', error);
+            this.showNotification('Error al guardar el presupuesto', 'error');
+        }
+    }
+
+    /**
+     * Renderiza la lista de presupuestos
+     */
+    renderBudgets() {
+        const budgetList = document.getElementById('budgetList');
+        if (!budgetList) return;
+
+        if (this.budgets.length === 0) {
+            budgetList.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-chart-pie"></i>
+                    <h3>No hay presupuestos configurados</h3>
+                    <p>Haz clic en "Agregar Categoría" para crear tu primer presupuesto</p>
+                </div>
+            `;
+            return;
+        }
+
+        budgetList.innerHTML = this.budgets.map(budget => `
+            <div class="budget-item" data-id="${budget.id}">
+                <div class="budget-header">
+                    <h4>${budget.category}</h4>
+                    <div class="budget-actions">
+                        <button onclick="editBudget('${budget.id}')" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteBudget('${budget.id}')" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="budget-details">
+                    <div class="budget-amount">
+                        <span class="label">Presupuesto:</span>
+                        <span class="amount">$${budget.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div class="budget-spent">
+                        <span class="label">Gastado:</span>
+                        <span class="amount">$${budget.spent.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div class="budget-remaining">
+                        <span class="label">Restante:</span>
+                        <span class="amount ${budget.amount - budget.spent < 0 ? 'negative' : ''}">
+                            $${(budget.amount - budget.spent).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </span>
+                    </div>
+                </div>
+                <div class="budget-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${Math.min((budget.spent / budget.amount) * 100, 100)}%"></div>
+                    </div>
+                    <span class="progress-text">${Math.round((budget.spent / budget.amount) * 100)}%</span>
+                </div>
+            </div>
+        `).join('');
     }
 
     /**
@@ -6528,6 +6706,39 @@ function addToGoalGlobal(goalId) {
     console.log(`💰 Agregando a meta: ${goalId}`);
     if (window.financeApp) {
         window.financeApp.showNotification('Función de agregar monto próximamente', 'info');
+    }
+}
+
+// ==================== FUNCIONES GLOBALES PARA PRESUPUESTOS ====================
+
+/**
+ * Función global para editar un presupuesto
+ * @param {string} budgetId - ID del presupuesto
+ */
+function editBudget(budgetId) {
+
+    if (window.financeApp) {
+        window.financeApp.showNotification('Función de edición de presupuestos próximamente', 'info');
+    }
+}
+
+/**
+ * Función global para eliminar un presupuesto
+ * @param {string} budgetId - ID del presupuesto
+ */
+function deleteBudget(budgetId) {
+  
+    if (window.financeApp && confirm('¿Estás seguro de que quieres eliminar este presupuesto?')) {
+        // Buscar y eliminar el presupuesto
+        const budgetIndex = window.financeApp.budgets.findIndex(b => b.id === budgetId);
+        if (budgetIndex !== -1) {
+            window.financeApp.budgets.splice(budgetIndex, 1);
+            // Guardar cambios
+            localStorage.setItem('fede_life_budgets', JSON.stringify(window.financeApp.budgets));
+            // Re-renderizar
+            window.financeApp.renderBudgets();
+            window.financeApp.showNotification('Presupuesto eliminado correctamente', 'success');
+        }
     }
 }
 
