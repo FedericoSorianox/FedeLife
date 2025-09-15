@@ -646,6 +646,37 @@
     <script src="/funciones/config-production-fixed.js"></script>
     <script src="/funciones/finanzas.js"></script>
     <script src="/pages/auth.js"></script>
+
+    <script>
+        // Configurar menú hamburguesa para móviles
+        document.addEventListener('DOMContentLoaded', function() {
+            const navToggle = document.getElementById('navToggle');
+            const navMenu = document.getElementById('navMenu');
+
+            if (navToggle && navMenu) {
+                navToggle.addEventListener('click', function() {
+                    navToggle.classList.toggle('active');
+                    navMenu.classList.toggle('active');
+                });
+
+                // Cerrar menú cuando se hace click en un enlace
+                navMenu.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', function() {
+                        navToggle.classList.remove('active');
+                        navMenu.classList.remove('active');
+                    });
+                });
+
+                // Cerrar menú cuando se hace click fuera de él
+                document.addEventListener('click', function(e) {
+                    if (!navToggle.contains(e.target) && !navMenu.contains(e.target)) {
+                        navToggle.classList.remove('active');
+                        navMenu.classList.remove('active');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>

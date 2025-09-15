@@ -1149,6 +1149,33 @@ Historial de consultas restaurado. ¿En qué puedo ayudarte con este cultivo?`, 
 
         // Inicializar Bruce AI cuando se carga la página
         document.addEventListener('DOMContentLoaded', () => {
+            // Configurar menú hamburguesa para móviles
+            const navToggle = document.getElementById('navToggle');
+            const navMenu = document.getElementById('navMenu');
+
+            if (navToggle && navMenu) {
+                navToggle.addEventListener('click', function() {
+                    navToggle.classList.toggle('active');
+                    navMenu.classList.toggle('active');
+                });
+
+                // Cerrar menú cuando se hace click en un enlace
+                navMenu.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', function() {
+                        navToggle.classList.remove('active');
+                        navMenu.classList.remove('active');
+                    });
+                });
+
+                // Cerrar menú cuando se hace click fuera de él
+                document.addEventListener('click', function(e) {
+                    if (!navToggle.contains(e.target) && !navMenu.contains(e.target)) {
+                        navToggle.classList.remove('active');
+                        navMenu.classList.remove('active');
+                    }
+                });
+            }
+
             new BruceAI();
         });
     </script>
