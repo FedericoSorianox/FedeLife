@@ -57,7 +57,6 @@ function checkAuthStatus() {
                 return true;
             }
         } catch (error) {
-            console.error('Error parsing auth data:', error);
         }
     }
     
@@ -76,7 +75,6 @@ async function tryAutoLogin() {
         // Verificar si ya hay un token guardado
         const existingToken = localStorage.getItem('dev_auth_token');
         if (existingToken) {
-            console.log(`🔑 Token de desarrollo encontrado, verificando...`);
             return true;
         }
 
@@ -84,7 +82,6 @@ async function tryAutoLogin() {
         // En producción, esto creará un usuario de desarrollo para testing
 
         // Crear usuario de desarrollo automáticamente
-        console.log(`👤 Creando usuario de desarrollo automático...`);
         
         const response = await fetch(`${API_CONFIG.BASE_URL}/auth/register`, {
             method: 'POST',
@@ -110,11 +107,9 @@ async function tryAutoLogin() {
                 user: data.data.user
             }));
             
-            console.log(`✅ Usuario de desarrollo creado y autenticado automáticamente`);
             return true;
         } else {
             // Si el usuario ya existe, intentar login
-            console.log(`🔄 Usuario de desarrollo ya existe, intentando login...`);
             
             const loginResponse = await fetch(`${API_CONFIG.BASE_URL}/auth/login`, {
                 method: 'POST',
@@ -135,15 +130,12 @@ async function tryAutoLogin() {
                     user: loginData.data.user
                 }));
                 
-                console.log(`✅ Login de desarrollo exitoso`);
                 return true;
             } else {
-                console.log(`❌ No se pudo autenticar automáticamente`);
                 return false;
             }
         }
     } catch (error) {
-        console.log(`❌ Error en autenticación automática:`, error);
         return false;
     }
 }
@@ -152,8 +144,6 @@ async function tryAutoLogin() {
  * Inicializa el sistema de autenticación
  */
 async function initAuth() {
-    console.log(`🔐 Inicializando sistema de autenticación...`);
-    console.log(`🔗 URL de la API: ${API_CONFIG.BASE_URL}`);
     
     // Verificar estado actual
     const isAuthenticated = checkAuthStatus();
@@ -164,7 +154,6 @@ async function initAuth() {
         checkAuthStatus(); // Actualizar UI después del intento
     }
     
-    console.log(`✅ Sistema de autenticación inicializado`);
 }
 
 // Inicializar cuando el DOM esté listo
@@ -185,7 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (autoAuthBtn) {
         autoAuthBtn.addEventListener('click', async () => {
-            console.log('🤖 Iniciando autenticación automática...');
             const success = await tryAutoLogin();
             if (success) {
                 checkAuthStatus();

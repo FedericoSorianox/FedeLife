@@ -18,7 +18,6 @@ export class OpenAIAnalyzer {
         };
         
         this.isConfigured = false;
-        console.log('🤖 OpenAI Analyzer inicializado');
     }
 
     /**
@@ -29,9 +28,7 @@ export class OpenAIAnalyzer {
         if (apiKey && apiKey.startsWith('sk-')) {
             this.config.apiKey = apiKey;
             this.isConfigured = true;
-            console.log('✅ API Key configurada correctamente');
         } else {
-            console.warn('⚠️ API Key inválida');
         }
     }
 
@@ -46,7 +43,6 @@ export class OpenAIAnalyzer {
                 throw new Error('API Key no configurada');
             }
 
-            console.log('🔍 Analizando texto financiero...');
             
             // Calcular tokens aproximados para evitar error 400
             const promptBase = `🚨 CRÍTICO: Extrae TODOS los gastos bancarios sin excepción
@@ -122,14 +118,12 @@ FORMATO JSON:`;
             const promptTokens = Math.ceil((promptBase.length + jsonFormat.length) / 4);
             const totalEstimatedTokens = textTokens + promptTokens;
 
-            console.log(`📊 Estimación de tokens: Texto=${textTokens}, Prompt=${promptTokens}, Total=${totalEstimatedTokens}`);
 
             // Limitar el texto si es demasiado largo para el modelo
             let textToProcess = text;
             if (totalEstimatedTokens > 100000) { // Límite de contexto del modelo
                 const maxTextLength = 80000; // Dejar espacio para respuesta
                 textToProcess = text.substring(0, maxTextLength);
-                console.log(`📝 Texto truncado a ${maxTextLength} caracteres por límite de modelo`);
             }
 
             // Si es demasiado largo, usar versión más corta del prompt
@@ -142,7 +136,6 @@ Moneda: "UYU" para pesos/$U, "USD" para dólares/$.
 Categorías: Alimentación, Transporte, Entretenimiento, Salud, Educación, Vivienda, Ropa, Servicios, Otros.
 
 ${jsonFormat}`;
-                console.log('📝 Usando prompt corto por límite de tokens');
             } else {
                 finalPrompt = promptBase + '\n\n' + jsonFormat;
             }
@@ -188,10 +181,6 @@ ${jsonFormat}`;
                 // Diagnóstico específico para errores comunes
                 if (response.status === 400) {
                     errorDetails += '. Posibles causas: solicitud demasiado larga, formato inválido, o límites excedidos.';
-                    console.log('🔍 Diagnóstico de error 400:');
-                    console.log(`  - Longitud del prompt: ${prompt.length} caracteres`);
-                    console.log(`  - Tokens estimados: ${totalEstimatedTokens}`);
-                    console.log(`  - Modelo usado: ${this.config.model}`);
                 } else if (response.status === 401) {
                     errorDetails += '. Verifica que tu API key sea válida.';
                 } else if (response.status === 429) {
@@ -204,7 +193,6 @@ ${jsonFormat}`;
             const data = await response.json();
             const content = data.choices[0].message.content.trim();
             
-            console.log('📊 Respuesta de OpenAI:', content);
             
             // Intentar parsear como JSON
             try {
@@ -224,7 +212,6 @@ ${jsonFormat}`;
                     data: result
                 };
             } catch (parseError) {
-                console.warn('⚠️ Error parseando JSON, intentando extracción manual...');
                 const extractedData = this.extractExpensesFromTextResponse(content);
 
                 // También mejorar monedas en la extracción manual
@@ -242,7 +229,6 @@ ${jsonFormat}`;
             }
 
         } catch (error) {
-            console.error('❌ Error en análisis:', error);
             return {
                 success: false,
                 error: error.message
@@ -284,7 +270,6 @@ ${jsonFormat}`;
         // Verificar indicadores de USD primero (prioridad)
         for (const indicator of usdIndicators) {
             if (description.toLowerCase().includes(indicator.toLowerCase())) {
-                console.log(`💵 Detectado USD por indicador: "${indicator}" en "${expense.description}"`);
                 return 'USD';
             }
         }
@@ -292,7 +277,6 @@ ${jsonFormat}`;
         // Verificar indicadores de UYU
         for (const indicator of uyuIndicators) {
             if (description.toLowerCase().includes(indicator.toLowerCase())) {
-                console.log(`💰 Detectado UYU por indicador: "${indicator}" en "${expense.description}"`);
                 return 'UYU';
             }
         }
@@ -300,12 +284,10 @@ ${jsonFormat}`;
         // Si no hay indicadores específicos, buscar patrones de símbolos
         const hasDollarSign = description.includes('$') && !description.includes('$u') && !description.includes('$uy');
         if (hasDollarSign) {
-            console.log(`💵 Detectado USD por símbolo $ en "${expense.description}"`);
             return 'USD';
         }
 
         // Si no hay indicadores claros, asumir UYU (contexto uruguayo por defecto)
-        console.log(`🤔 Moneda no clara para "${expense.description}", asumiendo UYU`);
         return 'UYU';
     }
 
@@ -316,7 +298,6 @@ ${jsonFormat}`;
      */
     extractExpensesFromTextResponse(text) {
         try {
-            console.log('🔍 Extrayendo gastos del texto de respuesta...');
             
             // Intentar extraer de tabla markdown
             const markdownExpenses = this.extractFromMarkdownTable(text);
@@ -336,15 +317,12 @@ ${jsonFormat}`;
                 try {
                     return JSON.parse(jsonMatch[0]);
                 } catch (e) {
-                    console.warn('⚠️ Error parseando JSON encontrado');
                 }
             }
             
-            console.log('❌ No se pudieron extraer gastos del texto');
             return { expenses: [] };
             
         } catch (error) {
-            console.error('❌ Error extrayendo gastos:', error);
             return { expenses: [] };
         }
     }
@@ -356,19 +334,16 @@ ${jsonFormat}`;
      */
     extractFromMarkdownTable(text) {
         try {
-            console.log('📋 Buscando tabla markdown...');
             
             // Patrón mejorado para capturar tablas markdown
             const tablePattern = /\|.*\|[\s\S]*?(?=\n\n|\*\*Notas|\*\*Resumen|$)/;
             const tableMatch = text.match(tablePattern);
             
             if (!tableMatch) {
-                console.log('❌ No se encontró tabla markdown');
                 return [];
             }
             
             const tableContent = tableMatch[0];
-            console.log('📋 Contenido de tabla encontrado:', tableContent);
             
             const expenses = [];
             const lines = tableContent.split('\n');
@@ -384,17 +359,14 @@ ${jsonFormat}`;
                                 expenses.push(expense);
                             }
                         } catch (error) {
-                            console.warn('⚠️ Error procesando fila:', error);
                         }
                     }
                 }
             }
             
-            console.log(`✅ Extraídos ${expenses.length} gastos de tabla markdown`);
             return expenses;
             
         } catch (error) {
-            console.error('❌ Error extrayendo de tabla markdown:', error);
             return [];
         }
     }
@@ -464,7 +436,6 @@ ${jsonFormat}`;
             return null;
             
         } catch (error) {
-            console.error('❌ Error procesando contenido de tabla:', error);
             return null;
         }
     }
@@ -495,7 +466,6 @@ ${jsonFormat}`;
             return isNaN(amount) ? 0 : amount;
             
         } catch (error) {
-            console.error('❌ Error parseando cantidad:', error);
             return 0;
         }
     }
@@ -546,7 +516,6 @@ ${jsonFormat}`;
      */
     extractFromMarkdownFormat(text) {
         try {
-            console.log('📝 Buscando formato markdown con emojis...');
             
             const expenses = [];
             const lines = text.split('\n');
@@ -561,11 +530,9 @@ ${jsonFormat}`;
                 }
             }
             
-            console.log(`✅ Extraídos ${expenses.length} gastos de formato markdown`);
             return expenses;
             
         } catch (error) {
-            console.error('❌ Error extrayendo de formato markdown:', error);
             return [];
         }
     }
@@ -599,7 +566,6 @@ ${jsonFormat}`;
             return null;
 
         } catch (error) {
-            console.error('❌ Error parseando línea markdown:', error);
             return null;
         }
     }
@@ -657,7 +623,6 @@ ${jsonFormat}`;
             return 'Otros';
 
         } catch (error) {
-            console.error('❌ Error asignando categoría:', error);
             return 'Otros';
         }
     }

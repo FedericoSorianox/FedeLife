@@ -58,9 +58,7 @@ export class FinancialChat {
             
             this.isInitialized = true;
 
-            console.log('✅ Chat financiero inicializado correctamente');
         } catch (error) {
-            console.error('❌ Error al inicializar el chat financiero:', error);
             throw error;
         }
     }
@@ -91,16 +89,13 @@ export class FinancialChat {
 
             // Si tenemos token de autenticación y queremos usar el sistema avanzado
             if (authToken && useAdvanced) {
-                console.log('🧠 Usando sistema de IA avanzado con acceso completo a datos');
                 return await this.processAdvancedQuery(userMessage, authToken, financialData, additionalData);
             }
 
             // Sistema básico (modo público o sin autenticación)
-            console.log('💬 Usando sistema de chat básico');
             return await this.processBasicQuery(userMessage, financialData);
 
         } catch (error) {
-            console.error('❌ Error al procesar consulta del chat:', error);
             return {
                 success: false,
                 message: 'Lo siento, no pude procesar tu consulta en este momento.',
@@ -119,7 +114,6 @@ export class FinancialChat {
      */
     async processAdvancedQuery(userMessage, authToken, financialData, additionalData) {
         try {
-            console.log('🚀 Procesando consulta avanzada con API backend...');
 
             const response = await fetch('/api/ai/advanced-query', {
                 method: 'POST',
@@ -156,10 +150,8 @@ export class FinancialChat {
             }
 
         } catch (error) {
-            console.error('❌ Error en consulta avanzada:', error);
 
             // Fallback al sistema básico si falla el avanzado
-            console.log('🔄 Fallback a sistema básico...');
             return await this.processBasicQuery(userMessage, financialData);
         }
     }
@@ -208,7 +200,6 @@ export class FinancialChat {
             }
 
         } catch (error) {
-            console.error('❌ Error en consulta básica:', error);
 
             // Último fallback: usar el sistema anterior si está disponible
             if (this.aiAnalyzer && this.isReady()) {
@@ -344,7 +335,6 @@ IMPORTANTE: Siempre basa tus respuestas en los datos reales proporcionados y no 
      */
     async getCompleteUserData(authToken) {
         try {
-            console.log('📊 Obteniendo datos completos del usuario para contexto...');
 
             const response = await fetch('/api/ai/user-data-summary', {
                 method: 'GET',
@@ -366,7 +356,6 @@ IMPORTANTE: Siempre basa tus respuestas en los datos reales proporcionados y no 
             }
 
         } catch (error) {
-            console.error('❌ Error obteniendo datos completos del usuario:', error);
             return null; // Retornar null para que el sistema siga funcionando
         }
     }
@@ -379,7 +368,6 @@ IMPORTANTE: Siempre basa tus respuestas en los datos reales proporcionados y no 
      */
     async performCompleteDiagnosis(authToken, additionalData = {}) {
         try {
-            console.log('🔍 Realizando diagnóstico financiero completo...');
 
             const response = await fetch('/api/ai/complete-diagnosis', {
                 method: 'POST',
@@ -411,7 +399,6 @@ IMPORTANTE: Siempre basa tus respuestas en los datos reales proporcionados y no 
             }
 
         } catch (error) {
-            console.error('❌ Error realizando diagnóstico completo:', error);
             return {
                 success: false,
                 diagnosis: 'No se pudo completar el diagnóstico en este momento.',
@@ -429,7 +416,6 @@ IMPORTANTE: Siempre basa tus respuestas en los datos reales proporcionados y no 
      */
     async generateDetailedContext(authToken, type = 'general') {
         try {
-            console.log('📝 Generando contexto detallado...');
 
             const response = await fetch(`/api/ai/context?type=${type}`, {
                 method: 'GET',
@@ -451,7 +437,6 @@ IMPORTANTE: Siempre basa tus respuestas en los datos reales proporcionados y no 
             }
 
         } catch (error) {
-            console.error('❌ Error generando contexto detallado:', error);
             return 'Error obteniendo contexto detallado. Información limitada disponible.';
         }
     }

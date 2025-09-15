@@ -115,7 +115,6 @@ export function getLogLevel(): string {
  * NOTA: Las API Keys se configuran únicamente en el servidor
  */
 export function getApiKey(): string | null {
-    console.warn('⚠️ Las API Keys se configuran únicamente en el servidor (config-local.js)');
 
     // Las API Keys se manejan únicamente en el servidor
     // Este archivo no debe contener keys de API

@@ -70,10 +70,8 @@ export class FinancialChat {
     public initialize(): void {
         try {
             // Verificar que el servidor tenga la configuración de OpenAI
-            console.log('✅ Chat financiero inicializado - OpenAI se maneja en el servidor');
             this.isInitialized = true;
         } catch (error) {
-            console.error('❌ Error al inicializar el chat financiero:', error);
             throw error;
         }
     }
@@ -115,7 +113,6 @@ export class FinancialChat {
             };
 
         } catch (error) {
-            console.error('❌ Error al procesar consulta del chat:', error);
             return {
                 success: false,
                 message: 'Lo siento, no pude procesar tu consulta en este momento.',

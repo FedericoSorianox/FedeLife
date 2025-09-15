@@ -81,7 +81,6 @@ class FinanceApp {
             month: now.getMonth() + 1,
             type: 'monthly'
         };
-        console.log(`📅 Período inicial: ${this.currentPeriod.month}/${this.currentPeriod.year}`);
 
         this.initializeApp();
     }
@@ -93,15 +92,11 @@ class FinanceApp {
 
 
         try {
-            console.log('🚀 Inicializando sistema de finanzas unificado...');
 
             // Intentar cargar datos del backend público primero
             try {
-                console.log('🔄 Intentando cargar datos desde backend público...');
                 await this.loadDataFromBackend();
-                console.log('✅ Datos cargados desde backend público');
             } catch (backendError) {
-                console.warn('⚠️ Backend no disponible, cargando desde localStorage:', backendError.message);
 
                 // Cargar datos del localStorage como fallback
                 this.loadDataFromStorage();
@@ -127,7 +122,6 @@ class FinanceApp {
             // Marcar como inicializado
             this.isInitialized = true;
 
-            console.log('✅ Sistema de finanzas inicializado correctamente');
 
             // Renderizar datos iniciales
             this.renderDashboard();
@@ -136,7 +130,6 @@ class FinanceApp {
             this.updateCharts();
 
         } catch (error) {
-            console.error('❌ Error inicializando sistema de finanzas:', error);
         }
     }
 
@@ -145,7 +138,6 @@ class FinanceApp {
      */
     async loadDataFromBackend() {
         try {
-            console.log('🔄 Cargando transacciones desde backend público...');
 
             const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}`, {
                 method: 'GET',
@@ -166,7 +158,6 @@ class FinanceApp {
                         updatedAt: transaction.updatedAt ? new Date(transaction.updatedAt) : new Date()
                     }));
 
-                    console.log(`✅ Cargadas ${this.transactions.length} transacciones desde backend público`);
 
                     // Si hay transacciones, actualizar la interfaz
                     if (this.transactions.length > 0) {
@@ -182,7 +173,6 @@ class FinanceApp {
             }
 
         } catch (error) {
-            console.error('❌ Error cargando datos desde backend:', error);
             throw error; // Re-lanzar para que el catch en initializeApp lo maneje
         }
     }
@@ -192,63 +182,50 @@ class FinanceApp {
      */
     loadDataFromStorage() {
         try {
-            console.log('💾 Cargando datos desde localStorage...');
 
             // Cargar transacciones
             const storedTransactions = localStorage.getItem('fede_life_transactions');
             if (storedTransactions) {
                 this.transactions = JSON.parse(storedTransactions);
-                console.log(`✅ Cargadas ${this.transactions.length} transacciones`);
 
                 // Verificar que las transacciones tengan todos los campos necesarios
                 this.transactions.forEach((transaction, index) => {
                     if (!transaction.id) {
                         transaction.id = this.generateId();
-                        console.log(`🔧 Generado ID faltante para transacción ${index}`);
                     }
                     if (!transaction.currency) {
                         transaction.currency = 'UYU'; // Valor por defecto
-                        console.log(`🔧 Asignada moneda por defecto UYU a transacción ${index}`);
                     }
                     if (!transaction.category) {
                         transaction.category = 'Otros'; // Valor por defecto
-                        console.log(`🔧 Asignada categoría por defecto "Otros" a transacción ${index}`);
                     }
                 });
             } else {
                 this.transactions = [];
-                console.log('ℹ️ No hay transacciones guardadas, iniciando vacío');
             }
 
             // Cargar categorías
             const storedCategories = localStorage.getItem('fede_life_categories');
             if (storedCategories) {
                 this.categories = JSON.parse(storedCategories);
-                console.log(`✅ Cargadas ${this.categories.length} categorías desde localStorage`);
 
                 // Verificar que las categorías tengan todos los campos necesarios
                 this.categories.forEach((category, index) => {
                     if (!category.id || category.id === 'undefined' || category.id === '') {
                         category.id = this.generateId();
-                        console.log(`🔧 Generado ID faltante para categoría ${category.name || `índice ${index}`}: ${category.id}`);
                     }
                     if (!category.type) {
                         category.type = 'expense'; // Valor por defecto
-                        console.log(`🔧 Asignado tipo por defecto 'expense' a categoría ${category.name || `índice ${index}`}`);
                     }
                     if (!category.color) {
                         category.color = '#95a5a6'; // Color gris por defecto
-                        console.log(`🔧 Asignado color por defecto a categoría ${category.name || `índice ${index}`}`);
                     }
                     if (!category.name) {
                         category.name = `Categoría ${index + 1}`;
-                        console.log(`🔧 Asignado nombre por defecto a categoría índice ${index}`);
                     }
                 });
 
-                console.log('🔍 Verificación de categorías completada');
             } else {
-                console.log('ℹ️ No hay categorías guardadas, inicializando por defecto');
                 this.initializeDefaultCategories();
             }
 
@@ -256,7 +233,6 @@ class FinanceApp {
             const storedBudgets = localStorage.getItem('fede_life_budgets');
             if (storedBudgets) {
                 this.budgets = JSON.parse(storedBudgets);
-                console.log(`✅ Cargados ${this.budgets.length} presupuestos`);
             } else {
                 this.budgets = [];
             }
@@ -267,9 +243,7 @@ class FinanceApp {
                 this.goals = JSON.parse(storedGoals);
             }
 
-            console.log('📊 Datos cargados del almacenamiento local');
         } catch (error) {
-            console.error('❌ Error cargando datos del localStorage:', error);
         }
     }
 
@@ -283,9 +257,7 @@ class FinanceApp {
             localStorage.setItem('fede_life_budgets', JSON.stringify(this.budgets));
             localStorage.setItem('fede_life_goals', JSON.stringify(this.goals));
             
-            console.log('💾 Datos guardados en almacenamiento local');
         } catch (error) {
-            console.error('❌ Error guardando datos en localStorage:', error);
         }
     }
 
@@ -294,7 +266,6 @@ class FinanceApp {
      */
     async loadCategoriesFromBackend() {
         try {
-            console.log('🔄 Intentando cargar categorías del backend...');
             const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.categories}`);
 
             if (response.ok) {
@@ -306,37 +277,27 @@ class FinanceApp {
                     this.categories.forEach((category, index) => {
                         if (!category.id || category.id === 'undefined' || category.id === '') {
                             category.id = this.generateId();
-                            console.log(`🔧 Generado ID faltante para categoría del backend ${category.name || `índice ${index}`}: ${category.id}`);
                         }
                         if (!category.type) {
                             category.type = 'expense'; // Valor por defecto
-                            console.log(`🔧 Asignado tipo por defecto 'expense' a categoría del backend ${category.name || `índice ${index}`}`);
                         }
                         if (!category.color) {
                             category.color = '#95a5a6'; // Color gris por defecto
-                            console.log(`🔧 Asignado color por defecto a categoría del backend ${category.name || `índice ${index}`}`);
                         }
                         if (!category.name) {
                             category.name = `Categoría ${index + 1}`;
-                            console.log(`🔧 Asignado nombre por defecto a categoría del backend índice ${index}`);
                         }
                     });
 
                     // Guardar en localStorage con IDs corregidos
                     localStorage.setItem('fede_life_categories', JSON.stringify(this.categories));
-                    console.log(`✅ Categorías cargadas del backend y corregidas: ${this.categories.length}`);
                 } else {
-                    console.warn('⚠️ Respuesta del backend sin datos válidos, usando categorías locales');
                     this.initializeDefaultCategories();
                 }
             } else {
-                console.warn(`⚠️ Error del backend (${response.status}): ${response.statusText}`);
-                console.log('📦 Usando categorías locales como fallback');
                 this.initializeDefaultCategories();
             }
         } catch (error) {
-            console.warn('⚠️ Error de conexión con el backend:', error.message);
-            console.log('📦 Usando categorías locales como fallback');
             this.initializeDefaultCategories();
         }
     }
@@ -367,7 +328,6 @@ class FinanceApp {
         ];
         
         this.saveDataToStorage();
-        console.log('🏷️ Categorías por defecto inicializadas');
     }
 
     /**
@@ -506,14 +466,12 @@ class FinanceApp {
         // Configurar botón de limpiar descripciones
         this.setupCleanDescriptionsButton();
 
-        console.log('🎯 Event listeners configurados');
     }
 
     /**
      * Configura los event listeners para los botones del dashboard
      */
     setupDashboardEventListeners() {
-        console.log('🔧 Configurando event listeners del dashboard...');
 
         // Botones para agregar ingresos/gastos UYU
         const incomeUYUCard = document.getElementById('incomeUYUCard');
@@ -587,7 +545,6 @@ class FinanceApp {
             });
         }
 
-        console.log('✅ Event listeners del dashboard configurados');
     }
 
     /**
@@ -602,7 +559,6 @@ class FinanceApp {
                     this.cleanAllTransactionDescriptions();
                 }
             });
-            console.log('✅ Botón de limpiar descripciones configurado');
         }
     }
 
@@ -610,7 +566,6 @@ class FinanceApp {
      * Muestra el modal para agregar una nueva transacción
      */
     showAddTransactionModal(type, currency) {
-        console.log(`📝 Navegando para agregar ${type} en ${currency}`);
 
         // Cambiar a la pestaña de transacciones
         this.switchToTab('transactions');
@@ -666,7 +621,6 @@ class FinanceApp {
      * Muestra el modal de transferencia entre monedas
      */
     showTransferModal(fromCurrency, toCurrency) {
-        console.log(`💱 Mostrando modal de transferencia: ${fromCurrency} → ${toCurrency}`);
 
         const modal = this.createTransferModal(fromCurrency, toCurrency);
         document.body.appendChild(modal);
@@ -678,7 +632,6 @@ class FinanceApp {
         // Configurar event listeners del modal
         this.setupTransferModalEvents(modal, fromCurrency, toCurrency);
 
-        console.log('✅ Modal de transferencia mostrado');
     }
 
     /**
@@ -844,7 +797,6 @@ class FinanceApp {
      * Realiza la transferencia entre monedas usando PUT para actualizar la base de datos
      */
     async performCurrencyTransfer(fromCurrency, toCurrency, amount, exchangeRate) {
-        console.log(`💱 Realizando transferencia: ${amount} ${fromCurrency} → ${toCurrency} (tasa: ${exchangeRate})`);
 
         try {
             // Calcular el monto equivalente
@@ -876,7 +828,6 @@ class FinanceApp {
             };
 
             // Enviar las transacciones al backend usando PUT (actualización/creación)
-            console.log('🔄 Enviando transacciones de transferencia al backend...');
 
             const transferData = [expenseTransaction, incomeTransaction];
             const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}`, {
@@ -889,19 +840,16 @@ class FinanceApp {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error('❌ Error creando transferencias en backend:', response.status, errorData);
                 this.showNotification('Error: No se pudo registrar la transferencia en el servidor', 'error');
                 return;
             }
 
             const result = await response.json();
             if (!result.success) {
-                console.error('❌ Respuesta del backend no exitosa:', result);
                 this.showNotification('Error: La transferencia no fue registrada correctamente', 'error');
                 return;
             }
 
-            console.log('✅ Transferencias registradas en backend exitosamente');
 
             // Agregar las transacciones al estado local con los IDs del backend
             const createdTransactions = result.data?.transactions || [];
@@ -931,10 +879,8 @@ class FinanceApp {
                 'success'
             );
 
-            console.log('✅ Transferencia completada exitosamente');
 
         } catch (error) {
-            console.error('❌ Error en la transferencia:', error);
             this.showNotification('Error al realizar la transferencia', 'error');
         }
     }
@@ -966,11 +912,9 @@ class FinanceApp {
                     targetContent.classList.add('active');
                 }
 
-                console.log(`🔄 Cambiado a pestaña: ${targetTab}`);
             });
         });
 
-        console.log('✅ Navegación por pestañas configurada');
     }
 
     /**
@@ -984,7 +928,6 @@ class FinanceApp {
      * Cambia a una pestaña específica programáticamente
      */
     switchToTab(tabName) {
-        console.log(`🔄 Cambiando programáticamente a pestaña: ${tabName}`);
 
         // Remover clase active de todos los botones
         const tabButtons = document.querySelectorAll('.tab-btn');
@@ -1006,7 +949,6 @@ class FinanceApp {
             targetContent.classList.add('active');
         }
 
-        console.log(`✅ Cambiado a pestaña: ${tabName}`);
     }
 
     /**
@@ -1186,9 +1128,7 @@ class FinanceApp {
                 this.renderCharts();
             }
 
-            console.log('📊 Dashboard renderizado correctamente');
         } catch (error) {
-            console.error('❌ Error renderizando dashboard:', error);
         }
     }
 
@@ -1272,7 +1212,6 @@ class FinanceApp {
 
                 if (response.ok) {
                     const result = await response.json();
-                    console.log('✅ Transacción guardada en backend:', result);
 
                     // Agregar a la lista local
                     transaction.id = result.data.transaction._id ? result.data.transaction._id.toString() : result.data.transaction.id;
@@ -1303,13 +1242,11 @@ class FinanceApp {
                             errorMessage += ': ' + errorResult.details.join(', ');
                         }
                     } catch (parseError) {
-                        console.warn('No se pudo parsear respuesta de error:', parseError);
                     }
 
                     throw new Error(`HTTP ${response.status}: ${errorMessage}`);
                 }
             } catch (backendError) {
-                console.warn('⚠️ Backend no disponible, guardando localmente');
 
                 // Guardar localmente
                 transaction.id = this.generateId();
@@ -1331,7 +1268,6 @@ class FinanceApp {
             }
 
         } catch (error) {
-            console.error('❌ Error agregando transacción:', error);
             this.showNotification(error.message, 'error');
         }
     }
@@ -1412,7 +1348,6 @@ class FinanceApp {
             const editingGoalId = document.getElementById('editingGoalId')?.value;
             const isEditing = !!editingGoalId;
 
-            console.log(`${isEditing ? '📝' : '📤'} ${isEditing ? 'Actualizando' : 'Enviando'} datos de meta a API:`, goalData);
 
             // Preparar la petición
             const apiUrl = isEditing ? `/api/goals/${editingGoalId}` : '/api/goals';
@@ -1432,7 +1367,6 @@ class FinanceApp {
             }
 
             if (result.success) {
-                console.log(`✅ Meta ${isEditing ? 'actualizada' : 'creada'} exitosamente:`, result.data.goal);
 
                 // Limpiar formulario
                 const form = event.target;
@@ -1453,7 +1387,6 @@ class FinanceApp {
             }
 
         } catch (error) {
-            console.error('❌ Error creando meta:', error);
             this.showNotification(`❌ Error: ${error.message}`, 'error');
         } finally {
             // Restaurar botón
@@ -1482,7 +1415,6 @@ class FinanceApp {
                     headers['Authorization'] = `Bearer ${parsed.token}`;
                 }
             } catch (error) {
-                console.warn('⚠️ Error al parsear datos de autenticación:', error);
             }
         }
 
@@ -1494,12 +1426,10 @@ class FinanceApp {
      */
     async loadGoals() {
         try {
-            console.log('📥 Cargando metas desde API...');
 
             const headers = this.getAuthHeaders();
 
             if (headers['Authorization']) {
-                console.log('🔑 Token JWT incluido en la petición');
             }
 
             const response = await fetch('/api/goals', {
@@ -1514,28 +1444,24 @@ class FinanceApp {
 
             if (result.success) {
                 this.goals = result.data.goals || [];
-                console.log(`✅ ${this.goals.length} metas cargadas desde API`);
                 this.renderGoals();
             } else {
                 throw new Error(result.message || 'Error desconocido al cargar metas');
             }
 
         } catch (error) {
-            console.warn('⚠️ API no disponible, usando localStorage:', error.message);
 
             // Fallback: cargar desde localStorage
             try {
                 const storedGoals = localStorage.getItem('fede_life_goals');
                 if (storedGoals) {
                     this.goals = JSON.parse(storedGoals);
-                    console.log(`📦 ${this.goals.length} metas cargadas desde localStorage`);
                     this.renderGoals();
                 } else {
                     this.goals = [];
                     this.renderGoals();
                 }
             } catch (storageError) {
-                console.error('❌ Error cargando desde localStorage:', storageError);
                 this.goals = [];
                 this.renderGoals();
             }
@@ -1564,9 +1490,7 @@ class FinanceApp {
                 currentDateInput.valueAsDate = new Date();
             }
 
-            console.log('🎯 Modal de metas abierto correctamente');
         } else {
-            console.error('❌ No se encontró el modal de metas (goalModal)');
         }
     }
 
@@ -1592,7 +1516,6 @@ class FinanceApp {
             submitBtn.innerHTML = '<i class="fas fa-plus"></i> Crear Meta';
         }
 
-        console.log('🔄 Modal de metas reseteado para nueva meta');
     }
 
     /**
@@ -1608,7 +1531,6 @@ class FinanceApp {
             if (form) {
                 form.reset();
             }
-            console.log('🎯 Modal de metas cerrado correctamente');
         }
     }
 
@@ -1709,7 +1631,6 @@ class FinanceApp {
             this.renderBudgets();
 
         } catch (error) {
-            console.error('Error al guardar presupuesto:', error);
             this.showNotification('Error al guardar el presupuesto', 'error');
         }
     }
@@ -1779,7 +1700,6 @@ class FinanceApp {
         const createGoalSection = document.querySelector('.create-goal-section');
 
         if (!goalsContainer) {
-            console.warn('⚠️ Contenedor de metas no encontrado');
             return;
         }
 
@@ -1907,14 +1827,12 @@ class FinanceApp {
 
         goalsContainer.innerHTML = goalsHTML + addGoalButton;
 
-        console.log(`🎯 Renderizadas ${this.goals.length} metas`);
     }
 
     /**
      * Edita una meta existente
      */
     editGoal(goalId) {
-        console.log(`✏️ Editando meta: ${goalId}`);
 
         // Buscar la meta por ID
         const goal = this.goals.find(g => g._id === goalId || g.id === goalId);
@@ -1947,7 +1865,6 @@ class FinanceApp {
             submitBtn.innerHTML = '<i class="fas fa-save"></i> Actualizar Meta';
         }
 
-        console.log(`✅ Modal de edición abierto para meta: ${goal.name}`);
     }
 
     /**
@@ -2004,7 +1921,6 @@ class FinanceApp {
         }
         if (notesField) notesField.value = goal.notes || '';
 
-        console.log('📝 Formulario completado con datos de la meta');
     }
 
     /**
@@ -2028,7 +1944,6 @@ class FinanceApp {
             this.renderGoals();
 
             this.showNotification(`Meta "${goal.name}" eliminada`, 'success');
-            console.log(`🗑️ Meta eliminada: ${goal.name}`);
         }
     }
 
@@ -2075,7 +1990,6 @@ class FinanceApp {
             this.showNotification(`Categoría "${name}" agregada correctamente`, 'success');
 
         } catch (error) {
-            console.error('❌ Error agregando categoría:', error);
             this.showNotification(error.message, 'error');
         }
     }
@@ -2230,9 +2144,7 @@ class FinanceApp {
             window.chartsManager.createExpensesChart(expensesData);
             window.chartsManager.createIncomeChart(incomeData);
 
-            console.log('📊 Gráficos renderizados correctamente');
         } catch (error) {
-            console.error('❌ Error renderizando gráficos:', error);
         }
     }
 
@@ -2283,9 +2195,7 @@ class FinanceApp {
             // Actualizar el dropdown de categorías para transacciones
             this.populateTransactionCategoryDropdown();
 
-            console.log('🏷️ Categorías renderizadas correctamente');
         } catch (error) {
-            console.error('❌ Error renderizando categorías:', error);
         }
     }
 
@@ -2298,7 +2208,6 @@ class FinanceApp {
     renderCategorySection(containerId, type, title) {
         const container = document.getElementById(containerId);
         if (!container) {
-            console.warn(`⚠️ Contenedor ${containerId} no encontrado`);
             return;
         }
 
@@ -2315,7 +2224,6 @@ class FinanceApp {
             const transactionCount = this.getTransactionCountByCategory(category.name);
             const totalAmount = this.getTotalAmountByCategory(category.name);
 
-            console.log(`🏷️ Renderizando categoría: ${category.name} (ID: ${category.id})`);
 
             return `
             <div class="category-item" data-category-id="${category.id}" onclick="showCategoryDetailsGlobal('${category.id}')" style="cursor: pointer;">
@@ -2359,7 +2267,6 @@ class FinanceApp {
             const categoryDropdown = document.getElementById('transactionCategory');
             
             if (!categoryDropdown) {
-                console.warn('⚠️ Dropdown de categorías no encontrado');
                 return;
             }
 
@@ -2391,9 +2298,7 @@ class FinanceApp {
                 categoryDropdown.appendChild(option);
             });
 
-            console.log(`✅ Dropdown de categorías actualizado con ${this.categories.length} categorías`);
         } catch (error) {
-            console.error('❌ Error poblando dropdown de categorías:', error);
         }
     }
 
@@ -2422,36 +2327,26 @@ class FinanceApp {
      * @param {string} categoryId - ID de la categoría
      */
     showCategoryDetails(categoryId) {
-        console.log(`📊 Mostrando detalles de categoría: ${categoryId}`);
-        console.log(`🔍 Tipo de categoryId: ${typeof categoryId}`);
-        console.log(`🔍 Longitud de categoryId: ${categoryId ? categoryId.length : 'N/A'}`);
 
         // Verificar que categoryId sea válido
         if (!categoryId || typeof categoryId !== 'string' || categoryId.trim() === '') {
-            console.error('❌ categoryId inválido:', categoryId);
             this.showNotification('ID de categoría inválido', 'error');
             return;
         }
 
         // Verificar que tengamos categorías cargadas
         if (!this.categories || !Array.isArray(this.categories)) {
-            console.error('❌ Array de categorías no válido:', this.categories);
             this.showNotification('Error: Categorías no cargadas', 'error');
             return;
         }
 
-        console.log(`🔍 Buscando categoría ${categoryId} en ${this.categories.length} categorías`);
-        console.log('🔍 IDs de categorías disponibles:', this.categories.map(c => c.id));
 
         const category = this.categories.find(c => c.id === categoryId);
         if (!category) {
-            console.error('❌ Categoría no encontrada:', categoryId);
-            console.log('🔍 Categorías disponibles:', this.categories.map(c => ({ id: c.id, name: c.name })));
             this.showNotification(`Categoría no encontrada: ${categoryId}`, 'error');
             return;
         }
 
-        console.log('✅ Categoría encontrada:', category);
 
         // Obtener transacciones de esta categoría
         const categoryTransactions = this.transactions
@@ -2466,7 +2361,6 @@ class FinanceApp {
         modal.style.display = 'block';
         modal.style.zIndex = '10000';
 
-        console.log(`✅ Modal de detalles creado para ${category.name} con ${categoryTransactions.length} transacciones`);
     }
 
     /**
@@ -2567,7 +2461,6 @@ class FinanceApp {
      * Función placeholder para editar transacción (se puede implementar más tarde)
      */
     editTransaction(transactionId) {
-        console.log(`✏️ Función editar transacción ${transactionId} - Implementar próximamente`);
         this.showNotification('Función de edición próximamente', 'info');
     }
 
@@ -2575,7 +2468,6 @@ class FinanceApp {
      * Exporta los datos de una categoría
      */
     exportCategoryData(categoryId) {
-        console.log(`📊 Exportando datos de categoría ${categoryId}`);
 
         const category = this.categories.find(c => c.id === categoryId);
         if (!category) {
@@ -2661,9 +2553,7 @@ class FinanceApp {
                 modal.remove();
             });
 
-            console.log('📝 Modal de agregar categoría mostrado');
         } catch (error) {
-            console.error('❌ Error mostrando modal de categoría:', error);
         }
     }
 
@@ -2708,9 +2598,7 @@ class FinanceApp {
             // Mostrar notificación
             this.showNotification(`Categoría "${name}" agregada correctamente`, 'success');
 
-            console.log('✅ Nueva categoría agregada:', newCategory);
         } catch (error) {
-            console.error('❌ Error agregando categoría:', error);
             this.showNotification('Error al agregar la categoría', 'error');
         }
     }
@@ -2773,9 +2661,7 @@ class FinanceApp {
                 modal.remove();
             });
 
-            console.log('✏️ Modal de editar categoría mostrado');
         } catch (error) {
-            console.error('❌ Error mostrando modal de edición:', error);
         }
     }
 
@@ -2824,10 +2710,8 @@ class FinanceApp {
                 // Mostrar notificación
                 this.showNotification(`Categoría "${name}" actualizada correctamente`, 'success');
 
-                console.log('✅ Categoría actualizada:', this.categories[categoryIndex]);
             }
         } catch (error) {
-            console.error('❌ Error actualizando categoría:', error);
             this.showNotification('Error al actualizar la categoría', 'error');
         }
     }
@@ -2867,9 +2751,7 @@ class FinanceApp {
             // Mostrar notificación
             this.showNotification(`Categoría "${category.name}" eliminada correctamente`, 'success');
 
-            console.log('🗑️ Categoría eliminada:', category);
         } catch (error) {
-            console.error('❌ Error eliminando categoría:', error);
             this.showNotification('Error al eliminar la categoría', 'error');
         }
     }
@@ -2906,9 +2788,7 @@ class FinanceApp {
                 }, 300);
             }, 5000);
 
-            console.log(`📢 Notificación ${type}: ${message}`);
         } catch (error) {
-            console.error('❌ Error mostrando notificación:', error);
         }
     }
 
@@ -2919,7 +2799,6 @@ class FinanceApp {
      */
     async syncAll() {
         try {
-            console.log('🔄 Sincronizando datos...');
             
             // Guardar en localStorage
             this.saveDataToStorage();
@@ -2927,9 +2806,7 @@ class FinanceApp {
             // Aquí se podría agregar sincronización con backend
             // await this.syncWithBackend();
             
-            console.log('✅ Datos sincronizados correctamente');
         } catch (error) {
-            console.error('❌ Error sincronizando datos:', error);
         }
     }
 
@@ -2995,7 +2872,6 @@ class FinanceApp {
             processingStatus.style.display = 'block';
             extractedExpenses.style.display = 'none';
 
-            console.log('📄 Iniciando procesamiento de PDF con pdfconverter.py...');
 
             // Verificar que el archivo PDF sea válido
             const file = csvFile.files[0];
@@ -3008,8 +2884,6 @@ class FinanceApp {
             }
 
             // Analizar con pdfconverter.py enviando el archivo PDF completo al servidor
-            console.log('🤖 Enviando archivo PDF al servidor para análisis...');
-            console.log('🔑 Usando API Key configurada en el servidor (.env)');
 
             // Crear FormData para enviar el archivo PDF
             const formData = new FormData();
@@ -3042,7 +2916,6 @@ class FinanceApp {
             const analysisResult = await analysisResponse.json();
 
             if (analysisResult.success && analysisResult.data) {
-                console.log('✅ Análisis completado:', analysisResult.data);
 
                 // Procesar resultados del servidor
                 // El servidor puede devolver diferentes estructuras
@@ -3050,40 +2923,23 @@ class FinanceApp {
 
                 if (analysisResult.data.extractedExpenses) {
                     // Usar extractedExpenses si está disponible (prioridad)
-                    console.log('📋 Usando extractedExpenses del servidor');
                     analysisData = { expenses: analysisResult.data.extractedExpenses };
                 } else if (analysisResult.data.analysis && analysisResult.data.analysis.expenses) {
                     // Usar analysis.expenses
-                    console.log('📋 Usando analysis.expenses del servidor');
                     analysisData = analysisResult.data.analysis;
                 } else {
                     // Fallback
-                    console.log('📋 Usando data directamente del servidor');
                     analysisData = analysisResult.data;
                 }
 
-                console.log('📋 Datos a procesar:', analysisData);
                 const processedData = this.processOpenAIResults(analysisData);
 
             const processedExpensesCount = processedData.expenses ? processedData.expenses.length : 0;
-            console.log(`📊 Resultados procesados: ${processedExpensesCount} gastos encontrados`);
 
                 // Alertas y estadísticas del procesamiento
                 if (processedExpensesCount === 0) {
-                    console.warn('🚨 No se encontraron gastos en el CSV procesado');
-                    console.log('💡 Posibles causas:');
-                    console.log('   - El CSV puede no contener transacciones de gastos');
-                    console.log('   - El formato del CSV puede ser incompatible');
-                    console.log('   - Las columnas pueden no estar en el formato esperado');
-                    console.log('   - Intenta con un CSV de estado de cuenta bancario');
                 } else if (processedExpensesCount < 20) {
-                    console.warn(`⚠️ Solo se encontraron ${processedExpensesCount} gastos`);
-                    console.log('💡 Para documentos bancarios típicos se esperan más transacciones');
-                    console.log('   - Verifica que el CSV contenga extractos bancarios');
-                    console.log('   - Asegúrate de que contenga transacciones COMPRA');
-                    console.log('   - El CSV debe tener el formato de Itaú o similar');
                 } else if (processedExpensesCount >= 50) {
-                    console.log(`✅ Excelente! Se encontraron ${processedExpensesCount} gastos - esto parece correcto para un documento bancario`);
                 }
 
                 // Mostrar estadísticas detalladas del procesamiento
@@ -3093,14 +2949,12 @@ class FinanceApp {
                         return acc;
                     }, {});
 
-                    console.log(`💰 Distribución por moneda:`, expensesByCurrency);
 
                     const expensesByCategory = processedData.expenses.reduce((acc, expense) => {
                         acc[expense.category] = (acc[expense.category] || 0) + 1;
                         return acc;
                     }, {});
 
-                    console.log(`📂 Distribución por categoría:`, expensesByCategory);
 
                     // Calcular totales por moneda
                     const totalsByCurrency = processedData.expenses.reduce((acc, expense) => {
@@ -3109,7 +2963,6 @@ class FinanceApp {
                         return acc;
                     }, {});
 
-                    console.log(`💵 Totales por moneda:`, totalsByCurrency);
                 }
 
                 // Mostrar resultados
@@ -3119,19 +2972,12 @@ class FinanceApp {
                 const totalTransactions = (processedData.expenses ? processedData.expenses.length : 0) + (processedData.incomes ? processedData.incomes.length : 0);
                 const incomesCount = processedData.incomes ? processedData.incomes.length : 0;
 
-                console.log('📊 Mostrando resultados procesados:', {
-                    expenses: processedExpensesCount,
-                    incomes: incomesCount,
-                    processedDataKeys: Object.keys(processedData)
-                });
-
                 this.showNotification(`PDF procesado exitosamente. ${totalTransactions} transacciones encontradas (${processedExpensesCount} gastos, ${incomesCount} ingresos).`, 'success');
             } else {
                 throw new Error(analysisResult?.error || 'Error en el análisis con OpenAI');
             }
 
         } catch (error) {
-            console.error('❌ Error procesando PDF:', error);
             this.showNotification(`Error procesando PDF: ${error.message}`, 'error');
         } finally {
             // Ocultar estado de procesamiento
@@ -3168,10 +3014,8 @@ class FinanceApp {
                             const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
                             let fullText = '';
 
-                            console.log(`📄 PDF cargado: ${pdf.numPages} páginas`);
 
                             for (let i = 1; i <= pdf.numPages; i++) {
-                                console.log(`📄 Procesando página ${i}/${pdf.numPages}`);
 
                                 const page = await pdf.getPage(i);
                                 const textContent = await page.getTextContent();
@@ -3184,20 +3028,15 @@ class FinanceApp {
                                     .replace(/\s+/g, ' ') // Normalizar espacios
                                     .trim();
 
-                                console.log(`📄 Página ${i}: ${pageText.length} caracteres extraídos`);
                                 fullText += pageText + '\n\n';
 
                                 // Log de preview para debug
                                 const preview = pageText.substring(0, 200);
-                                console.log(`📄 Preview página ${i}: "${preview}..."`);
                             }
 
-                            console.log(`📄 Texto total extraído: ${fullText.length} caracteres`);
-                            console.log(`📄 Número aproximado de líneas: ${fullText.split('\n').length}`);
 
                             resolve(fullText);
                         } catch (error) {
-                            console.error('❌ Error extrayendo texto del PDF:', error);
                             reject(error);
                         }
                     }
@@ -3218,8 +3057,6 @@ class FinanceApp {
         let expenses = [];
         let incomes = [];
 
-        console.log('🔄 Procesando resultados de OpenAI...');
-        console.log('📋 Estructura de datos recibida:', JSON.stringify(data, null, 2));
 
         // Si la respuesta es un array directo
         if (Array.isArray(data)) {
@@ -3238,80 +3075,54 @@ class FinanceApp {
                     expenses.push(transaction);
                 }
             });
-            console.log(`📋 Respuesta es array directo: ${expenses.length} gastos, ${incomes.length} ingresos`);
         }
 
         // Si la respuesta tiene estructura de análisis
         else if (data.expenses && Array.isArray(data.expenses)) {
             expenses = data.expenses;
-            console.log(`📋 Respuesta tiene estructura expenses: ${expenses.length} gastos`);
 
             // Verificar si también hay ingresos
             if (data.incomes && Array.isArray(data.incomes)) {
                 incomes = data.incomes;
-                console.log(`📋 Respuesta tiene estructura incomes: ${incomes.length} ingresos`);
             }
         }
 
         // Si la respuesta es texto, intentar extraer gastos
         else if (typeof data === 'string') {
-            console.log('📋 Respuesta es texto, intentando extracción manual...');
             expenses = this.extractExpensesFromText(data);
-            console.log(`📋 Extracción de texto encontró: ${expenses.length} gastos`);
         }
 
         // Si no se reconoce la estructura
         else {
-            console.warn('⚠️ Estructura de datos no reconocida para procesamiento de transacciones');
-            console.log('🔍 Propiedades disponibles:', Object.keys(data || {}));
         }
 
         // Siempre intentar extracción adicional, incluso si OpenAI encontró algunas transacciones
-        console.log(`🔄 Intentando extracción adicional para encontrar más transacciones...`);
 
         if (this.lastExtractedPdfText) {
             const additionalExpenses = this.extractBankingExpenses(this.lastExtractedPdfText);
 
             if (additionalExpenses.length > 0) {
-                console.log(`✅ Extracción adicional encontró ${additionalExpenses.length} transacciones potenciales`);
 
                 // Combinar resultados, evitando duplicados
                 const combinedExpenses = this.combineExpenseResults(expenses, additionalExpenses);
-                console.log(`📊 Total gastos combinados: ${combinedExpenses.length} gastos únicos`);
 
                 expenses = combinedExpenses;
             } else {
-                console.log('⚠️ La extracción adicional no encontró transacciones adicionales');
             }
         }
 
         // Validaciones finales
         const totalTransactions = expenses.length + incomes.length;
         if (totalTransactions === 0) {
-            console.log('🚨 No se encontraron transacciones ni con OpenAI ni con extracción manual');
-            console.log('💡 Posibles causas:');
-            console.log('   - El PDF puede contener imágenes en lugar de texto');
-            console.log('   - El formato del PDF puede ser incompatible');
-            console.log('   - El documento puede no contener extractos bancarios');
         } else if (totalTransactions < 20) {
-            console.log(`⚠️ Solo se encontraron ${totalTransactions} transacciones totales (${expenses.length} gastos, ${incomes.length} ingresos)`);
-            console.log('💡 Para documentos bancarios típicos se esperan más transacciones');
-            console.log('   - Verifica que el PDF contenga extractos bancarios');
-            console.log('   - Asegúrate de que el texto sea legible');
-            console.log('   - Algunos PDFs pueden requerir OCR previo');
         } else if (totalTransactions >= 50) {
-            console.log(`✅ ¡Excelente! Se encontraron ${totalTransactions} transacciones - esto parece correcto para un documento bancario`);
         }
 
-        console.log(`📊 Transacciones finales antes de mejora: ${expenses.length} gastos, ${incomes.length} ingresos`);
 
         // Procesar y mejorar los gastos e ingresos extraídos
         expenses = this.enhanceExtractedExpenses(expenses);
         incomes = this.enhanceExtractedIncomes(incomes);
 
-        console.log(`✅ Transacciones finales después de mejora: ${expenses.length} gastos, ${incomes.length} ingresos`);
-        console.log('📋 Resumen de gastos encontrados:', expenses.map(exp => `${exp.description}: $${exp.amount}`).slice(0, 5));
-        console.log('📋 Resumen de ingresos encontrados:', incomes.map(inc => `${inc.description}: $${inc.amount}`).slice(0, 5));
 
         return { expenses, incomes };
     }
@@ -3460,7 +3271,6 @@ class FinanceApp {
 
             return '';
         } catch (error) {
-            console.warn('Error formateando fecha:', error);
             return '';
         }
     }
@@ -3502,36 +3312,26 @@ class FinanceApp {
      * Extrae gastos del texto completo del PDF como respaldo
      */
     extractExpensesFromFullText() {
-        console.log('🔍 Intentando extracción de respaldo del texto completo...');
 
         const expenses = [];
 
         try {
             // Usar el texto completo almacenado del PDF
             if (!this.lastExtractedPdfText) {
-                console.log('⚠️ No hay texto completo disponible para respaldo');
                 return expenses;
             }
 
-            console.log(`📄 Usando texto completo almacenado (${this.lastExtractedPdfText.length} caracteres)`);
 
             // Usar la función especializada de extracción bancaria
             const bankingExpenses = this.extractBankingExpenses(this.lastExtractedPdfText);
 
             if (bankingExpenses.length > 0) {
-                console.log(`✅ Extracción bancaria encontró ${bankingExpenses.length} gastos adicionales`);
                 expenses.push(...bankingExpenses);
             } else {
-                console.log('⚠️ La extracción bancaria tampoco encontró gastos');
-                console.log('💡 Posibles soluciones:');
-                console.log('   - El PDF puede contener imágenes en lugar de texto');
-                console.log('   - El formato del PDF puede ser incompatible');
-                console.log('   - Intenta con un PDF diferente');
             }
 
             return expenses;
         } catch (error) {
-            console.error('❌ Error en extracción de respaldo:', error);
             return expenses;
         }
     }
@@ -3540,12 +3340,10 @@ class FinanceApp {
      * Función mejorada para extraer gastos de texto bancario
      */
     extractBankingExpenses(text) {
-        console.log('🏦 Iniciando extracción especializada de gastos bancarios...');
 
         const expenses = [];
         const lines = text.split('\n');
 
-        console.log(`📄 Procesando ${lines.length} líneas de texto bancario`);
 
         // Patrones exhaustivos para extractos bancarios uruguayos
         const bankingPatterns = [
@@ -3659,7 +3457,6 @@ class FinanceApp {
                                     date: this.extractDateFromLine(cleanLine, lines, index)
                                 });
 
-                                console.log(`💰 Encontrado gasto: ${description} - ${this.detectCurrencyFromLine(cleanLine)}${amount}`);
                             }
                         }
                     }
@@ -3667,10 +3464,6 @@ class FinanceApp {
             });
         });
 
-        console.log(`📊 Estadísticas de extracción:`);
-        console.log(`  - Líneas procesadas: ${processedLines}`);
-        console.log(`  - Montos potenciales encontrados: ${potentialAmounts}`);
-        console.log(`  - Gastos extraídos: ${expenses.length}`);
 
         return expenses;
     }
@@ -3693,7 +3486,6 @@ class FinanceApp {
                 return parseFloat(amountStr.replace(/[^\d.]/g, ''));
             }
         } catch (error) {
-            console.warn(`Error parseando monto: ${amountStr}`, error);
             return 0;
         }
     }
@@ -3930,9 +3722,7 @@ class FinanceApp {
                 if (!similarDescription) {
                     combined.push(manualExpense);
                     existingAmounts.add(amountKey);
-                    console.log(`➕ Agregado gasto adicional: ${manualExpense.description} - ${manualExpense.currency}${manualExpense.amount}`);
                 } else {
-                    console.log(`⚠️ Omitido gasto duplicado: ${manualExpense.description}`);
                 }
             }
         });
@@ -3969,12 +3759,6 @@ class FinanceApp {
      * Muestra los resultados del análisis de CSV
      */
     displayCsvResults(data) {
-        console.log('🎨 displayCsvResults called with data:', {
-            dataKeys: Object.keys(data),
-            expensesCount: data.expenses ? data.expenses.length : 0,
-            incomesCount: data.incomes ? data.incomes.length : 0,
-            firstExpense: data.expenses && data.expenses[0] ? data.expenses[0] : null
-        });
 
         const expensesList = document.getElementById('expensesList');
 
@@ -4179,7 +3963,6 @@ class FinanceApp {
         const dateInput = document.getElementById('pdfTransactionDate');
         if (dateInput) {
             dateInput.addEventListener('change', () => {
-                console.log('📅 Fecha de PDF cambiada a:', dateInput.value);
             });
         }
 
@@ -4194,7 +3977,6 @@ class FinanceApp {
      * Agrega las transacciones seleccionadas del PDF usando POST para ingresos y PUT para gastos
      */
     async addSelectedPdfTransactions() {
-        console.log('📝 Agregando transacciones seleccionadas del PDF...');
 
         const checkboxes = document.querySelectorAll('.expense-checkbox:checked');
         if (checkboxes.length === 0) {
@@ -4217,7 +3999,6 @@ class FinanceApp {
                         transactionDate = this.getPdfSelectedDate();
                     }
                 } catch (error) {
-                    console.warn('Fecha inválida en dataset, usando fecha seleccionada:', cb.dataset.date);
                     transactionDate = this.getPdfSelectedDate();
                 }
             } else {
@@ -4247,7 +4028,6 @@ class FinanceApp {
             }
         });
 
-        console.log(`📊 ${selectedExpenses.length} gastos y ${selectedIncomes.length} ingresos seleccionados para agregar`);
 
         try {
             let expensesAdded = 0;
@@ -4255,7 +4035,6 @@ class FinanceApp {
 
             // Agregar gastos usando PUT (como antes)
             if (selectedExpenses.length > 0) {
-                console.log('🔄 Enviando gastos al backend...');
                 const expenseResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}`, {
                     method: 'PUT',
                     headers: {
@@ -4266,20 +4045,17 @@ class FinanceApp {
 
                 if (!expenseResponse.ok) {
                     const errorData = await expenseResponse.json().catch(() => ({}));
-                    console.error('❌ Error agregando gastos:', expenseResponse.status, errorData);
                     this.showNotification('Error: No se pudieron agregar los gastos', 'error');
                 } else {
                     const result = await expenseResponse.json();
                     if (result.success) {
                         expensesAdded = selectedExpenses.length;
-                        console.log('✅ Gastos agregados exitosamente al backend');
                     }
                 }
             }
 
             // Agregar ingresos usando POST
             if (selectedIncomes.length > 0) {
-                console.log('🔄 Enviando ingresos al backend...');
                 const incomeResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}`, {
                     method: 'POST',
                     headers: {
@@ -4290,13 +4066,11 @@ class FinanceApp {
 
                 if (!incomeResponse.ok) {
                     const errorData = await incomeResponse.json().catch(() => ({}));
-                    console.error('❌ Error agregando ingresos:', incomeResponse.status, errorData);
                     this.showNotification('Error: No se pudieron agregar los ingresos', 'error');
                 } else {
                     const result = await incomeResponse.json();
                     if (result.success) {
                         incomesAdded = selectedIncomes.length;
-                        console.log('✅ Ingresos agregados exitosamente al backend');
                     }
                 }
             }
@@ -4328,11 +4102,9 @@ class FinanceApp {
                     expensesList.style.display = 'none';
                 }
 
-                console.log('✅ Todas las transacciones del PDF agregadas exitosamente');
             }
 
         } catch (error) {
-            console.error('❌ Error agregando transacciones del PDF:', error);
             this.showNotification('Error interno al agregar las transacciones', 'error');
         }
     }
@@ -4349,7 +4121,6 @@ class FinanceApp {
 
             // Agregar listener para cambios en la fecha
             dateInput.addEventListener('change', () => {
-                console.log('📅 Fecha de CSV cambiada a:', dateInput.value);
             });
         }
     }
@@ -4366,7 +4137,6 @@ class FinanceApp {
                     return selectedDate;
                 }
             } catch (error) {
-                console.warn('Fecha seleccionada inválida, usando fecha actual');
             }
         }
         return new Date();
@@ -4391,11 +4161,9 @@ class FinanceApp {
                     // Crear fecha con hora 12:00:00 para evitar problemas de zona horaria
                     const correctedDate = new Date(year, month, day, 12, 0, 0, 0);
 
-                    console.log(`📅 Fecha PDF corregida: ${selectedDate.toISOString().split('T')[0]} → ${correctedDate.toISOString().split('T')[0]}`);
                     return correctedDate;
                 }
             } catch (error) {
-                console.warn('Fecha seleccionada inválida, usando fecha actual');
             }
         }
         return new Date();
@@ -4409,7 +4177,6 @@ class FinanceApp {
      */
     async diagnoseGoalsWithAI() {
         try {
-            console.log('🏥 Iniciando diagnóstico financiero con IA...');
 
             // Obtener contexto financiero completo del usuario
             const financialData = this.getFinancialContextForDiagnosis();
@@ -4430,10 +4197,8 @@ class FinanceApp {
                 diagnosisType: 'goals_financial_advisor'
             };
 
-            console.log('📊 Enviando datos financieros para diagnóstico:', diagnosisData);
 
             // Usar el nuevo sistema de diagnóstico avanzado
-            console.log('🔍 Usando sistema de diagnóstico avanzado...');
 
             // Verificar autenticación para diagnóstico avanzado
             const authData = localStorage.getItem('auth_data');
@@ -4444,7 +4209,6 @@ class FinanceApp {
                     const parsed = JSON.parse(authData);
                     authToken = parsed.token;
                 } catch (error) {
-                    console.warn('⚠️ Error parseando datos de autenticación para diagnóstico');
                 }
             }
 
@@ -4477,7 +4241,6 @@ class FinanceApp {
             }
 
             // Fallback al endpoint original si el sistema avanzado no está disponible
-            console.log('🔄 Fallback al endpoint de diagnóstico original...');
             const diagnosisResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/public/ai/diagnose-goals`, {
                 method: 'POST',
                 headers: {
@@ -4500,7 +4263,6 @@ class FinanceApp {
             const diagnosisResult = await diagnosisResponse.json();
 
             if (diagnosisResult.success && diagnosisResult.data) {
-                console.log('✅ Diagnóstico completado exitosamente');
 
                 // Mostrar resultados en el chat
                 this.displayDiagnosisResults(diagnosisResult.data);
@@ -4511,7 +4273,6 @@ class FinanceApp {
             }
 
         } catch (error) {
-            console.error('❌ Error en diagnóstico financiero:', error);
             this.showNotification(`❌ Error en diagnóstico: ${error.message}`, 'error');
         } finally {
             // Restaurar botón
@@ -4552,7 +4313,6 @@ class FinanceApp {
                 context.transactions = JSON.parse(transactionsData);
             }
         } catch (error) {
-            console.warn('Error obteniendo transacciones:', error);
         }
 
         // Obtener metas del localStorage
@@ -4562,7 +4322,6 @@ class FinanceApp {
                 context.goals = JSON.parse(goalsData);
             }
         } catch (error) {
-            console.warn('Error obteniendo metas:', error);
         }
 
         // Obtener categorías del localStorage
@@ -4572,7 +4331,6 @@ class FinanceApp {
                 context.categories = JSON.parse(categoriesData);
             }
         } catch (error) {
-            console.warn('Error obteniendo categorías:', error);
         }
 
         // Calcular resumen financiero
@@ -4683,7 +4441,6 @@ class FinanceApp {
 
     async diagnoseOpenAIConnection() {
         try {
-            console.log('🔍 Iniciando diagnóstico de OpenAI...');
 
             // Verificar API Key local
             let apiKey = null;
@@ -4706,7 +4463,6 @@ class FinanceApp {
                 }
             }
 
-            console.log(`🔑 API Key encontrada en: ${apiKeySource}`);
 
             if (!apiKey) {
                 throw new Error('No se encontró una API Key de OpenAI configurada');
@@ -4732,17 +4488,14 @@ class FinanceApp {
             const healthData = await healthResponse.json();
 
             if (healthData.success && healthData.data.status === 'success') {
-                console.log('✅ Diagnóstico completado: OpenAI funcionando correctamente');
                 this.showNotification('✅ OpenAI funcionando correctamente', 'success');
                 return true;
             } else {
-                console.error('❌ Diagnóstico fallido:', healthData.data.message);
                 this.showNotification(`❌ Error en OpenAI: ${healthData.data.message}`, 'error');
                 return false;
             }
 
         } catch (error) {
-            console.error('❌ Error en diagnóstico:', error.message);
             this.showNotification(`❌ Error de diagnóstico: ${error.message}`, 'error');
             return false;
         }
@@ -4803,7 +4556,6 @@ class FinanceApp {
             }
 
             // Usar el nuevo sistema de IA con acceso completo a datos
-            console.log('🧠 Usando sistema de IA avanzado con acceso completo...');
 
             // Obtener datos financieros actuales del frontend
             const financialData = this.getCurrentFinancialData();
@@ -4831,7 +4583,6 @@ class FinanceApp {
                 }
             } else {
                 // Fallback al endpoint original si el sistema avanzado no está disponible
-                console.log('🔄 Fallback al endpoint original...');
                 const chatResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/public/ai/chat`, {
                     method: 'POST',
                     headers: {
@@ -4884,7 +4635,6 @@ class FinanceApp {
             chatMessages.appendChild(aiMessageDiv);
 
         } catch (error) {
-            console.error('Error obteniendo respuesta de IA:', error);
 
             // Remover indicador de escritura
             chatMessages.removeChild(typingIndicator);
@@ -4930,7 +4680,6 @@ class FinanceApp {
                 throw new Error('Configuración local no disponible');
             }
         } catch (error) {
-            console.warn('⚠️ No se pudo cargar config-local.js, intentando localStorage...');
             apiKey = localStorage.getItem('openai_api_key');
             if (apiKey && apiKey !== 'sk-proj-your-openai-api-key-here') {
                 apiKeySource = 'localStorage';
@@ -4939,7 +4688,6 @@ class FinanceApp {
             }
         }
 
-        console.log(`🤖 Usando API Key de ${apiKeySource}`);
 
         // Preparar contexto financiero del usuario
         const financialContext = this.getFinancialContext();
@@ -5129,7 +4877,6 @@ Responde como un economista profesional especializado en la mejor administració
                     const description = checkbox?.dataset.description || '';
                     if (description) {
                         textarea.value = description;
-                        console.log(`📝 Auto-completado comentario para categoría "Otro": "${description}"`);
                     }
                 }
             } else {
@@ -5147,7 +4894,6 @@ Responde como un economista profesional especializado en la mejor administració
 
         if (checkbox) {
             checkbox.dataset.currency = newCurrency;
-            console.log(`💱 Cambiada moneda del gasto ${index} a: ${newCurrency}`);
 
             // Actualizar el símbolo visual en la interfaz
             if (amountSpan) {
@@ -5186,34 +4932,27 @@ Responde como un economista profesional especializado en la mejor administració
      * Refresca todos los datos
      */
     refreshAllData() {
-        console.log('🔄 Refrescando todos los datos para el período:', this.currentPeriod);
-        console.log('📊 Estado actual de transacciones:', this.transactions.length);
 
         // NO recargar desde localStorage aquí porque ya tenemos los datos actualizados en memoria
         // Solo actualizar la interfaz con los datos que ya tenemos
-        console.log('🔄 Actualizando interfaz con datos en memoria...');
 
         this.renderDashboard();
         this.renderTransactions();
         this.updateCharts();
-        console.log('✅ Todos los datos refrescados correctamente');
     }
 
     /**
      * Refresca todos los datos recargando desde localStorage (para casos especiales)
      */
     refreshAllDataWithReload() {
-        console.log('🔄 Refrescando todos los datos con recarga desde localStorage...');
 
         // Recargar datos del localStorage
-        console.log('💾 Recargando datos desde localStorage...');
         this.loadDataFromStorage();
 
         // Actualizar interfaz
         this.renderDashboard();
         this.renderTransactions();
         this.updateCharts();
-        console.log('✅ Datos recargados y refrescados correctamente');
     }
 
 
@@ -5221,37 +4960,30 @@ Responde como un economista profesional especializado en la mejor administració
      * Configura la selección de gastos para agregar
      */
     setupExpenseSelection() {
-        console.log('🔧 Configurando selección de gastos...');
 
         const checkboxes = document.querySelectorAll('.expense-checkbox');
         const addSelectedBtn = document.getElementById('addSelectedExpenses');
         const selectAllBtn = document.getElementById('selectAllExpenses');
 
-        console.log(`📋 Encontrados ${checkboxes.length} checkboxes, botón agregar: ${addSelectedBtn ? '✅' : '❌'}, botón seleccionar todos: ${selectAllBtn ? '✅' : '❌'}`);
 
         if (addSelectedBtn) {
             // Remover event listeners previos para evitar duplicados
             addSelectedBtn.removeEventListener('click', this.handleAddSelectedExpenses);
             addSelectedBtn.addEventListener('click', () => this.handleAddSelectedExpenses(checkboxes));
-            console.log('✅ Event listener configurado para botón "Agregar Seleccionados"');
 
             // Configurar actualización del estado del botón cuando cambian los checkboxes
             this.setupCheckboxStateTracking(checkboxes, addSelectedBtn);
         } else {
-            console.warn('⚠️ Botón "addSelectedExpenses" no encontrado');
         }
 
         if (selectAllBtn) {
             selectAllBtn.addEventListener('click', () => this.handleSelectAllExpenses(checkboxes, addSelectedBtn));
-            console.log('✅ Event listener configurado para botón "Seleccionar Todos"');
         } else {
-            console.warn('⚠️ Botón "selectAllExpenses" no encontrado');
         }
 
         // Configurar event listeners para checkboxes individuales
         checkboxes.forEach((checkbox, index) => {
             checkbox.addEventListener('change', () => {
-                console.log(`☑️ Checkbox ${index} cambió: ${checkbox.checked ? 'marcado' : 'desmarcado'}`);
                 this.updateAddSelectedButtonState(checkboxes, addSelectedBtn);
             });
         });
@@ -5283,14 +5015,12 @@ Responde como un economista profesional especializado en la mejor administració
      * Maneja la selección de todos los gastos
      */
     handleSelectAllExpenses(checkboxes, addSelectedBtn) {
-        console.log('🔄 Seleccionando todos los gastos...');
 
         const allChecked = Array.from(checkboxes).every(cb => cb.checked);
         const newState = !allChecked; // Si todos están marcados, desmarcar; si no, marcar todos
 
         checkboxes.forEach((checkbox, index) => {
             checkbox.checked = newState;
-            console.log(`☑️ Checkbox ${index}: ${newState ? 'marcado' : 'desmarcado'}`);
         });
 
         // Actualizar el texto del botón
@@ -5304,7 +5034,6 @@ Responde como un economista profesional especializado en la mejor administració
         // Actualizar estado del botón "Agregar Seleccionados"
         this.updateAddSelectedButtonState(checkboxes, addSelectedBtn);
 
-        console.log(`✅ ${newState ? 'Seleccionados' : 'Deseleccionados'} todos los gastos`);
     }
 
     /**
@@ -5321,14 +5050,12 @@ Responde como un economista profesional especializado en la mejor administració
             ? `Agregar Seleccionados (${checkedBoxes.length})`
             : 'Agregar Seleccionados';
 
-        console.log(`🔄 Estado del botón actualizado: ${hasSelections ? 'habilitado' : 'deshabilitado'} (${checkedBoxes.length} seleccionados)`);
     }
 
     /**
      * Maneja el evento de agregar gastos seleccionados
      */
     handleAddSelectedExpenses(checkboxes) {
-        console.log('🖱️ Botón "Agregar Seleccionados" presionado');
 
         const selectedExpenses = Array.from(checkboxes)
                     .filter(cb => cb.checked)
@@ -5346,7 +5073,6 @@ Responde como un economista profesional especializado en la mejor administració
                                 // Si no hay comentarios pero la descripción es detallada, usarla como comentario
                                 if (!comments && cb.dataset.description && cb.dataset.description.length > 10) {
                                     comments = cb.dataset.description;
-                                    console.log(`📝 Usando descripción como comentario para "${cb.dataset.description}"`);
                                 }
                             }
                         }
@@ -5361,7 +5087,6 @@ Responde como un economista profesional especializado en la mejor administració
                                     transactionDate = this.getPdfSelectedDate();
                                 }
                             } catch (error) {
-                                console.warn('Fecha inválida en dataset, usando fecha seleccionada:', cb.dataset.date);
                                 transactionDate = this.getPdfSelectedDate();
                             }
                         } else {
@@ -5369,7 +5094,6 @@ Responde como un economista profesional especializado en la mejor administració
                             transactionDate = this.getPdfSelectedDate();
                         }
 
-                        console.log(`📝 Procesando gasto ${index}: ${cb.dataset.description} - ${cb.dataset.amount} ${cb.dataset.currency} - Categoría: ${category}`);
 
                         return {
                             type: 'expense',
@@ -5382,39 +5106,29 @@ Responde como un economista profesional especializado en la mejor administració
                         };
                     });
 
-                console.log(`📊 ${selectedExpenses.length} gastos seleccionados para agregar`);
 
                 if (selectedExpenses.length > 0) {
                     // LIMPIEZA AUTOMÁTICA DE DESCRIPCIONES
-                    console.log('🧹 Aplicando limpieza automática de descripciones...');
                     const cleanedExpenses = this.cleanPdfDescriptions(selectedExpenses);
-                    console.log(`✅ Limpieza completada: ${cleanedExpenses.length} gastos procesados`);
 
-                    console.log('📝 Agregando gastos al array de transacciones...');
-                    console.log('📊 Total de transacciones antes:', this.transactions.length);
 
                     cleanedExpenses.forEach(expense => {
                         expense.id = this.generateId();
                         expense.createdAt = new Date();
                         this.transactions.push(expense);
-                        console.log(`✅ Agregado: ${expense.description} - ${expense.currency}${expense.amount} - Fecha: ${expense.date}`);
                     });
 
-                    console.log('📊 Total de transacciones después:', this.transactions.length);
 
                     this.saveDataToStorage();
 
                     // Forzar actualización inmediata de la lista
-                    console.log('🔄 Forzando actualización de la interfaz...');
                     this.renderTransactions();
                     this.renderDashboard();
                     this.updateCharts();
 
                     this.showNotification(`${selectedExpenses.length} gastos agregados correctamente`, 'success');
-                    console.log('🎉 Gastos agregados exitosamente');
                 } else {
                     this.showNotification('Selecciona al menos un gasto para agregar', 'error');
-                    console.log('⚠️ No se seleccionaron gastos para agregar');
                 }
     }
 
@@ -5556,7 +5270,6 @@ Responde como un economista profesional especializado en la mejor administració
      * Actualiza los datos de los gráficos
      */
     updateChartData() {
-        console.log('📊 Actualizando datos de gráficos para período:', this.currentPeriod);
         this.updateChart1Data();
         this.updateChart2Data();
     }
@@ -5693,7 +5406,6 @@ Responde como un economista profesional especializado en la mejor administració
             simpleFilter.removeEventListener('change', this.handleFilterChange);
             simpleFilter.addEventListener('change', () => this.handleFilterChange());
 
-            console.log('✅ Filtro de transacciones configurado correctamente');
         }
     }
 
@@ -5701,16 +5413,13 @@ Responde como un economista profesional especializado en la mejor administració
      * Maneja el cambio del filtro de transacciones
      */
     handleFilterChange() {
-        console.log('🔄 Filtro cambiado, refrescando transacciones...');
         this.renderTransactions();
-        console.log('✅ Transacciones refrescadas después del cambio de filtro');
     }
 
     /**
      * Configura la funcionalidad de selección múltiple
      */
     setupBulkSelection() {
-        console.log('🔧 Configurando selección múltiple...');
 
         const checkboxes = document.querySelectorAll('.transaction-select-checkbox');
         const selectAllBtn = document.getElementById('selectAllBtn');
@@ -5719,7 +5428,6 @@ Responde como un economista profesional especializado en la mejor administració
         const bulkActionsBar = document.getElementById('bulkActionsBar');
         const selectedCount = document.getElementById('selectedCount');
 
-        console.log(`📋 Encontrados ${checkboxes.length} checkboxes`);
 
         // Event listener para cada checkbox individual
         checkboxes.forEach(checkbox => {
@@ -5749,7 +5457,6 @@ Responde como un economista profesional especializado en la mejor administració
             });
         }
 
-        console.log('✅ Selección múltiple configurada');
     }
 
     /**
@@ -5779,7 +5486,6 @@ Responde como un economista profesional especializado en la mejor administració
             }
         }
 
-        console.log(`📊 ${checkedCount} transacción(es) seleccionada(s)`);
     }
 
     /**
@@ -5791,7 +5497,6 @@ Responde como un economista profesional especializado en la mejor administració
             checkbox.checked = true;
         });
         this.updateBulkSelectionState();
-        console.log('✅ Todas las transacciones seleccionadas');
     }
 
     /**
@@ -5803,7 +5508,6 @@ Responde como un economista profesional especializado en la mejor administració
             checkbox.checked = false;
         });
         this.updateBulkSelectionState();
-        console.log('✅ Todas las transacciones deseleccionadas');
     }
 
     /**
@@ -5821,7 +5525,6 @@ Responde como un economista profesional especializado en la mejor administració
             checkbox.getAttribute('data-transaction-id')
         );
 
-        console.log(`🗑️ Eliminando ${selectedIds.length} transacción(es) seleccionada(s):`, selectedIds);
 
         // Mostrar confirmación
         const confirmMessage = `¿Estás seguro de que deseas eliminar ${selectedIds.length} transacción(es) seleccionada(s)? Esta acción no se puede deshacer.`;
@@ -5834,12 +5537,10 @@ Responde como un economista profesional especializado en la mejor administració
                     this.deleteTransaction(transactionId);
                     deletedCount++;
                 } catch (error) {
-                    console.error(`❌ Error eliminando transacción ${transactionId}:`, error);
                 }
             });
 
             this.showNotification(`${deletedCount} transacción(es) eliminada(s) correctamente`, 'success');
-            console.log(`✅ ${deletedCount} transacción(es) eliminada(s) correctamente`);
 
             // Refrescar la vista
             this.renderTransactions();
@@ -5853,30 +5554,24 @@ Responde como un economista profesional especializado en la mejor administració
         let transactions = this.getTransactionsForCurrentPeriod();
         const simpleFilter = document.getElementById('simpleFilter');
 
-        console.log('🔍 Aplicando filtro simple...');
-        console.log('📊 Transacciones del período actual:', transactions.length);
 
         if (!simpleFilter || !simpleFilter.value || simpleFilter.value === 'all') {
             // Mostrar todas las transacciones ordenadas por fecha
-            console.log('📋 Filtro: Todas las transacciones');
             return transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
         }
 
         switch (simpleFilter.value) {
             case 'income':
                 transactions = transactions.filter(t => t.type === 'income');
-                console.log('💰 Filtro: Solo ingresos - Resultado:', transactions.length);
                 break;
             case 'expense':
                 transactions = transactions.filter(t => t.type === 'expense');
-                console.log('💸 Filtro: Solo gastos - Resultado:', transactions.length);
                 break;
             case 'recent':
                 // Ordenar por fecha y tomar las últimas 10
                 transactions = transactions
                     .sort((a, b) => new Date(b.date) - new Date(a.date))
                     .slice(0, 10);
-                console.log('🕐 Filtro: Últimas 10 - Resultado:', transactions.length);
                 return transactions;
         }
 
@@ -5903,21 +5598,14 @@ Responde como un economista profesional especializado en la mejor administració
     renderTransactions() {
         const container = document.getElementById('transactionsList');
         if (!container) {
-            console.error('❌ No se encontró el contenedor transactionsList');
             return;
         }
 
-        console.log('📋 Renderizando transacciones...');
-        console.log('📊 Total de transacciones en memoria:', this.transactions.length);
-        console.log('📋 IDs de transacciones disponibles:', this.transactions.map(t => t.id));
 
         const filteredTransactions = this.getSimpleFilteredTransactions();
-        console.log('🔍 Transacciones después del filtro simple:', filteredTransactions.length);
-        console.log('📋 IDs de transacciones filtradas:', filteredTransactions.map(t => t.id));
 
         if (filteredTransactions.length === 0) {
             container.innerHTML = '<p class="no-data">No hay transacciones para mostrar</p>';
-            console.log('⚠️ No hay transacciones para mostrar después del filtro');
             return;
         }
 
@@ -5990,25 +5678,19 @@ Responde como un economista profesional especializado en la mejor administració
         `;
 
         container.innerHTML = bulkActionsHTML + transactionsHTML;
-        console.log('📝 HTML actualizado en transactionsList');
-        console.log('🔗 HTML generado:', transactionsHTML.substring(0, 200) + '...');
 
         // Configurar event listeners para los botones de eliminación
         this.setupDeleteTransactionButtons();
-        console.log('✅ Event listeners configurados para botones de eliminación');
 
         // Configurar selección múltiple
         this.setupBulkSelection();
-        console.log('✅ Selección múltiple configurada');
 
-        console.log('🎉 Renderizado de transacciones completado');
     }
 
     /**
      * Configura los event listeners para los botones de eliminación
      */
     setupDeleteTransactionButtons() {
-        console.log('🔧 Iniciando configuración de botones de eliminación...');
 
         // Limpiar event listeners previos
         document.querySelectorAll('.delete-transaction-btn').forEach(button => {
@@ -6016,18 +5698,15 @@ Responde como un economista profesional especializado en la mejor administració
         });
 
         const deleteButtons = document.querySelectorAll('.delete-transaction-btn');
-        console.log(`🔧 Encontrados ${deleteButtons.length} botones de eliminación`);
 
         // Usar bind para mantener el contexto correcto
         this.handleDeleteClick = this.handleDeleteClick.bind(this);
 
         deleteButtons.forEach((button, index) => {
             const transactionId = button.getAttribute('data-transaction-id');
-            console.log(`🔗 Configurando botón ${index + 1}: ID = ${transactionId}`);
             button.addEventListener('click', this.handleDeleteClick);
         });
 
-        console.log('✅ Configuración de botones de eliminación completada');
     }
 
     /**
@@ -6040,17 +5719,10 @@ Responde como un economista profesional especializado en la mejor administració
         const button = e.currentTarget;
         const transactionId = button.getAttribute('data-transaction-id');
 
-        console.log(`🗑️ Solicitando eliminación de transacción: ${transactionId}`);
-        console.log('🔍 Contexto this:', this);
-        console.log('🔍 Botón clickeado:', button);
-        console.log('🔍 ID de transacción:', transactionId);
 
         if (transactionId) {
-            console.log('✅ ID válido, mostrando modal de confirmación...');
             this.showDeleteConfirmationModal(transactionId);
         } else {
-            console.error('❌ No se encontró ID de transacción en el botón');
-            console.log('🔍 Atributos del botón:', button.attributes);
         }
     }
 
@@ -6058,48 +5730,30 @@ Responde como un economista profesional especializado en la mejor administració
      * Muestra el modal de confirmación para eliminar una transacción
      */
     showDeleteConfirmationModal(transactionId) {
-        console.log(`📋 Mostrando modal de confirmación para: ${transactionId}`);
 
         const transaction = this.transactions.find(t => t.id === transactionId);
         if (!transaction) {
-            console.error('❌ Transacción no encontrada:', transactionId);
-            console.log('📋 Transacciones disponibles:', this.transactions.map(t => ({ id: t.id, desc: t.description })));
             return;
         }
 
-        console.log('✅ Transacción encontrada:', transaction);
 
         const modal = this.createDeleteConfirmationModal(transaction);
-        console.log('📝 Modal creado:', modal);
 
         // Verificar que el modal tenga los elementos correctos antes de agregarlo
         const confirmBtn = modal.querySelector('.confirm-delete-btn');
         const cancelBtn = modal.querySelector('.cancel-delete-btn');
-        console.log('🔍 Verificación antes de agregar modal:');
-        console.log('🔍 - Confirm button encontrado:', !!confirmBtn);
-        console.log('🔍 - Cancel button encontrado:', !!cancelBtn);
-        console.log('🔍 - Modal HTML:', modal.innerHTML.substring(0, 200) + '...');
 
         document.body.appendChild(modal);
-        console.log('📋 Modal agregado al DOM');
 
         // HACER VISIBLE EL MODAL - ¡ESTO ES CRÍTICO!
         modal.style.display = 'block';
         modal.style.zIndex = '10000'; // Asegurar que esté por encima de otros elementos
-        console.log('👁️ Modal hecho visible (display: block)');
-        console.log('👁️ Modal debería ser visible ahora en la pantalla');
-        console.log('👁️ Z-index establecido en 10000 para asegurar visibilidad');
 
         // Verificar que los botones estén presentes después de agregar al DOM
         const confirmBtnAfter = modal.querySelector('.confirm-delete-btn');
         const cancelBtnAfter = modal.querySelector('.cancel-delete-btn');
-        console.log('🔍 Verificación después de agregar al DOM:');
-        console.log('🔍 - Confirm button encontrado:', !!confirmBtnAfter);
-        console.log('🔍 - Cancel button encontrado:', !!cancelBtnAfter);
-        console.log('🔍 - Modal está visible:', modal.style.display === 'block');
 
         this.setupDeleteConfirmationModalEvents(modal, transactionId);
-        console.log('🎯 Event listeners configurados para el modal');
     }
 
     /**
@@ -6156,7 +5810,6 @@ Responde como un economista profesional especializado en la mejor administració
      */
     getTransactionsForCurrentPeriod() {
         const { year, month, type } = this.currentPeriod;
-        console.log(`🔍 Filtrando transacciones para ${type === 'monthly' ? `mes ${month}/${year}` : `año ${year}`}`);
 
         const filteredTransactions = this.transactions.filter(transaction => {
             const transactionDate = new Date(transaction.date);
@@ -6170,7 +5823,6 @@ Responde como un economista profesional especializado en la mejor administració
             }
         });
 
-        console.log(`📊 Filtradas ${filteredTransactions.length} transacciones para ${type === 'monthly' ? `mes ${month}/${year}` : `año ${year}`}`);
         return filteredTransactions;
     }
 
@@ -6178,28 +5830,18 @@ Responde como un economista profesional especializado en la mejor administració
      * Configura los event listeners del modal de confirmación
      */
     setupDeleteConfirmationModalEvents(modal, transactionId) {
-        console.log('🔧 Configurando event listeners del modal...');
 
         const cancelBtn = modal.querySelector('.cancel-delete-btn');
         const confirmBtn = modal.querySelector('.confirm-delete-btn');
         const closeBtn = modal.querySelector('.modal-header .close');
 
-        console.log('🔍 Botones encontrados:', {
-            cancel: !!cancelBtn,
-            confirm: !!confirmBtn,
-            close: !!closeBtn
-        });
-
         const closeModal = () => {
-            console.log('🚪 Cerrando modal...');
             if (modal) {
                 modal.style.display = 'none';
-                console.log('✅ Modal ocultado (display: none)');
                 // Remover del DOM después de un pequeño delay para que la transición sea visible
                 setTimeout(() => {
                     if (modal && modal.parentNode) {
                         modal.parentNode.removeChild(modal);
-                        console.log('✅ Modal removido del DOM');
                     }
                 }, 300);
             }
@@ -6207,51 +5849,31 @@ Responde como un economista profesional especializado en la mejor administració
 
         if (cancelBtn) {
             cancelBtn.addEventListener('click', () => {
-                console.log('❌ Cancelando eliminación');
                 closeModal();
             });
-            console.log('✅ Event listener configurado para botón cancelar');
         }
 
         if (confirmBtn) {
             // Agregar un event listener adicional para debugging
             confirmBtn.addEventListener('mousedown', () => {
-                console.log('🖱️ MOUSEDOWN detectado en botón confirmar');
             });
 
             confirmBtn.addEventListener('click', (e) => {
-                console.log(`✅ Confirmando eliminación de: ${transactionId}`);
-                console.log('🔍 Evento click en botón confirmar:', e);
-                console.log('🔍 Target del evento:', e.target);
-                console.log('🔍 Current target del evento:', e.currentTarget);
-                console.log('🔍 Tipo de evento:', e.type);
-                console.log('🔍 Coordenadas del click:', { clientX: e.clientX, clientY: e.clientY });
 
                 try {
-                    console.log('🔍 Contexto this en event listener:', this);
-                    console.log('🔍 Tipo de this:', typeof this);
-                    console.log('🔍 Es instancia de FinanceApp:', this.constructor.name);
 
                     if (typeof this.deleteTransaction !== 'function') {
-                        console.error('❌ this.deleteTransaction no es una función:', this.deleteTransaction);
                         throw new Error('Función deleteTransaction no encontrada');
                     }
 
                     this.deleteTransaction(transactionId);
-                    console.log('✅ deleteTransaction ejecutada correctamente');
                 } catch (error) {
-                    console.error('❌ Error ejecutando deleteTransaction:', error);
-                    console.error('❌ Stack trace:', error.stack);
                     this.showNotification('Error: No se pudo eliminar la transacción', 'error');
                 }
 
                 // Cerrar modal después de la eliminación
                 closeModal();
-                console.log('✅ Modal cerrado después de eliminación');
             });
-            console.log('✅ Event listener configurado para botón confirmar');
-            console.log('🔍 Botón confirmar encontrado:', confirmBtn);
-            console.log('🔍 Texto del botón confirmar:', confirmBtn.textContent);
         }
 
         if (closeBtn) closeBtn.addEventListener('click', closeModal);
@@ -6259,7 +5881,6 @@ Responde como un economista profesional especializado en la mejor administració
         // Cerrar al hacer clic fuera del modal
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-                console.log('👆 Clic fuera del modal, cerrando...');
                 closeModal();
             }
         });
@@ -6267,36 +5888,26 @@ Responde como un economista profesional especializado en la mejor administració
         // Cerrar con tecla Escape
         document.addEventListener('keydown', function escapeHandler(e) {
             if (e.key === 'Escape') {
-                console.log('⌨️ Tecla Escape presionada, cerrando modal...');
                 closeModal();
                 document.removeEventListener('keydown', escapeHandler);
             }
         });
 
-        console.log('🎯 Configuración completa de event listeners del modal');
     }
 
     /**
      * Elimina una transacción usando la API DELETE al _id en MongoDB
      */
     async deleteTransaction(transactionId) {
-        console.log(`🗑️ ===== INICIANDO ELIMINACIÓN DE TRANSACCIÓN =====`);
-        console.log(`🗑️ ID de transacción a eliminar: ${transactionId}`);
-        console.log(`📊 Total de transacciones antes: ${this.transactions.length}`);
-        console.log(`🔍 Tipo de transactionId: ${typeof transactionId}`);
-        console.log(`🔍 Longitud de transactionId: ${transactionId ? transactionId.length : 'N/A'}`);
-        console.log(`🔍 Contexto this en deleteTransaction:`, this);
 
         // Verificar que transactionId sea válido
         if (!transactionId || typeof transactionId !== 'string') {
-            console.error('❌ ID de transacción inválido:', transactionId);
             this.showNotification('Error: ID de transacción inválido', 'error');
             return;
         }
 
         // Verificar que tengamos transacciones cargadas
         if (!this.transactions || !Array.isArray(this.transactions)) {
-            console.error('❌ Array de transacciones no válido:', this.transactions);
             this.showNotification('Error: Datos de transacciones corruptos', 'error');
             return;
         }
@@ -6305,19 +5916,14 @@ Responde como un economista profesional especializado en la mejor administració
         const transactionIndex = this.transactions.findIndex(t => t && t.id === transactionId);
 
         if (transactionIndex === -1) {
-            console.error('❌ Transacción no encontrada para eliminar:', transactionId);
-            console.log('📋 IDs de transacciones disponibles:', this.transactions.filter(t => t && t.id).map(t => t.id));
-            console.log('📋 Transacciones sin ID:', this.transactions.filter(t => !t || !t.id).length);
             this.showNotification('Error: Transacción no encontrada', 'error');
             return;
         }
 
         const transaction = this.transactions[transactionIndex];
-        console.log(`📝 Eliminando: ${transaction.description} - ${transaction.type === 'income' ? '+' : '-'}${transaction.currency === 'UYU' ? '$U' : '$'}${transaction.amount}`);
 
         try {
             // Intentar eliminar del backend primero usando la API DELETE
-            console.log('🔄 Eliminando transacción del backend...');
             const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}/${transactionId}`, {
                 method: 'DELETE',
                 headers: {
@@ -6327,60 +5933,48 @@ Responde como un economista profesional especializado en la mejor administració
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error('❌ Error eliminando del backend:', response.status, errorData);
                 this.showNotification('Error: No se pudo eliminar la transacción del servidor', 'error');
                 return;
             }
 
             const result = await response.json();
             if (!result.success) {
-                console.error('❌ Respuesta del backend no exitosa:', result);
                 this.showNotification('Error: La eliminación no fue confirmada por el servidor', 'error');
                 return;
             }
 
-            console.log('✅ Transacción eliminada exitosamente del backend');
 
         } catch (backendError) {
-            console.error('❌ Error de conexión con el backend:', backendError);
             this.showNotification('Error: No se pudo conectar con el servidor. La transacción no se eliminó.', 'error');
             return;
         }
 
         // Si la eliminación del backend fue exitosa, eliminar del array local
-        console.log('🗑️ Eliminando transacción del estado local...');
         this.transactions.splice(transactionIndex, 1);
-        console.log(`📊 Total de transacciones después: ${this.transactions.length}`);
 
         // Verificar que la transacción fue eliminada del array local
         const stillExists = this.transactions.find(t => t.id === transactionId);
         if (stillExists) {
-            console.error('❌ ERROR: La transacción aún existe en el array local después de eliminarla');
             this.showNotification('Error: Problema interno al eliminar la transacción', 'error');
             return;
         }
 
         // Guardar en localStorage
-        console.log('💾 Guardando cambios en localStorage...');
         this.saveDataToStorage();
 
         // Verificar que se guardó correctamente
         try {
             const saved = localStorage.getItem('fede_life_transactions');
             const savedTransactions = JSON.parse(saved);
-            console.log(`💾 Verificación: ${savedTransactions.length} transacciones guardadas`);
         } catch (error) {
-            console.error('❌ Error verificando guardado:', error);
         }
 
         // Actualizar la interfaz
-        console.log('🔄 Actualizando interfaz...');
         this.refreshAllData();
 
         // Mostrar notificación de éxito
         this.showNotification(`Transacción eliminada: ${transaction.description}`, 'success');
 
-        console.log('✅ Transacción eliminada exitosamente del backend y del estado local');
     }
 
     /**
@@ -6397,32 +5991,20 @@ Responde como un economista profesional especializado en la mejor administració
      * Ejecutar desde la consola: financeApp.testDeleteFunctionality()
      */
     testDeleteFunctionality() {
-        console.log('🧪 === PRUEBA DE FUNCIONAMIENTO DE ELIMINACIÓN ===');
 
         // Verificar que existan transacciones
-        console.log(`📊 Total de transacciones: ${this.transactions.length}`);
         if (this.transactions.length === 0) {
-            console.log('⚠️ No hay transacciones para probar');
             return;
         }
 
         // Mostrar las primeras 3 transacciones disponibles
-        console.log('📋 Transacciones disponibles para prueba:');
         this.transactions.slice(0, 3).forEach((t, i) => {
-            console.log(`${i + 1}. ID: ${t.id} - ${t.description} (${t.type})`);
         });
 
         // Verificar que las funciones existan
-        console.log('🔧 Verificación de funciones:');
-        console.log('- deleteTransaction existe:', typeof this.deleteTransaction === 'function');
-        console.log('- showDeleteConfirmationModal existe:', typeof this.showDeleteConfirmationModal === 'function');
-        console.log('- refreshAllData existe:', typeof this.refreshAllData === 'function');
-        console.log('- saveDataToStorage existe:', typeof this.saveDataToStorage === 'function');
 
         // Verificar el contexto
-        console.log('🔍 Contexto this:', this.constructor.name);
 
-        console.log('✅ Prueba completada. Para probar la eliminación real, haz clic en el botón de eliminar de cualquier transacción.');
     }
 
     /**
@@ -6430,7 +6012,6 @@ Responde como un economista profesional especializado en la mejor administració
      * Ejecutar desde la consola: financeApp.testModalVisibility()
      */
     testModalVisibility() {
-        console.log('🧪 === PRUEBA DE VISIBILIDAD DEL MODAL ===');
 
         // Crear un modal de prueba
         const testModal = document.createElement('div');
@@ -6456,8 +6037,6 @@ Responde como un economista profesional especializado en la mejor administració
         testModal.style.display = 'block';
         testModal.style.zIndex = '10000';
 
-        console.log('👁️ Modal de prueba creado y hecho visible');
-        console.log('🔍 Si puedes ver este modal en pantalla, el sistema funciona correctamente');
 
         // Configurar botón de cerrar
         const closeBtn = testModal.querySelector('.test-close-btn');
@@ -6469,11 +6048,9 @@ Responde como un economista profesional especializado en la mejor administració
                         testModal.parentNode.removeChild(testModal);
                     }
                 }, 300);
-                console.log('✅ Modal de prueba cerrado');
             });
         }
 
-        console.log('🎯 Si el modal es visible, haz clic en "Cerrar" para continuar');
     }
 
     /**
@@ -6481,29 +6058,18 @@ Responde como un economista profesional especializado en la mejor administració
      * Ejecutar desde la consola: financeApp.testCategoriesFunctionality()
      */
     testCategoriesFunctionality() {
-        console.log('🧪 === PRUEBA DE FUNCIONALIDAD DE CATEGORÍAS ===');
 
-        console.log(`📊 Total de categorías: ${this.categories.length}`);
-        console.log(`📊 Total de transacciones: ${this.transactions.length}`);
 
         if (this.categories.length === 0) {
-            console.log('⚠️ No hay categorías cargadas');
             return;
         }
 
-        console.log('📋 Categorías disponibles:');
         this.categories.forEach((cat, i) => {
             const count = this.getTransactionCountByCategory(cat.name);
             const total = this.getTotalAmountByCategory(cat.name);
-            console.log(`${i + 1}. ${cat.name} (ID: ${cat.id}) - ${count} transacción(es) - Total: ${total}`);
         });
 
-        console.log('🔧 Verificación de funciones:');
-        console.log('- showCategoryDetails existe:', typeof this.showCategoryDetails === 'function');
-        console.log('- showCategoryDetailsGlobal existe:', typeof window.showCategoryDetailsGlobal === 'function');
-        console.log('- window.financeApp existe:', !!window.financeApp);
 
-        console.log('✅ Prueba completada. Para probar hacer clic en cualquier categoría.');
     }
 
     /**
@@ -6511,7 +6077,6 @@ Responde como un economista profesional especializado en la mejor administració
      * Ejecutar desde la consola: financeApp.resetCategoriesWithValidIds()
      */
     resetCategoriesWithValidIds() {
-        console.log('🔄 === LIMPIANDO Y REGENERANDO CATEGORÍAS ===');
 
         try {
             // Forzar recarga de categorías por defecto
@@ -6523,14 +6088,11 @@ Responde como un economista profesional especializado en la mejor administració
             // Re-renderizar
             this.renderCategories();
 
-            console.log('✅ Categorías regeneradas con IDs válidos');
-            console.log('🔍 Nuevas categorías:', this.categories.map(c => ({ id: c.id, name: c.name })));
 
             // Mostrar mensaje al usuario
             this.showNotification('Categorías regeneradas correctamente', 'success');
 
         } catch (error) {
-            console.error('❌ Error regenerando categorías:', error);
             this.showNotification('Error al regenerar categorías', 'error');
         }
     }
@@ -6540,12 +6102,10 @@ Responde como un economista profesional especializado en la mejor administració
      * Ejecutar desde la consola: financeApp.clearCategoriesStorage()
      */
     clearCategoriesStorage() {
-        console.log('🗑️ === LIMPIANDO CATEGORÍAS DEL LOCALSTORAGE ===');
 
         try {
             // Eliminar categorías del localStorage
             localStorage.removeItem('fede_life_categories');
-            console.log('✅ Categorías eliminadas del localStorage');
 
             // Forzar recarga de categorías por defecto
             this.initializeDefaultCategories();
@@ -6556,13 +6116,10 @@ Responde como un economista profesional especializado en la mejor administració
             // Re-renderizar
             this.renderCategories();
 
-            console.log('✅ Categorías por defecto recargadas');
-            console.log('🔍 Nuevas categorías:', this.categories.map(c => ({ id: c.id, name: c.name })));
 
             this.showNotification('Categorías limpiadas y recargadas', 'success');
 
         } catch (error) {
-            console.error('❌ Error limpiando categorías:', error);
             this.showNotification('Error al limpiar categorías', 'error');
         }
     }
@@ -6608,7 +6165,6 @@ Responde como un economista profesional especializado en la mejor administració
      * Ejecutar desde la consola: financeApp.cleanAllTransactionDescriptions()
      */
     cleanAllTransactionDescriptions() {
-        console.log('🧹 === LIMPIANDO DESCRIPCIONES DE TRANSACCIONES ===');
 
         let cleanedCount = 0;
         const originalDescriptions = new Map();
@@ -6633,17 +6189,13 @@ Responde como un economista profesional especializado en la mejor administració
                 this.renderTransactions();
                 this.renderCategories();
 
-                console.log(`✅ Limpieza completada: ${cleanedCount} descripciones limpiadas`);
-                console.log('🔍 Descripciones modificadas:', Array.from(originalDescriptions.entries()));
 
                 this.showNotification(`${cleanedCount} descripciones limpiadas correctamente`, 'success');
             } else {
-                console.log('ℹ️ No se encontraron descripciones que limpiar');
                 this.showNotification('No se encontraron descripciones para limpiar', 'info');
             }
 
         } catch (error) {
-            console.error('❌ Error limpiando descripciones:', error);
             this.showNotification('Error al limpiar descripciones', 'error');
         }
     }
@@ -6653,7 +6205,6 @@ Responde como un economista profesional especializado en la mejor administració
      * Se ejecuta automáticamente al agregar transacciones desde PDFs
      */
     cleanPdfDescriptions(transactions) {
-        console.log('🧹 Limpiando descripciones de PDF...');
 
         transactions.forEach(transaction => {
             if (transaction.description) {
@@ -6661,7 +6212,6 @@ Responde como un economista profesional especializado en la mejor administració
                 const cleanedDesc = this.cleanTransactionDescription(originalDesc);
 
                 if (originalDesc !== cleanedDesc) {
-                    console.log(`📝 Descripción limpiada: "${originalDesc}" → "${cleanedDesc}"`);
                     transaction.description = cleanedDesc;
                 }
             }
@@ -6675,14 +6225,11 @@ Responde como un economista profesional especializado en la mejor administració
      * Ejecutar desde la consola: financeApp.diagnoseCategoryClicks()
      */
     diagnoseCategoryClicks() {
-        console.log('🔍 === DIAGNÓSTICO DE CLICS EN CATEGORÍAS ===');
 
         // Verificar que las categorías estén renderizadas
         const categoryItems = document.querySelectorAll('.category-item');
-        console.log(`📊 Elementos .category-item encontrados: ${categoryItems.length}`);
 
         if (categoryItems.length === 0) {
-            console.log('❌ No se encontraron elementos .category-item. Verifica que estés en la pestaña Categorías.');
             return;
         }
 
@@ -6691,29 +6238,17 @@ Responde como un economista profesional especializado en la mejor administració
             const categoryId = item.getAttribute('data-category-id');
             const onclickAttr = item.getAttribute('onclick');
 
-            console.log(`📋 Categoría ${index + 1}:`);
-            console.log(`   - data-category-id: ${categoryId}`);
-            console.log(`   - onclick: ${onclickAttr}`);
-            console.log(`   - Tiene cursor pointer: ${item.style.cursor === 'pointer'}`);
         });
 
         // Verificar funciones globales
-        console.log('🔧 Funciones globales disponibles:');
-        console.log('- showCategoryDetailsGlobal:', typeof window.showCategoryDetailsGlobal === 'function');
-        console.log('- window.financeApp:', !!window.financeApp);
 
         if (window.financeApp) {
-            console.log('- showCategoryDetails method:', typeof window.financeApp.showCategoryDetails === 'function');
         }
 
         // Verificar que las categorías estén en memoria
-        console.log('📊 Estado de categorías en memoria:');
-        console.log(`- Total categorías: ${this.categories.length}`);
         if (this.categories.length > 0) {
-            console.log('- IDs de categorías:', this.categories.map(c => c.id));
         }
 
-        console.log('✅ Diagnóstico completado. Si todo parece correcto, intenta hacer clic en una categoría.');
     }
 
     /**
@@ -6765,7 +6300,6 @@ Responde como un economista profesional especializado en la mejor administració
             }
         });
 
-        console.log(`📊 Filtradas ${filteredTransactions.length} transacciones para ${type === 'yearly' ? year : `${month}/${year}`}`);
         return filteredTransactions;
     }
 
@@ -6819,7 +6353,6 @@ Responde como un economista profesional especializado en la mejor administració
      * Configura el selector global de períodos
      */
     setupGlobalPeriodSelector() {
-        console.log('🔧 Configurando selector global de períodos...');
 
         // Navegación de períodos
         const prevBtn = document.getElementById('prevPeriodBtn');
@@ -6827,28 +6360,22 @@ Responde como un economista profesional especializado en la mejor administració
 
         if (prevBtn) {
             prevBtn.addEventListener('click', () => {
-                console.log('⬅️ Navegando al período anterior');
                 this.navigateToPreviousPeriod();
             });
         } else {
-            console.warn('⚠️ Botón prevPeriodBtn no encontrado');
         }
 
         if (nextBtn) {
             nextBtn.addEventListener('click', () => {
-                console.log('➡️ Navegando al período siguiente');
                 this.navigateToNextPeriod();
             });
         } else {
-            console.warn('⚠️ Botón nextPeriodBtn no encontrado');
         }
 
         // Cambio de tipo de período
         const periodTypeInputs = document.querySelectorAll('input[name="periodType"]');
-        console.log(`📅 Encontrados ${periodTypeInputs.length} inputs de tipo de período`);
         periodTypeInputs.forEach(input => {
             input.addEventListener('change', (e) => {
-                console.log(`🔄 Cambiando tipo de período a: ${e.target.value}`);
                 this.changePeriodType(e.target.value);
             });
         });
@@ -6859,7 +6386,6 @@ Responde como un economista profesional especializado en la mejor administració
         this.updatePeriodDisplay();
 
 
-        console.log('✅ Selector global de períodos configurado correctamente');
     }
 
     /**
@@ -7129,17 +6655,11 @@ if (typeof window !== 'undefined') {
  * @param {string} categoryId - ID de la categoría
  */
 function showCategoryDetailsGlobal(categoryId) {
-    console.log(`🌐 Función global showCategoryDetailsGlobal llamada con:`, categoryId);
-    console.log(`🔍 Tipo del parámetro:`, typeof categoryId);
 
     if (window.financeApp && typeof window.financeApp.showCategoryDetails === 'function') {
-        console.log(`🔗 Llamando a showCategoryDetails con: ${categoryId}`);
         window.financeApp.showCategoryDetails(categoryId);
     } else {
-        console.error('❌ Función showCategoryDetails no disponible en window.financeApp');
-        console.log('🔍 Estado de window.financeApp:', !!window.financeApp);
         if (window.financeApp) {
-            console.log('🔍 Métodos disponibles:', Object.getOwnPropertyNames(window.financeApp).filter(name => typeof window.financeApp[name] === 'function'));
         }
     }
 
@@ -7151,10 +6671,8 @@ function showCategoryDetailsGlobal(categoryId) {
  */
 function editCategoryGlobal(categoryId) {
     if (window.financeApp && typeof window.financeApp.editCategory === 'function') {
-        console.log(`🔗 Función global editCategory llamada para: ${categoryId}`);
         window.financeApp.editCategory(categoryId);
     } else {
-        console.log('ℹ️ Función editar categoría no implementada aún');
         if (window.financeApp) {
             window.financeApp.showNotification('Función de edición próximamente', 'info');
         }
@@ -7167,10 +6685,8 @@ function editCategoryGlobal(categoryId) {
  */
 function deleteCategoryGlobal(categoryId) {
     if (window.financeApp && typeof window.financeApp.deleteCategory === 'function') {
-        console.log(`🔗 Función global deleteCategory llamada para: ${categoryId}`);
         window.financeApp.deleteCategory(categoryId);
     } else {
-        console.log('ℹ️ Función eliminar categoría no implementada aún');
         if (window.financeApp) {
             window.financeApp.showNotification('Función de eliminación próximamente', 'info');
         }
@@ -7184,7 +6700,6 @@ function deleteCategoryGlobal(categoryId) {
  * @param {string} goalId - ID de la meta a editar
  */
 function editGoalGlobal(goalId) {
-    console.log(`🎯 Editando meta: ${goalId}`);
     if (window.financeApp) {
         window.financeApp.editGoal(goalId);
     }
@@ -7195,7 +6710,6 @@ function editGoalGlobal(goalId) {
  * @param {string} goalId - ID de la meta a eliminar
  */
 function deleteGoalGlobal(goalId) {
-    console.log(`🗑️ Eliminando meta: ${goalId}`);
     if (window.financeApp) {
         window.financeApp.showNotification('Función de eliminación de metas próximamente', 'info');
     }
@@ -7206,7 +6720,6 @@ function deleteGoalGlobal(goalId) {
  * @param {string} goalId - ID de la meta
  */
 function addToGoalGlobal(goalId) {
-    console.log(`💰 Agregando a meta: ${goalId}`);
     if (window.financeApp) {
         window.financeApp.showNotification('Función de agregar monto próximamente', 'info');
     }

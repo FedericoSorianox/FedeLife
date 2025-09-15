@@ -14,10 +14,8 @@ async function safeImport(modulePath: string, moduleName: string): Promise<any> 
     try {
         // Intentar importar el módulo
         const module = await import(modulePath);
-        console.log(`✅ Módulo ${moduleName} cargado correctamente`);
         return module;
     } catch (error) {
-        console.warn(`⚠️ No se pudo cargar el módulo ${moduleName}:`, error);
         return null;
     }
 }
@@ -29,39 +27,30 @@ async function safeImport(modulePath: string, moduleName: string): Promise<any> 
  * Se ejecuta cuando el DOM está listo
  */
 async function initializeApp() {
-    console.log('🚀 Iniciando Fede Life - Sistema de Finanzas Personales');
     
     try {
         // Verificar que todos los componentes estén disponibles
         if (typeof window !== 'undefined') {
-            console.log('✅ Window object disponible');
             
             // Cargar módulos de forma segura
             await loadModules();
             
             // Verificar authUI
             if (window.authUI) {
-                console.log('✅ Sistema de autenticación inicializado');
             } else {
-                console.warn('⚠️ Sistema de autenticación no disponible');
             }
             
             // Verificar financeApp
             if (window.financeApp) {
-                console.log('✅ Aplicación de finanzas inicializada');
             } else {
-                console.warn('⚠️ Aplicación de finanzas no disponible');
             }
             
             // Verificar config
             if (window.config) {
-                console.log('✅ Configuración cargada:', window.config);
             } else {
-                console.warn('⚠️ Configuración no disponible');
             }
         }
     } catch (error) {
-        console.error('❌ Error durante la inicialización:', error);
     }
 }
 
@@ -79,9 +68,7 @@ async function loadModules(): Promise<void> {
         await safeImport('./auth_ui.js', 'Auth UI');
         await safeImport('./finanzas.js', 'Finanzas');
         
-        console.log('✅ Todos los módulos cargados correctamente');
     } catch (error) {
-        console.error('❌ Error cargando módulos:', error);
     }
 }
 

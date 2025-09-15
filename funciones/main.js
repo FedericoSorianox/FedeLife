@@ -15,10 +15,8 @@ async function safeImport(modulePath, moduleName) {
     try {
         // Intentar importar el módulo
         const module = await import(modulePath);
-        console.log(`✅ Módulo ${moduleName} cargado correctamente`);
         return module;
     } catch (error) {
-        console.warn(`⚠️ No se pudo cargar el módulo ${moduleName}:`, error);
         return null;
     }
 }
@@ -30,12 +28,10 @@ async function safeImport(modulePath, moduleName) {
  * Se ejecuta cuando el DOM está listo
  */
 async function initializeApp() {
-    console.log('🚀 Iniciando Fede Life - Sistema de Finanzas Personales');
     
     try {
         // Verificar que todos los componentes estén disponibles
         if (typeof window !== 'undefined') {
-            console.log('✅ Window object disponible');
             
             // Verificar conectividad antes de cargar módulos
             await checkInitialConnectivity();
@@ -45,29 +41,21 @@ async function initializeApp() {
             
             // Verificar authUI
             if (window.authUI) {
-                console.log('✅ Sistema de autenticación inicializado');
             } else {
-                console.warn('⚠️ Sistema de autenticación no disponible');
             }
             
             // Verificar financeApp
             if (window.financeApp) {
-                console.log('✅ Aplicación de finanzas inicializada');
             } else {
-                console.warn('⚠️ Aplicación de finanzas no disponible');
             }
             
             // Verificar config
             if (window.config) {
-                console.log('✅ Configuración cargada:', window.config);
             } else {
-                console.warn('⚠️ Configuración no disponible');
             }
             
-            console.log('🎉 Sistema inicializado completamente');
         }
     } catch (error) {
-        console.error('❌ Error durante la inicialización:', error);
         // Mostrar mensaje de error al usuario
         showErrorMessage('Error al inicializar el sistema. Por favor, recarga la página.');
     }
@@ -78,7 +66,6 @@ async function initializeApp() {
  */
 async function checkInitialConnectivity() {
     try {
-        console.log('🔍 Verificando conectividad del sistema...');
         
         // Verificar conexión a internet usando un endpoint permitido por CSP
         try {
@@ -88,21 +75,16 @@ async function checkInitialConnectivity() {
             });
             
             if (internetCheck) {
-                console.log('✅ Conexión a internet disponible');
             }
         } catch (error) {
-            console.log('ℹ️ Verificación de internet no disponible, continuando...');
         }
         
         // Verificar configuración local
         if (window.config && window.config.apiUrl) {
-            console.log(`✅ URL de API configurada: ${window.config.apiUrl}`);
         } else {
-            console.warn('⚠️ URL de API no configurada, usando configuración por defecto');
         }
         
     } catch (error) {
-        console.warn('⚠️ Problema de conectividad detectado:', error.message);
         // Continuar con la inicialización aunque haya problemas de conectividad
     }
 }
@@ -112,7 +94,6 @@ async function checkInitialConnectivity() {
  */
 async function loadModules() {
     try {
-        console.log('📦 Cargando módulos del sistema...');
         
         // Cargar módulos principales
         await safeImport('/funciones/types.js', 'Types');
@@ -123,9 +104,7 @@ async function loadModules() {
         await safeImport('/funciones/auth_ui.js', 'Auth UI');
         await safeImport('/funciones/finanzas.js', 'Finanzas');
         
-        console.log('✅ Todos los módulos cargados correctamente');
     } catch (error) {
-        console.error('❌ Error cargando módulos:', error);
         throw error;
     }
 }
@@ -175,7 +154,6 @@ function showErrorMessage(message) {
         }, 10000);
         
     } catch (error) {
-        console.error('❌ Error mostrando mensaje de error:', error);
     }
 }
 

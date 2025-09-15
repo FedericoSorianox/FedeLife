@@ -34,7 +34,6 @@ export class ChartsManager {
         try {
             // Verificar que Chart.js esté disponible
             if (typeof Chart === 'undefined') {
-                console.error('❌ Chart.js no está disponible');
                 return;
             }
 
@@ -43,9 +42,7 @@ export class ChartsManager {
             Chart.defaults.font.size = 12;
             Chart.defaults.color = '#333';
 
-            console.log('✅ ChartsManager inicializado correctamente');
         } catch (error) {
-            console.error('❌ Error inicializando ChartsManager:', error);
         }
     }
 
@@ -57,7 +54,6 @@ export class ChartsManager {
         try {
             const ctx = document.getElementById('expensesChart');
             if (!ctx) {
-                console.error('❌ Canvas de gastos no encontrado');
                 return;
             }
 
@@ -77,9 +73,7 @@ export class ChartsManager {
             // Crear leyenda personalizada
             this.createLegend('expensesLegend', data);
 
-            console.log('✅ Gráfico de gastos creado');
         } catch (error) {
-            console.error('❌ Error creando gráfico de gastos:', error);
         }
     }
 
@@ -91,7 +85,6 @@ export class ChartsManager {
         try {
             const ctx = document.getElementById('incomeChart');
             if (!ctx) {
-                console.error('❌ Canvas de ingresos no encontrado');
                 return;
             }
 
@@ -111,9 +104,7 @@ export class ChartsManager {
             // Crear leyenda personalizada
             this.createLegend('incomeLegend', data);
 
-            console.log('✅ Gráfico de ingresos creado');
         } catch (error) {
-            console.error('❌ Error creando gráfico de ingresos:', error);
         }
     }
 
@@ -258,9 +249,7 @@ export class ChartsManager {
             this.createExpensesChart(expensesData);
             this.createIncomeChart(incomeData);
 
-            console.log(`✅ Gráficos actualizados para período: ${period}`);
         } catch (error) {
-            console.error('❌ Error actualizando gráficos:', error);
         }
     }
 

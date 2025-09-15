@@ -27,7 +27,6 @@ class SimpleAuthManager {
                 this.user = parsed.user;
             }
         } catch (error) {
-            console.error('Error cargando datos de autenticación:', error);
         }
     }
 
@@ -39,7 +38,6 @@ class SimpleAuthManager {
             };
             localStorage.setItem('auth_data', JSON.stringify(authData));
         } catch (error) {
-            console.error('Error guardando datos de autenticación:', error);
         }
     }
 
@@ -73,7 +71,6 @@ class SimpleAuthManager {
             }
             return false;
         } catch (error) {
-            console.error('Error en login:', error);
             return false;
         }
     }
@@ -96,7 +93,6 @@ class SimpleAuthManager {
             }
             return false;
         } catch (error) {
-            console.error('Error en registro:', error);
             return false;
         }
     }
@@ -284,7 +280,6 @@ class AuthUIManager {
                 this.showAuthNotification('Usuario o contraseña incorrectos', 'error');
             }
         } catch (error) {
-            console.error('Error en login:', error);
             this.showAuthNotification('Error al iniciar sesión', 'error');
         }
     }
@@ -323,7 +318,6 @@ class AuthUIManager {
                 this.showAuthNotification('Error en el registro. Usuario o email ya existe', 'error');
             }
         } catch (error) {
-            console.error('Error en registro:', error);
             this.showAuthNotification('Error al registrarse', 'error');
         }
     }

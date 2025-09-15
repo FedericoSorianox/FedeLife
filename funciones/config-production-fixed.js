@@ -79,7 +79,6 @@ async function checkApiHealth() {
         clearTimeout(timeoutId);
         return response.ok;
     } catch (error) {
-        console.warn('⚠️ API no disponible:', error.message);
         return false;
     }
 }
@@ -126,7 +125,6 @@ async function apiRequest(endpoint, options = {}, retryCount = 0) {
             const delay = PRODUCTION_CONFIG.retryConfig.retryDelay * 
                          Math.pow(PRODUCTION_CONFIG.retryConfig.backoffMultiplier, retryCount);
             
-            console.log(`🔄 Reintentando en ${delay}ms... (${retryCount + 1}/${PRODUCTION_CONFIG.retryConfig.maxRetries})`);
             
             await new Promise(resolve => setTimeout(resolve, delay));
             return apiRequest(endpoint, options, retryCount + 1);
