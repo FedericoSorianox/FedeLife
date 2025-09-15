@@ -1296,13 +1296,46 @@ class FinanceApp {
     }
 
     /**
+     * Obtiene los headers con autenticación para las peticiones API
+     */
+    getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        // Agregar token JWT si existe
+        const authData = localStorage.getItem('auth_data');
+        if (authData) {
+            try {
+                const parsed = JSON.parse(authData);
+                if (parsed.token) {
+                    headers['Authorization'] = `Bearer ${parsed.token}`;
+                }
+            } catch (error) {
+                console.warn('⚠️ Error al parsear datos de autenticación:', error);
+            }
+        }
+
+        return headers;
+    }
+
+    /**
      * Carga las metas desde la API
      */
     async loadGoals() {
         try {
             console.log('📥 Cargando metas desde API...');
 
-            const response = await fetch('/api/goals');
+            const headers = this.getAuthHeaders();
+
+            if (headers['Authorization']) {
+                console.log('🔑 Token JWT incluido en la petición');
+            }
+
+            const response = await fetch('/api/goals', {
+                method: 'GET',
+                headers: headers
+            });
             const result = await response.json();
 
             if (!response.ok) {
