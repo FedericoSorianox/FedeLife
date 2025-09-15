@@ -638,12 +638,39 @@ cultivoSchema.pre('save', function(next) {
         return next(new Error('La variedad no puede estar vacía'));
     }
 
-    // Asegurar que el array de notas esté siempre inicializado
+    // Asegurar que el array de notas esté siempre inicializado correctamente
     if (!this.notas) {
         this.notas = [];
     } else if (!Array.isArray(this.notas)) {
-        // Si notas no es un array, intentar convertirlo o inicializarlo
+        // Si notas no es un array, convertirlo a array vacío
+        // Esto maneja casos donde notas es una string vacía o cualquier otro tipo
+        console.warn(`Campo 'notas' malformado en cultivo ${this.nombre}, convirtiendo a array vacío`);
         this.notas = [];
+    } else {
+        // Si es un array, asegurarse de que todos los elementos sean objetos válidos
+        this.notas = this.notas.filter(nota => {
+            return nota &&
+                   typeof nota === 'object' &&
+                   nota.contenido &&
+                   typeof nota.contenido === 'string' &&
+                   nota.contenido.trim().length > 0;
+        });
+    }
+
+    // Asegurar que chatHistory sea un array
+    if (!this.chatHistory) {
+        this.chatHistory = [];
+    } else if (!Array.isArray(this.chatHistory)) {
+        this.chatHistory = [];
+    }
+
+    // Asegurar que estadisticas esté inicializado
+    if (!this.estadisticas) {
+        this.estadisticas = {
+            consultasBruce: 0,
+            imagenesAnalizadas: 0,
+            problemasDetectados: 0
+        };
     }
 
     // Para cultivos demo (userId null), saltar validaciones adicionales

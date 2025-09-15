@@ -61,8 +61,29 @@ const validateCultivo = (req, res, next) => {
         errors.push('La fase debe ser: germinacion, vegetativo, floracion, cosecha o curado');
     }
 
-    if (notas && notas.length > 1000) {
-        errors.push('Las notas no pueden exceder 1000 caracteres');
+    // Validar notas si se proporciona (debe ser array o string para compatibilidad)
+    if (notas !== undefined) {
+        if (Array.isArray(notas)) {
+            // Si es array, validar cada nota
+            notas.forEach((nota, index) => {
+                if (!nota.contenido || nota.contenido.trim().length === 0) {
+                    errors.push(`La nota ${index + 1} debe tener contenido`);
+                }
+                if (nota.contenido && nota.contenido.length > 1000) {
+                    errors.push(`La nota ${index + 1} no puede exceder 1000 caracteres`);
+                }
+                if (nota.tipo && !['general', 'vegetativo', 'floracion', 'cosecha', 'recordatorio', 'comentario'].includes(nota.tipo)) {
+                    errors.push(`Tipo de nota inválido en la nota ${index + 1}`);
+                }
+            });
+        } else if (typeof notas === 'string') {
+            // Para compatibilidad con notaActual
+            if (notas.length > 1000) {
+                errors.push('Las notas no pueden exceder 1000 caracteres');
+            }
+        } else {
+            errors.push('Las notas deben ser un array o una cadena de texto');
+        }
     }
 
     if (errors.length > 0) {
@@ -191,25 +212,35 @@ router.post('/', authenticateToken, validateCultivo, async (req, res) => {
     try {
         const userId = req.user._id;
         const cultivoData = {
-            ...req.body,
             userId,
+            nombre: req.body.nombre,
+            variedad: req.body.variedad,
+            medio: req.body.medio,
+            espacio: req.body.espacio,
+            macetas: req.body.macetas,
+            potencia: req.body.potencia,
+            plantas: req.body.plantas,
+            notas: Array.isArray(req.body.notas) ? req.body.notas : [], // Asegurar que siempre sea array
+            notaActual: req.body.notaActual || '',
             metodo: 'indoor', // Siempre indoor
             iluminacion: 'led', // Siempre LED
             ventilacion: 'sistema_cerrado_co2', // Siempre sistema cerrado con CO2
             estado: req.body.estado || 'activo',
             faseActual: req.body.faseActual || 'vegetativo',
+            objetivo: req.body.objetivo || '',
+            banco: req.body.banco || '',
             chatHistory: [],
             metadata: {
                 costos: {
-                    semillas: 0,
-                    sustrato: 0,
-                    fertilizantes: 0,
-                    iluminacion: 0,
-                    otros: 0
+                    semillas: req.body.metadata?.costos?.semillas || 0,
+                    sustrato: req.body.metadata?.costos?.sustrato || 0,
+                    fertilizantes: req.body.metadata?.costos?.fertilizantes || 0,
+                    iluminacion: req.body.metadata?.costos?.iluminacion || 0,
+                    otros: req.body.metadata?.costos?.otros || 0
                 },
-                rendimientoEsperado: {},
-                calidad: {},
-                fechas: {}
+                rendimientoEsperado: req.body.metadata?.rendimientoEsperado || {},
+                calidad: req.body.metadata?.calidad || {},
+                fechas: req.body.metadata?.fechas || {}
             },
             estadisticas: {
                 consultasBruce: 0,
@@ -264,7 +295,7 @@ router.put('/:id', authenticateToken, validateCultivo, async (req, res) => {
         // Actualizar campos permitidos
         const camposPermitidos = [
             'nombre', 'variedad', 'medio', 'espacio', 'macetas',
-            'potencia', 'plantas', 'notas', 'estado', 'faseActual',
+            'potencia', 'plantas', 'estado', 'faseActual',
             'objetivo', 'banco'
         ];
 
@@ -273,6 +304,19 @@ router.put('/:id', authenticateToken, validateCultivo, async (req, res) => {
                 cultivo[campo] = req.body[campo];
             }
         });
+
+        // Manejar el campo notas por separado para asegurar que siempre sea array
+        if (req.body.notas !== undefined) {
+            if (Array.isArray(req.body.notas)) {
+                cultivo.notas = req.body.notas;
+            } else if (typeof req.body.notas === 'string') {
+                // Si es string, actualizar notaActual pero mantener notas como array
+                cultivo.notaActual = req.body.notas;
+                // No cambiar el array de notas existente
+            } else {
+                cultivo.notas = [];
+            }
+        }
 
         await cultivo.save();
 
