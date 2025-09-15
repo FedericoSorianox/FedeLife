@@ -7,6 +7,485 @@
     <title>Tareas - Fede Life</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
     <link rel="stylesheet" href="app.css">
+
+    <style>
+        /* ==================== ESTILOS PARA TAREAS ==================== */
+
+        /* Estados de drag & drop */
+        .task-list.drag-over {
+            background-color: rgba(135, 207, 232, 0.1);
+            border: 2px dashed #87ccd8;
+        }
+
+        .task-item.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+
+        .task-item.loading {
+            position: relative;
+            pointer-events: none;
+        }
+
+        .task-item.loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .task-item.loading::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid #87ccd8;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            z-index: 11;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Layout mejorado de tareas */
+        .task-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: move;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-item:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .task-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .task-text {
+            flex: 1;
+            font-weight: 500;
+            color: #333;
+            word-break: break-word;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .task-item:hover .task-actions {
+            opacity: 1;
+        }
+
+        .edit-task, .delete-task {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
+        }
+
+        .edit-task:hover {
+            background-color: #f0f0f0;
+        }
+
+        .delete-task:hover {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
+
+        .task-description {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .task-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 12px;
+        }
+
+        .task-due-date {
+            color: #666;
+        }
+
+        .task-due-date.overdue {
+            color: #d32f2f;
+            font-weight: 500;
+        }
+
+        .task-due-date.due-soon {
+            color: #f57c00;
+            font-weight: 500;
+        }
+
+        .task-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .task-tag {
+            background-color: #f5f5f5;
+            color: #666;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+
+        .task-priority {
+            font-weight: 500;
+        }
+
+        .task-priority.priority-low {
+            color: #4caf50;
+        }
+
+        .task-priority.priority-medium {
+            color: #ff9800;
+        }
+
+        .task-priority.priority-high {
+            color: #f44336;
+        }
+
+        /* Estados de prioridad */
+        .task-item.priority-high {
+            border-left: 4px solid #f44336;
+        }
+
+        .task-item.priority-low {
+            border-left: 4px solid #4caf50;
+        }
+
+        /* Estado de tarea vencida */
+        .task-item.overdue {
+            border-left: 4px solid #d32f2f;
+            background-color: #ffebee;
+        }
+
+        /* ==================== NOTIFICACIONES ==================== */
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 300px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification-success {
+            background-color: #4caf50;
+        }
+
+        .notification-error {
+            background-color: #f44336;
+        }
+
+        .notification-info {
+            background-color: #2196f3;
+        }
+
+        /* ==================== KANBAN BOARD ==================== */
+
+        .kanban-board {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .kanban-column {
+            flex: 1;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 400px;
+        }
+
+        .column-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .task-list {
+            min-height: 200px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        /* ==================== FORMULARIO ==================== */
+
+        .add-task-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            max-width: 500px;
+        }
+
+        #newTaskInput {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s ease;
+        }
+
+        #newTaskInput:focus {
+            outline: none;
+            border-color: #87ccd8;
+        }
+
+        #addTaskBtn {
+            background-color: #87ccd8;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        #addTaskBtn:hover {
+            background-color: #6bb8c4;
+        }
+
+        /* ==================== MODAL DE EDICIÓN ==================== */
+
+        .edit-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-modal-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .edit-modal-content {
+            position: relative;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .edit-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .edit-modal-header h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .close-modal:hover {
+            background-color: #f5f5f5;
+        }
+
+        .edit-form {
+            padding: 20px 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #87ccd8;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .cancel-btn {
+            background-color: #f5f5f5;
+            color: #666;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .cancel-btn:hover {
+            background-color: #e0e0e0;
+        }
+
+        .save-btn {
+            background-color: #87ccd8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .save-btn:hover {
+            background-color: #6bb8c4;
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+
+        @media (max-width: 768px) {
+            .kanban-board {
+                flex-direction: column;
+            }
+
+            .kanban-column {
+                margin-bottom: 20px;
+            }
+
+            .add-task-container {
+                flex-direction: column;
+            }
+
+            .task-header {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .task-actions {
+                align-self: flex-end;
+                opacity: 1;
+            }
+
+            .edit-modal-content {
+                width: 95%;
+                margin: 20px;
+            }
+
+            .edit-modal-header {
+                padding: 16px 20px 12px;
+            }
+
+            .edit-form {
+                padding: 16px 20px;
+            }
+        }
+    </style>
 </head>
 
 <body class="body">
@@ -44,34 +523,21 @@
             <div class="kanban-column" data-status="todo">
                 <h3 class="column-title">Por Hacer</h3>
                 <div class="task-list" id="todoList">
-                    <div class="task-item" draggable="true">
-                        <span class="task-text">Revisar documentación del proyecto</span>
-                        <button class="delete-task">×</button>
-                    </div>
-                    <div class="task-item" draggable="true">
-                        <span class="task-text">Preparar presentación para el cliente</span>
-                        <button class="delete-task">×</button>
-                    </div>
+                    <!-- Las tareas se cargarán dinámicamente desde la API -->
                 </div>
             </div>
 
             <div class="kanban-column" data-status="doing">
                 <h3 class="column-title">Haciendo</h3>
                 <div class="task-list" id="doingList">
-                    <div class="task-item" draggable="true">
-                        <span class="task-text">Desarrollar nueva funcionalidad</span>
-                        <button class="delete-task">×</button>
-                    </div>
+                    <!-- Las tareas se cargarán dinámicamente desde la API -->
                 </div>
             </div>
 
             <div class="kanban-column" data-status="done">
                 <h3 class="column-title">Hechas</h3>
                 <div class="task-list" id="doneList">
-                    <div class="task-item" draggable="true">
-                        <span class="task-text">Configurar base de datos</span>
-                        <button class="delete-task">×</button>
-                    </div>
+                    <!-- Las tareas se cargarán dinámicamente desde la API -->
                 </div>
             </div>
         </div>
@@ -81,26 +547,311 @@
     </footer>
 
     <script>
-        // Variables globales
-        let draggedElement = null;
+        // ==================== CONFIGURACIÓN Y VARIABLES GLOBALES ====================
 
-        // Función para crear una nueva tarea
-        function createTask(text) {
+        // Configuración de la API
+        const API_BASE_URL = window.location.origin;
+        const API_TASKS_URL = `${API_BASE_URL}/api/public/tasks`; // Usando rutas públicas para demo
+
+        // Variables globales para drag & drop
+        let draggedElement = null;
+        let draggedTaskId = null;
+        let draggedFromStatus = null;
+
+        // ==================== FUNCIONES DE LA API ====================
+
+        /**
+         * Realiza una petición HTTP a la API
+         * @param {string} url - URL del endpoint
+         * @param {object} options - Opciones de la petición
+         * @returns {Promise<object>} - Respuesta de la API
+         */
+        async function apiRequest(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            };
+
+            const response = await fetch(url, { ...defaultOptions, ...options });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        }
+
+        /**
+         * Carga todas las tareas desde la API
+         */
+        async function loadTasks() {
+            try {
+                console.log('📋 Cargando tareas desde la API...');
+                const response = await apiRequest(API_TASKS_URL);
+
+                if (response.success) {
+                    renderTasks(response.data.tasks);
+                    console.log(`✅ ${response.data.tasks.length} tareas cargadas`);
+                } else {
+                    console.error('❌ Error cargando tareas:', response.error);
+                    showNotification('Error al cargar las tareas', 'error');
+                }
+            } catch (error) {
+                console.error('❌ Error de conexión:', error);
+                showNotification('Error de conexión con el servidor', 'error');
+            }
+        }
+
+        /**
+         * Crea una nueva tarea
+         * @param {string} title - Título de la tarea
+         * @param {object} options - Opciones adicionales
+         */
+        async function createTask(title, options = {}) {
+            try {
+                const taskData = {
+                    title,
+                    status: 'todo',
+                    priority: 'medium',
+                    ...options
+                };
+
+                console.log('📋 Creando nueva tarea:', taskData.title);
+                const response = await apiRequest(API_TASKS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(taskData)
+                });
+
+                if (response.success) {
+                    addTaskToDOM(response.data.task);
+                    showNotification('Tarea creada exitosamente', 'success');
+                    console.log('✅ Tarea creada:', response.data.task.title);
+                } else {
+                    console.error('❌ Error creando tarea:', response.error);
+                    showNotification('Error al crear la tarea', 'error');
+                }
+            } catch (error) {
+                console.error('❌ Error creando tarea:', error);
+                showNotification('Error al crear la tarea', 'error');
+            }
+        }
+
+        /**
+         * Actualiza una tarea existente
+         * @param {string} taskId - ID de la tarea
+         * @param {object} updates - Campos a actualizar
+         */
+        async function updateTask(taskId, updates) {
+            try {
+                console.log('📋 Actualizando tarea:', taskId, updates);
+                const response = await apiRequest(`${API_TASKS_URL}/${taskId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(updates)
+                });
+
+                if (response.success) {
+                    updateTaskInDOM(response.data.task);
+                    console.log('✅ Tarea actualizada:', response.data.task.title);
+                } else {
+                    console.error('❌ Error actualizando tarea:', response.error);
+                    showNotification('Error al actualizar la tarea', 'error');
+                }
+            } catch (error) {
+                console.error('❌ Error actualizando tarea:', error);
+                showNotification('Error al actualizar la tarea', 'error');
+            }
+        }
+
+        /**
+         * Mueve una tarea entre columnas
+         * @param {string} taskId - ID de la tarea
+         * @param {string} newStatus - Nuevo estado
+         * @param {number} newOrder - Nueva posición
+         */
+        async function moveTask(taskId, newStatus, newOrder) {
+            const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+            if (taskElement) {
+                taskElement.classList.add('loading');
+            }
+
+            try {
+                console.log(`📋 Moviendo tarea ${taskId} a ${newStatus} (orden: ${newOrder})`);
+                const response = await apiRequest(`${API_TASKS_URL}/${taskId}/move`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        status: newStatus,
+                        order: newOrder
+                    })
+                });
+
+                if (response.success) {
+                    console.log('✅ Tarea movida exitosamente');
+                    // Actualizar el dataset del elemento
+                    if (taskElement) {
+                        taskElement.dataset.status = newStatus;
+                        taskElement.dataset.order = newOrder;
+                    }
+                } else {
+                    console.error('❌ Error moviendo tarea:', response.error);
+                    showNotification('Error al mover la tarea', 'error');
+                    // Revertir el movimiento visual en caso de error
+                    if (taskElement) {
+                        taskElement.dataset.status = draggedFromStatus;
+                        const originalList = document.getElementById(`${draggedFromStatus}List`);
+                        if (originalList) {
+                            originalList.appendChild(taskElement);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error moviendo tarea:', error);
+                showNotification('Error al mover la tarea', 'error');
+                // Revertir el movimiento visual en caso de error
+                if (taskElement) {
+                    taskElement.dataset.status = draggedFromStatus;
+                    const originalList = document.getElementById(`${draggedFromStatus}List`);
+                    if (originalList) {
+                        originalList.appendChild(taskElement);
+                    }
+                }
+            } finally {
+                if (taskElement) {
+                    taskElement.classList.remove('loading');
+                }
+            }
+        }
+
+        /**
+         * Elimina una tarea
+         * @param {string} taskId - ID de la tarea
+         */
+        async function deleteTask(taskId) {
+            try {
+                console.log('🗑️ Eliminando tarea:', taskId);
+                const response = await apiRequest(`${API_TASKS_URL}/${taskId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.success) {
+                    removeTaskFromDOM(taskId);
+                    showNotification('Tarea eliminada exitosamente', 'success');
+                    console.log('✅ Tarea eliminada');
+                } else {
+                    console.error('❌ Error eliminando tarea:', response.error);
+                    showNotification('Error al eliminar la tarea', 'error');
+                }
+            } catch (error) {
+                console.error('❌ Error eliminando tarea:', error);
+                showNotification('Error al eliminar la tarea', 'error');
+            }
+        }
+
+        // ==================== FUNCIONES DEL DOM ====================
+
+        /**
+         * Renderiza todas las tareas en el DOM
+         * @param {Array} tasks - Array de tareas
+         */
+        function renderTasks(tasks) {
+            // Limpiar listas existentes
+            document.getElementById('todoList').innerHTML = '';
+            document.getElementById('doingList').innerHTML = '';
+            document.getElementById('doneList').innerHTML = '';
+
+            // Agregar tareas a sus respectivas columnas
+            tasks.forEach(task => {
+                addTaskToDOM(task);
+            });
+        }
+
+        /**
+         * Agrega una tarea al DOM
+         * @param {object} task - Datos de la tarea
+         */
+        function addTaskToDOM(task) {
             const taskItem = document.createElement('div');
             taskItem.className = 'task-item';
             taskItem.draggable = true;
+            taskItem.dataset.taskId = task.id;
+            taskItem.dataset.status = task.status;
+            taskItem.dataset.order = task.order || 0;
+            taskItem.dataset.priority = task.priority || 'medium';
+            taskItem.dataset.dueDate = task.dueDate || '';
+
+            // Agregar clases de prioridad
+            if (task.priority === 'high') {
+                taskItem.classList.add('priority-high');
+            } else if (task.priority === 'low') {
+                taskItem.classList.add('priority-low');
+            }
+
+            // Agregar clase si está vencida
+            if (task.isOverdue) {
+                taskItem.classList.add('overdue');
+            }
+
+            // Crear contenido de la tarea
             taskItem.innerHTML = `
-                <span class="task-text">${text}</span>
-                <button class="delete-task">×</button>
+                <div class="task-content">
+                    <div class="task-header">
+                        <span class="task-text">${task.title}</span>
+                        <div class="task-actions">
+                            <button class="edit-task" title="Editar">✏️</button>
+                            <button class="delete-task" title="Eliminar">×</button>
+                        </div>
+                    </div>
+                    ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+                    <div class="task-meta">
+                        ${task.dueDate ? `<span class="task-due-date ${task.isOverdue ? 'overdue' : task.isDueSoon ? 'due-soon' : ''}">📅 ${formatDate(task.dueDate)}</span>` : ''}
+                        ${task.tags && task.tags.length > 0 ? `<div class="task-tags">${task.tags.map(tag => `<span class="task-tag">${tag}</span>`).join('')}</div>` : ''}
+                        <span class="task-priority priority-${task.priority}">🔥 ${task.priorityLabel}</span>
+                    </div>
+                </div>
             `;
 
             // Agregar event listeners
             addTaskEventListeners(taskItem);
 
-            return taskItem;
+            // Agregar a la lista correspondiente
+            const listId = `${task.status}List`;
+            const list = document.getElementById(listId);
+            if (list) {
+                list.appendChild(taskItem);
+            }
         }
 
-        // Función para agregar event listeners a una tarea
+        /**
+         * Actualiza una tarea en el DOM
+         * @param {object} updatedTask - Tarea actualizada
+         */
+        function updateTaskInDOM(updatedTask) {
+            const existingTask = document.querySelector(`[data-task-id="${updatedTask.id}"]`);
+            if (existingTask) {
+                // Remover del DOM actual
+                existingTask.remove();
+
+                // Agregar la versión actualizada
+                addTaskToDOM(updatedTask);
+            }
+        }
+
+        /**
+         * Remueve una tarea del DOM
+         * @param {string} taskId - ID de la tarea
+         */
+        function removeTaskFromDOM(taskId) {
+            const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+            if (taskElement) {
+                taskElement.remove();
+            }
+        }
+
+        /**
+         * Agrega event listeners a una tarea
+         * @param {HTMLElement} taskItem - Elemento de la tarea
+         */
         function addTaskEventListeners(taskItem) {
             // Drag events
             taskItem.addEventListener('dragstart', handleDragStart);
@@ -108,41 +859,335 @@
 
             // Delete button
             const deleteBtn = taskItem.querySelector('.delete-task');
-            deleteBtn.addEventListener('click', () => {
-                taskItem.remove();
-            });
-        }
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const taskId = taskItem.dataset.taskId;
+                    if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+                        deleteTask(taskId);
+                    }
+                });
+            }
 
-        // Handlers para drag and drop
-        function handleDragStart(e) {
-            draggedElement = this;
-            this.style.opacity = '0.5';
-        }
-
-        function handleDragEnd(e) {
-            this.style.opacity = '1';
-            draggedElement = null;
-        }
-
-        function handleDragOver(e) {
-            e.preventDefault();
-        }
-
-        function handleDrop(e) {
-            e.preventDefault();
-            if (draggedElement && this.classList.contains('task-list')) {
-                this.appendChild(draggedElement);
+            // Edit button
+            const editBtn = taskItem.querySelector('.edit-task');
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const taskId = taskItem.dataset.taskId;
+                    editTask(taskId);
+                });
             }
         }
 
-        // Inicialización
-        document.addEventListener('DOMContentLoaded', function () {
-            // Agregar event listeners a tareas existentes
-            document.querySelectorAll('.task-item').forEach(addTaskEventListeners);
+        // ==================== FUNCIONES DE DRAG & DROP ====================
 
-            // Event listeners para las listas (drop zones)
+        /**
+         * Handler para el inicio del drag
+         */
+        function handleDragStart(e) {
+            draggedElement = this;
+            draggedTaskId = this.dataset.taskId;
+            draggedFromStatus = this.dataset.status;
+
+            this.style.opacity = '0.5';
+            this.classList.add('dragging');
+
+            // Configurar datos de transferencia
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.outerHTML);
+        }
+
+        /**
+         * Handler para el fin del drag
+         */
+        function handleDragEnd(e) {
+            this.style.opacity = '1';
+            this.classList.remove('dragging');
+
+            draggedElement = null;
+            draggedTaskId = null;
+            draggedFromStatus = null;
+        }
+
+        /**
+         * Handler para drag over
+         */
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            // Agregar clase visual al drop zone
+            if (this.classList.contains('task-list')) {
+                this.classList.add('drag-over');
+            }
+        }
+
+        /**
+         * Handler para drag leave
+         */
+        function handleDragLeave(e) {
+            if (this.classList.contains('task-list')) {
+                this.classList.remove('drag-over');
+            }
+        }
+
+        /**
+         * Handler para el drop
+         */
+        function handleDrop(e) {
+            e.preventDefault();
+
+            if (this.classList.contains('task-list')) {
+                this.classList.remove('drag-over');
+
+                if (draggedElement && draggedElement !== e.target && draggedTaskId) {
+                    const newStatus = this.dataset.status;
+                    const newOrder = calculateNewOrder(this, e.clientY);
+
+                    // Solo mover si cambió de columna o posición
+                    const currentOrder = parseInt(draggedElement.dataset.order) || 0;
+                    if (newStatus !== draggedFromStatus || newOrder !== currentOrder) {
+                        // Mover visualmente primero para mejor UX
+                        const insertionPoint = findInsertionPoint(this, e.clientY);
+                        if (insertionPoint) {
+                            this.insertBefore(draggedElement, insertionPoint);
+                        } else {
+                            this.appendChild(draggedElement);
+                        }
+
+                        // Actualizar en el servidor
+                        moveTask(draggedTaskId, newStatus, newOrder);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Calcula la nueva posición de orden basada en la posición del mouse
+         * @param {HTMLElement} list - Lista objetivo
+         * @param {number} clientY - Posición Y del mouse
+         * @returns {number} - Nueva posición de orden
+         */
+        function calculateNewOrder(list, clientY) {
+            const tasks = Array.from(list.children).filter(child =>
+                child.classList.contains('task-item') && child !== draggedElement
+            );
+
+            if (tasks.length === 0) return 0;
+
+            // Encontrar la posición de inserción
+            for (let i = 0; i < tasks.length; i++) {
+                const task = tasks[i];
+                const rect = task.getBoundingClientRect();
+
+                if (clientY < rect.top + rect.height / 2) {
+                    const taskOrder = parseInt(task.dataset.order);
+                    return isNaN(taskOrder) ? i : taskOrder;
+                }
+            }
+
+            // Si no se encontró, agregar al final
+            return tasks.length;
+        }
+
+        /**
+         * Encuentra el punto de inserción para el drop
+         * @param {HTMLElement} list - Lista objetivo
+         * @param {number} clientY - Posición Y del mouse
+         * @returns {HTMLElement} - Punto de inserción
+         */
+        function findInsertionPoint(list, clientY) {
+            const tasks = Array.from(list.children).filter(child =>
+                child.classList.contains('task-item') && child !== draggedElement
+            );
+
+            for (let i = 0; i < tasks.length; i++) {
+                const task = tasks[i];
+                const rect = task.getBoundingClientRect();
+
+                if (clientY < rect.top + rect.height / 2) {
+                    return task;
+                }
+            }
+
+            return null; // Agregar al final
+        }
+
+        // ==================== FUNCIONES DE UTILIDAD ====================
+
+        /**
+         * Formatea una fecha para mostrar
+         * @param {string} dateString - Fecha en formato ISO
+         * @returns {string} - Fecha formateada
+         */
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            if (date.toDateString() === today.toDateString()) {
+                return `Hoy ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+            } else if (date.toDateString() === tomorrow.toDateString()) {
+                return 'Mañana';
+            } else {
+                return date.toLocaleDateString('es-ES', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+                });
+            }
+        }
+
+        /**
+         * Muestra una notificación al usuario
+         * @param {string} message - Mensaje a mostrar
+         * @param {string} type - Tipo de notificación (success, error, info)
+         */
+        function showNotification(message, type = 'info') {
+            // Crear elemento de notificación
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+
+            // Agregar al DOM
+            document.body.appendChild(notification);
+
+            // Mostrar con animación
+            setTimeout(() => notification.classList.add('show'), 10);
+
+            // Ocultar después de 3 segundos
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        /**
+         * Edita una tarea existente
+         * @param {string} taskId - ID de la tarea
+         */
+        function editTask(taskId) {
+            const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+            if (!taskElement) return;
+
+            const taskData = {
+                id: taskId,
+                title: taskElement.querySelector('.task-text').textContent,
+                description: taskElement.querySelector('.task-description')?.textContent || '',
+                priority: taskElement.dataset.priority || 'medium',
+                dueDate: taskElement.dataset.dueDate || '',
+                tags: Array.from(taskElement.querySelectorAll('.task-tag')).map(tag => tag.textContent).join(', ')
+            };
+
+            showEditModal(taskData);
+        }
+
+        /**
+         * Muestra el modal de edición de tarea
+         * @param {object} taskData - Datos de la tarea a editar
+         */
+        function showEditModal(taskData) {
+            const modal = document.createElement('div');
+            modal.className = 'edit-modal';
+            modal.innerHTML = `
+                <div class="edit-modal-backdrop" onclick="this.parentElement.remove()"></div>
+                <div class="edit-modal-content">
+                    <div class="edit-modal-header">
+                        <h3>Editar Tarea</h3>
+                        <button class="close-modal" onclick="this.closest('.edit-modal').remove()">×</button>
+                    </div>
+                    <form class="edit-form" onsubmit="handleEditSubmit(event, '${taskData.id}')">
+                        <div class="form-group">
+                            <label for="edit-title">Título *</label>
+                            <input type="text" id="edit-title" value="${taskData.title}" required maxlength="200">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-description">Descripción</label>
+                            <textarea id="edit-description" rows="3" maxlength="1000">${taskData.description}</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-priority">Prioridad</label>
+                            <select id="edit-priority">
+                                <option value="low" ${taskData.priority === 'low' ? 'selected' : ''}>Baja</option>
+                                <option value="medium" ${taskData.priority === 'medium' ? 'selected' : ''}>Media</option>
+                                <option value="high" ${taskData.priority === 'high' ? 'selected' : ''}>Alta</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-due-date">Fecha de vencimiento</label>
+                            <input type="datetime-local" id="edit-due-date" value="${taskData.dueDate ? new Date(taskData.dueDate).toISOString().slice(0, 16) : ''}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-tags">Etiquetas (separadas por coma)</label>
+                            <input type="text" id="edit-tags" value="${taskData.tags}" placeholder="trabajo, urgente, personal">
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="cancel-btn" onclick="this.closest('.edit-modal').remove()">Cancelar</button>
+                            <button type="submit" class="save-btn">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Focus en el título
+            setTimeout(() => {
+                modal.querySelector('#edit-title').focus();
+            }, 100);
+        }
+
+        /**
+         * Maneja el envío del formulario de edición
+         * @param {Event} event - Evento del formulario
+         * @param {string} taskId - ID de la tarea
+         */
+        async function handleEditSubmit(event, taskId) {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const updates = {
+                title: formData.get('edit-title').trim(),
+                description: formData.get('edit-description').trim(),
+                priority: formData.get('edit-priority'),
+                dueDate: formData.get('edit-due-date') || null,
+                tags: formData.get('edit-tags').split(',').map(tag => tag.trim()).filter(tag => tag)
+            };
+
+            // Validar datos
+            if (!updates.title) {
+                showNotification('El título es obligatorio', 'error');
+                return;
+            }
+
+            try {
+                await updateTask(taskId, updates);
+                showNotification('Tarea actualizada exitosamente', 'success');
+
+                // Cerrar modal
+                event.target.closest('.edit-modal').remove();
+            } catch (error) {
+                console.error('Error actualizando tarea:', error);
+                showNotification('Error al actualizar la tarea', 'error');
+            }
+        }
+
+        // ==================== INICIALIZACIÓN ====================
+
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🚀 Inicializando aplicación de tareas...');
+
+            // Configurar event listeners para las listas (drop zones)
             document.querySelectorAll('.task-list').forEach(list => {
                 list.addEventListener('dragover', handleDragOver);
+                list.addEventListener('dragleave', handleDragLeave);
                 list.addEventListener('drop', handleDrop);
             });
 
@@ -153,8 +1198,7 @@
             addTaskBtn.addEventListener('click', function () {
                 const taskText = newTaskInput.value.trim();
                 if (taskText) {
-                    const newTask = createTask(taskText);
-                    document.getElementById('todoList').appendChild(newTask);
+                    createTask(taskText);
                     newTaskInput.value = '';
                 }
             });
@@ -165,6 +1209,11 @@
                     addTaskBtn.click();
                 }
             });
+
+            // Cargar tareas iniciales
+            loadTasks();
+
+            console.log('✅ Aplicación de tareas inicializada');
         });
     </script>
 </body>

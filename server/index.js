@@ -20,14 +20,17 @@ require('dotenv').config();
 // Importar modelos (necesario para que Mongoose los registre)
 require('./models/Category');
 require('./models/Transaction');
+require('./models/Task');
 require('./models/User');
 
 // Importar modelos para uso directo
 const Transaction = require('./models/Transaction');
+const Task = require('./models/Task');
 
 // Importar rutas
 const authRoutes = require('./routes/auth');
 const transactionRoutes = require('./routes/transactions');
+const taskRoutes = require('./routes/tasks');
 const categoryRoutes = require('./routes/categories');
 const budgetRoutes = require('./routes/budgets');
 const goalRoutes = require('./routes/goals');
@@ -266,6 +269,7 @@ function setupRoutes() {
     
     // Rutas protegidas (requieren autenticación)
     app.use('/api/transactions', authenticateToken, transactionRoutes);
+    app.use('/api/tasks', authenticateToken, taskRoutes);
     app.use('/api/categories', authenticateToken, categoryRoutes);
     app.use('/api/budgets', authenticateToken, budgetRoutes);
     app.use('/api/goals', authenticateToken, goalRoutes);
@@ -274,6 +278,280 @@ function setupRoutes() {
     app.use('/api/exchange-rates', authenticateToken, exchangeRateRoutes);
     
     // Rutas públicas (sin autenticación) - para modo demo
+    // Rutas públicas de tareas (sin middleware de autenticación)
+    app.get('/api/public/tasks', async (req, res) => {
+        try {
+            const {
+                page = 1,
+                limit = 50,
+                status,
+                sortBy = 'order',
+                sortOrder = 'asc'
+            } = req.query;
+
+            // Construir filtros para tareas públicas
+            const filters = { userId: null };
+
+            if (status) filters.status = status;
+
+            // Construir opciones de ordenamiento
+            const sortOptions = {};
+            sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+            // Aplicar paginación
+            const skip = (parseInt(page) - 1) * parseInt(limit);
+
+            const tasks = await Task.find(filters)
+                .sort(sortOptions)
+                .skip(skip)
+                .limit(parseInt(limit))
+                .lean();
+
+            const total = await Task.countDocuments(filters);
+
+            res.json({
+                success: true,
+                data: {
+                    tasks: tasks.map(task => ({
+                        ...task,
+                        id: task._id,
+                        _id: undefined
+                    })),
+                    pagination: {
+                        page: parseInt(page),
+                        limit: parseInt(limit),
+                        total,
+                        pages: Math.ceil(total / parseInt(limit))
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error obteniendo tareas públicas:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Error interno del servidor',
+                message: 'No se pudieron obtener las tareas públicas'
+            });
+        }
+    });
+
+    app.post('/api/public/tasks', async (req, res) => {
+        try {
+            const {
+                title,
+                description,
+                status = 'todo',
+                priority = 'medium',
+                dueDate,
+                tags = [],
+                notes,
+                order = 0
+            } = req.body;
+
+            // Obtener el orden máximo para el estado especificado
+            if (order === 0) {
+                const maxOrderTask = await Task.findOne({ userId: null, status })
+                    .sort({ order: -1 })
+                    .select('order')
+                    .lean();
+
+                const maxOrder = maxOrderTask ? maxOrderTask.order : 0;
+                req.body.order = maxOrder + 1;
+            }
+
+            const task = new Task({
+                userId: null, // Tarea pública
+                title: title.trim(),
+                description: description?.trim(),
+                status,
+                priority,
+                dueDate: dueDate ? new Date(dueDate) : null,
+                tags: tags.filter(tag => tag.trim()),
+                notes: notes?.trim(),
+                order: req.body.order
+            });
+
+            await task.save();
+
+            res.status(201).json({
+                success: true,
+                message: 'Tarea pública creada exitosamente',
+                data: {
+                    task: task.getSummary()
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error creando tarea pública:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Error interno del servidor',
+                message: 'No se pudo crear la tarea pública'
+            });
+        }
+    });
+
+    app.put('/api/public/tasks/:id/move', async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { status, order } = req.body;
+
+            if (!status || !['todo', 'doing', 'done'].includes(status)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Estado inválido',
+                    message: 'El estado debe ser "todo", "doing" o "done"'
+                });
+            }
+
+            // Validar que el orden sea un número válido
+            if (order !== undefined && (typeof order !== 'number' || isNaN(order) || order < 0)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Orden inválido',
+                    message: 'El orden debe ser un número positivo'
+                });
+            }
+
+            const task = await Task.findOne({ _id: id, userId: null });
+
+            if (!task) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Tarea no encontrada',
+                    message: 'La tarea pública especificada no existe'
+                });
+            }
+
+            const oldStatus = task.status;
+            const oldOrder = task.order;
+
+            // Actualizar órdenes si es necesario
+            if (order !== undefined) {
+                if (oldStatus === status) {
+                    if (order > oldOrder) {
+                        await Task.updateMany(
+                            { userId: null, status, order: { $gt: oldOrder, $lte: order } },
+                            { $inc: { order: -1 } }
+                        );
+                    } else if (order < oldOrder) {
+                        await Task.updateMany(
+                            { userId: null, status, order: { $gte: order, $lt: oldOrder } },
+                            { $inc: { order: 1 } }
+                        );
+                    }
+                } else {
+                    await Task.updateMany(
+                        { userId: null, status: oldStatus, order: { $gt: oldOrder } },
+                        { $inc: { order: -1 } }
+                    );
+                    await Task.updateMany(
+                        { userId: null, status, order: { $gte: order } },
+                        { $inc: { order: 1 } }
+                    );
+                }
+            }
+
+            task.status = status;
+            if (order !== undefined) task.order = order;
+
+            await task.save();
+
+            res.json({
+                success: true,
+                message: 'Tarea pública movida exitosamente',
+                data: {
+                    task: task.getSummary()
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error moviendo tarea pública:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Error interno del servidor',
+                message: 'No se pudo mover la tarea pública'
+            });
+        }
+    });
+
+    app.put('/api/public/tasks/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { title, description, priority, dueDate, tags } = req.body;
+
+            const task = await Task.findOne({ _id: id, userId: null });
+
+            if (!task) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Tarea no encontrada',
+                    message: 'La tarea pública especificada no existe'
+                });
+            }
+
+            // Actualizar campos
+            if (title !== undefined) task.title = title.trim();
+            if (description !== undefined) task.description = description?.trim();
+            if (priority !== undefined) task.priority = priority;
+            if (dueDate !== undefined) task.dueDate = dueDate ? new Date(dueDate) : null;
+            if (tags !== undefined) task.tags = tags.filter(tag => tag.trim());
+
+            await task.save();
+
+            res.json({
+                success: true,
+                message: 'Tarea pública actualizada exitosamente',
+                data: {
+                    task: task.getSummary()
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error actualizando tarea pública:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Error interno del servidor',
+                message: 'No se pudo actualizar la tarea pública'
+            });
+        }
+    });
+
+    app.delete('/api/public/tasks/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+
+            const task = await Task.findOneAndDelete({ _id: id, userId: null });
+
+            if (!task) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Tarea no encontrada',
+                    message: 'La tarea pública especificada no existe'
+                });
+            }
+
+            await Task.updateMany(
+                { userId: null, status: task.status, order: { $gt: task.order } },
+                { $inc: { order: -1 } }
+            );
+
+            res.json({
+                success: true,
+                message: 'Tarea pública eliminada exitosamente'
+            });
+
+        } catch (error) {
+            console.error('❌ Error eliminando tarea pública:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Error interno del servidor',
+                message: 'No se pudo eliminar la tarea pública'
+            });
+        }
+    });
+
     // Handlers específicos para rutas públicas sin reutilizar routers con auth
     app.get('/api/public/transactions', async (req, res) => {
         try {
