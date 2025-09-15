@@ -226,6 +226,14 @@
                 return token || '';
             }
 
+            getApiBaseUrl() {
+                // Usar la misma lógica que auth.js
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    return 'http://localhost:3000/api';
+                }
+                return `${window.location.protocol}//${window.location.host}/api`;
+            }
+
             async waitForAuth() {
                 return new Promise((resolve) => {
                     // Verificar si ya hay un token disponible
@@ -973,6 +981,9 @@ Historial de consultas restaurado. ¿En qué puedo ayudarte con este cultivo?`, 
                     this.openInfoBtn.style.display = open ? 'none' : 'block';
                 } else if (panel === this.notesPanel) {
                     this.openNotesBtn.style.display = open ? 'none' : 'block';
+                    if (open && this.currentCultivo) {
+                        this.loadNotasFromAPI();
+                    }
                 }
             }
 
@@ -999,36 +1010,192 @@ Historial de consultas restaurado. ¿En qué puedo ayudarte con este cultivo?`, 
                     <p><strong>Iluminación:</strong> LED (${c.potencia || '?'}W)</p>
                     <p><strong>Ventilación:</strong> Sistema cerrado con CO2</p>
                 `;
-                this.notesArea.value = c.notas || '';
+
+                // Mostrar notas recientes en el panel de información
+                if (c.notasRecientes && c.notasRecientes.length > 0) {
+                    const notasHTML = c.notasRecientes.map(nota => {
+                        const fecha = new Date(nota.fecha).toLocaleDateString();
+                        const tipoIcon = this.getTipoNotaIcon(nota.tipo);
+                        return `<div class="nota-resumen ${nota.importante ? 'importante' : ''}">
+                            <span class="nota-fecha">${fecha}</span>
+                            <span class="nota-tipo">${tipoIcon}</span>
+                            <span class="nota-contenido">${nota.contenido.substring(0, 50)}${nota.contenido.length > 50 ? '...' : ''}</span>
+                        </div>`;
+                    }).join('');
+
+                    this.infoContent.innerHTML += `
+                        <div class="notas-resumen">
+                            <h4>📝 Notas Recientes</h4>
+                            ${notasHTML}
+                        </div>
+                    `;
+                }
             }
 
             async saveNotes() {
                 if (!this.currentCultivo) return;
 
+                // Obtener valores del formulario
+                const tipoSelect = document.getElementById('note-type');
+                const importanteCheckbox = document.getElementById('note-important');
+
+                const tipo = tipoSelect ? tipoSelect.value : 'general';
+                const importante = importanteCheckbox ? importanteCheckbox.checked : false;
+
                 try {
-                    const response = await fetch(`/api/cultivos/${this.currentCultivo.id}`, {
-                        method: 'PUT',
+                    const response = await fetch(`${this.getApiBaseUrl()}/cultivos/${this.currentCultivo.id}/notas`, {
+                        method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${this.getAuthToken()}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            notas: this.notesArea.value
+                            contenido: this.notesArea.value,
+                            tipo: tipo,
+                            importante: importante
                         })
                     });
 
                     if (response.ok) {
                         const result = await response.json();
-                        this.currentCultivo.notas = this.notesArea.value;
-                        this.addMessage('✅ Notas guardadas exitosamente', 'ai');
+                        this.addMessage('✅ Nota guardada exitosamente', 'ai');
+                        // Actualizar el cultivo local con la nueva nota
+                        if (!this.currentCultivo.notas) {
+                            this.currentCultivo.notas = [];
+                        }
+                        this.currentCultivo.notas.push(result.data.nuevaNota);
+                        // Limpiar el textarea después de guardar
+                        this.notesArea.value = '';
+                        // Actualizar el panel de información para mostrar las notas recientes
+                        this.updateInfoPanel();
+                        // Actualizar el panel lateral de notas si está abierto
+                        this.updateNotesPanel();
                     } else {
                         const error = await response.json();
-                        this.addMessage(`❌ Error guardando notas: ${error.error}`, 'ai');
+                        this.addMessage(`❌ Error guardando nota: ${error.error}`, 'ai');
                     }
                 } catch (error) {
-                    console.error('Error guardando notas:', error);
-                    this.addMessage('❌ Error interno guardando notas', 'ai');
+                    console.error('Error guardando nota:', error);
+                    this.addMessage('❌ Error interno guardando nota', 'ai');
                 }
+            }
+
+            getTipoNotaIcon(tipo) {
+                const iconos = {
+                    'general': '📝',
+                    'vegetativo': '🌱',
+                    'floracion': '🌸',
+                    'cosecha': '✂️',
+                    'recordatorio': '⏰',
+                    'comentario': '💬'
+                };
+                return iconos[tipo] || '📝';
+            }
+
+            updateNotesPanel() {
+                if (!this.currentCultivo || !this.notesPanel.classList.contains('open')) return;
+
+                const notesContent = this.notesPanel.querySelector('.side-content');
+                const notesList = notesContent.querySelector('.notes-list');
+
+                if (notesList && this.currentCultivo.notas) {
+                    notesList.innerHTML = this.renderNotasList(this.currentCultivo.notas);
+                }
+            }
+
+            async loadNotasFromAPI() {
+                if (!this.currentCultivo) return;
+
+                try {
+                    const response = await fetch(`${this.getApiBaseUrl()}/cultivos/${this.currentCultivo.id}/notas`, {
+                        headers: {
+                            'Authorization': `Bearer ${this.getAuthToken()}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        // Actualizar las notas del cultivo con las de la API
+                        this.currentCultivo.notas = result.data.notas;
+                        this.updateNotesPanelUI();
+                    } else {
+                        console.error('Error cargando notas desde API:', response.status);
+                    }
+                } catch (error) {
+                    console.error('Error cargando notas desde API:', error);
+                }
+            }
+
+            updateNotesPanelUI() {
+                const notesContent = this.notesPanel.querySelector('.side-content');
+                if (!notesContent) return;
+
+                notesContent.innerHTML = `
+                    <div class="notes-history">
+                        <div class="notes-header">
+                            <h4>📝 Historial de Notas</h4>
+                            <span class="notes-count">${this.currentCultivo.notas ? this.currentCultivo.notas.length : 0} notas</span>
+                        </div>
+                        <div class="notes-list">
+                            ${this.renderNotasList(this.currentCultivo.notas || [])}
+                        </div>
+                        <div class="add-note-section">
+                            <textarea id="notes-area" placeholder="Escribe una nueva nota..." rows="3"></textarea>
+                            <div class="note-options">
+                                <select id="note-type" class="note-type-select">
+                                    <option value="general">📝 General</option>
+                                    <option value="vegetativo">🌱 Vegetativo</option>
+                                    <option value="floracion">🌸 Floración</option>
+                                    <option value="cosecha">✂️ Cosecha</option>
+                                    <option value="recordatorio">⏰ Recordatorio</option>
+                                    <option value="comentario">💬 Comentario</option>
+                                </select>
+                                <label class="important-checkbox">
+                                    <input type="checkbox" id="note-important"> Importante
+                                </label>
+                                <button id="save-notes" class="save-notes-btn">💾 Guardar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Reasignar referencias después de recrear el DOM
+                this.notesArea = document.getElementById('notes-area');
+                this.saveNotesBtn = document.getElementById('save-notes');
+
+                // Reasignar event listeners
+                if (this.saveNotesBtn) {
+                    this.saveNotesBtn.addEventListener('click', () => this.saveNotes());
+                }
+            }
+
+            renderNotasList(notas) {
+                if (!notas || notas.length === 0) {
+                    return '<p class="no-notes">No hay notas aún. ¡Agrega la primera!</p>';
+                }
+
+                // Ordenar por fecha descendente (más recientes primero)
+                const notasOrdenadas = notas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+                return notasOrdenadas.map(nota => {
+                    const fecha = new Date(nota.fecha).toLocaleString();
+                    const tipoIcon = this.getTipoNotaIcon(nota.tipo);
+                    const tipoLabel = nota.tipo.charAt(0).toUpperCase() + nota.tipo.slice(1);
+                    const importanteClass = nota.importante ? 'importante' : '';
+
+                    return `
+                        <div class="nota-item ${importanteClass}">
+                            <div class="nota-header">
+                                <span class="nota-tipo">${tipoIcon} ${tipoLabel}</span>
+                                <span class="nota-fecha">${fecha}</span>
+                                ${nota.importante ? '<span class="nota-importante">⭐</span>' : ''}
+                            </div>
+                            <div class="nota-contenido">${nota.contenido}</div>
+                            ${nota.fase ? `<div class="nota-fase">Fase: ${nota.fase}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
             }
 
             addMessage(content, sender, image = null) {
@@ -1269,6 +1436,196 @@ Historial de consultas restaurado. ¿En qué puedo ayudarte con este cultivo?`, 
 
                 .auto-login-btn:hover {
                     background: #1e7e34;
+                }
+
+                /* Estilos para notas */
+                .notas-resumen {
+                    margin-top: 15px;
+                    padding-top: 15px;
+                    border-top: 1px solid rgba(255, 255, 255, 0.1);
+                }
+
+                .notas-resumen h4 {
+                    margin: 0 0 10px 0;
+                    color: #4CAF50;
+                    font-size: 14px;
+                }
+
+                .nota-resumen {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 6px 0;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                    font-size: 12px;
+                }
+
+                .nota-resumen.importante {
+                    background: rgba(255, 193, 7, 0.1);
+                    border-left: 3px solid #ffc107;
+                }
+
+                .nota-fecha {
+                    color: #888;
+                    flex-shrink: 0;
+                }
+
+                .nota-tipo {
+                    flex-shrink: 0;
+                }
+
+                .nota-contenido {
+                    flex: 1;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                /* Panel lateral de notas */
+                .notes-history {
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .notes-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 15px;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                }
+
+                .notes-header h4 {
+                    margin: 0;
+                    color: #4CAF50;
+                }
+
+                .notes-count {
+                    font-size: 12px;
+                    color: #888;
+                }
+
+                .notes-list {
+                    flex: 1;
+                    overflow-y: auto;
+                    margin-bottom: 20px;
+                }
+
+                .nota-item {
+                    background: rgba(255, 255, 255, 0.05);
+                    border-radius: 8px;
+                    padding: 12px;
+                    margin-bottom: 10px;
+                    border-left: 3px solid #4CAF50;
+                }
+
+                .nota-item.importante {
+                    border-left-color: #ffc107;
+                    background: rgba(255, 193, 7, 0.1);
+                }
+
+                .nota-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 8px;
+                    font-size: 12px;
+                }
+
+                .nota-tipo {
+                    font-weight: bold;
+                }
+
+                .nota-fecha {
+                    color: #888;
+                }
+
+                .nota-importante {
+                    color: #ffc107;
+                }
+
+                .nota-contenido {
+                    margin-bottom: 5px;
+                    line-height: 1.4;
+                }
+
+                .nota-fase {
+                    font-size: 11px;
+                    color: #4CAF50;
+                    font-style: italic;
+                }
+
+                .no-notes {
+                    text-align: center;
+                    color: #888;
+                    font-style: italic;
+                    padding: 20px;
+                }
+
+                .add-note-section {
+                    border-top: 1px solid rgba(255, 255, 255, 0.1);
+                    padding-top: 15px;
+                }
+
+                .add-note-section textarea {
+                    width: 100%;
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    padding: 10px;
+                    color: white;
+                    font-family: inherit;
+                    resize: vertical;
+                    margin-bottom: 10px;
+                }
+
+                .add-note-section textarea::placeholder {
+                    color: #888;
+                }
+
+                .note-options {
+                    display: flex;
+                    gap: 10px;
+                    align-items: center;
+                    flex-wrap: wrap;
+                }
+
+                .note-type-select {
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 4px;
+                    padding: 6px 8px;
+                    color: white;
+                    font-size: 12px;
+                }
+
+                .important-checkbox {
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    font-size: 12px;
+                    color: #ccc;
+                }
+
+                .important-checkbox input[type="checkbox"] {
+                    margin: 0;
+                }
+
+                .save-notes-btn {
+                    background: #4CAF50;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 8px 12px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    transition: background 0.3s;
+                }
+
+                .save-notes-btn:hover {
+                    background: #45a049;
                 }
             </style>
         `;

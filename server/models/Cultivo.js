@@ -96,11 +96,42 @@ const cultivoSchema = new mongoose.Schema({
         max: [1000, 'No puede exceder 1000 plantas']
     },
 
-    // Notas y observaciones
-    notas: {
+    // Notas y observaciones (historial completo)
+    notas: [{
+        tipo: {
+            type: String,
+            enum: {
+                values: ['general', 'vegetativo', 'floracion', 'cosecha', 'recordatorio', 'comentario'],
+                message: 'Tipo de nota inválido'
+            },
+            default: 'general'
+        },
+        contenido: {
+            type: String,
+            required: [true, 'El contenido de la nota es requerido'],
+            trim: true,
+            maxlength: [1000, 'La nota no puede exceder 1000 caracteres']
+        },
+        fecha: {
+            type: Date,
+            default: Date.now
+        },
+        fase: {
+            type: String,
+            enum: ['germinacion', 'vegetativo', 'floracion', 'cosecha', 'curado'],
+            default: null
+        },
+        importante: {
+            type: Boolean,
+            default: false
+        }
+    }],
+
+    // Nota actual (para compatibilidad con versiones anteriores)
+    notaActual: {
         type: String,
         trim: true,
-        maxlength: [1000, 'Las notas no pueden exceder 1000 caracteres']
+        maxlength: [1000, 'La nota actual no puede exceder 1000 caracteres']
     },
 
     // Historial de chat con Bruce AI
@@ -300,6 +331,26 @@ cultivoSchema.virtual('diasActivo').get(function() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 });
 
+/**
+ * Virtual para obtener la última nota
+ */
+cultivoSchema.virtual('ultimaNota').get(function() {
+    if (this.notas && this.notas.length > 0) {
+        return this.notas[this.notas.length - 1];
+    }
+    return null;
+});
+
+/**
+ * Virtual para obtener notas recientes (últimas 5)
+ */
+cultivoSchema.virtual('notasRecientes').get(function() {
+    if (this.notas && this.notas.length > 0) {
+        return this.notas.slice(-5).reverse(); // Últimas 5, ordenadas de más reciente a más antigua
+    }
+    return [];
+});
+
 // ==================== MÉTODOS DE INSTANCIA ====================
 
 /**
@@ -405,6 +456,52 @@ cultivoSchema.methods.actualizarCostos = async function(costos) {
             this.metadata.costos[key] = Math.max(0, parseFloat(costos[key]) || 0);
         }
     });
+    await this.save();
+    return this;
+};
+
+/**
+ * Agrega una nueva nota al historial
+ * @param {string} contenido - Contenido de la nota
+ * @param {string} tipo - Tipo de nota (general, vegetativo, floracion, etc.)
+ * @param {boolean} importante - Si es una nota importante
+ * @returns {Promise<Cultivo>} - Cultivo actualizado
+ */
+cultivoSchema.methods.agregarNota = async function(contenido, tipo = 'general', importante = false) {
+    if (!contenido || contenido.trim().length === 0) {
+        throw new Error('El contenido de la nota es requerido');
+    }
+
+    const nuevaNota = {
+        tipo: tipo,
+        contenido: contenido.trim(),
+        fecha: new Date(),
+        fase: this.faseActual,
+        importante: importante
+    };
+
+    this.notas.push(nuevaNota);
+
+    // También actualizar la nota actual para compatibilidad
+    this.notaActual = contenido.trim();
+
+    await this.save();
+    return this;
+};
+
+/**
+ * Actualiza la nota actual (para compatibilidad)
+ * @param {string} contenido - Contenido de la nota
+ * @returns {Promise<Cultivo>} - Cultivo actualizado
+ */
+cultivoSchema.methods.actualizarNotaActual = async function(contenido) {
+    this.notaActual = contenido.trim();
+
+    // Si hay contenido, agregar también al historial como nota general
+    if (contenido && contenido.trim().length > 0) {
+        await this.agregarNota(contenido, 'general');
+    }
+
     await this.save();
     return this;
 };

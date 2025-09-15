@@ -137,7 +137,9 @@ userSchema.virtual('fullName').get(function() {
  * Virtual para iniciales
  */
 userSchema.virtual('initials').get(function() {
-    return `${this.firstName.charAt(0)}${this.lastName.charAt(0)}`.toUpperCase();
+    const firstInitial = this.firstName && this.firstName.length > 0 ? this.firstName.charAt(0) : 'U';
+    const lastInitial = this.lastName && this.lastName.length > 0 ? this.lastName.charAt(0) : 'U';
+    return `${firstInitial}${lastInitial}`.toUpperCase();
 });
 
 // ==================== MIDDLEWARE PRE-SAVE ====================

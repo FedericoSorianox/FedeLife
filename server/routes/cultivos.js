@@ -576,4 +576,98 @@ router.get('/grouped/by-estado', authenticateToken, async (req, res) => {
     }
 });
 
+/**
+ * POST /api/cultivos/:id/notas
+ * Agrega una nueva nota al historial del cultivo
+ */
+router.post('/:id/notas', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { id } = req.params;
+        const { contenido, tipo = 'general', importante = false } = req.body;
+
+        if (!contenido || contenido.trim().length === 0) {
+            return res.status(400).json({
+                error: 'El contenido de la nota es requerido'
+            });
+        }
+
+        const cultivo = await Cultivo.findOne({ _id: id, userId });
+
+        if (!cultivo) {
+            return res.status(404).json({
+                error: 'Cultivo no encontrado'
+            });
+        }
+
+        await cultivo.agregarNota(contenido, tipo, importante);
+
+        res.status(201).json({
+            success: true,
+            message: 'Nota agregada exitosamente',
+            data: {
+                id: cultivo._id,
+                nuevaNota: cultivo.ultimaNota,
+                totalNotas: cultivo.notas.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Error agregando nota:', error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            message: error.message
+        });
+    }
+});
+
+/**
+ * GET /api/cultivos/:id/notas
+ * Obtiene el historial de notas del cultivo
+ */
+router.get('/:id/notas', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { id } = req.params;
+        const { limit = 10, tipo } = req.query;
+
+        const cultivo = await Cultivo.findOne({ _id: id, userId });
+
+        if (!cultivo) {
+            return res.status(404).json({
+                error: 'Cultivo no encontrado'
+            });
+        }
+
+        let notasFiltradas = cultivo.notas || [];
+
+        // Filtrar por tipo si se especifica
+        if (tipo) {
+            notasFiltradas = notasFiltradas.filter(nota => nota.tipo === tipo);
+        }
+
+        // Ordenar por fecha descendente y limitar
+        notasFiltradas = notasFiltradas
+            .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+            .slice(0, parseInt(limit));
+
+        res.json({
+            success: true,
+            data: {
+                id: cultivo._id,
+                notas: notasFiltradas,
+                total: cultivo.notas.length,
+                filtradas: notasFiltradas.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Error obteniendo notas:', error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            message: error.message
+        });
+    }
+});
+
 module.exports = router;
