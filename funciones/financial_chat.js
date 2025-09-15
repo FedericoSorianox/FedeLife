@@ -74,37 +74,30 @@ export class FinancialChat {
     }
 
     /**
-     * Procesa una consulta del usuario sobre sus finanzas
+     * Procesa una consulta del usuario sobre sus finanzas usando el nuevo sistema con acceso completo
      * @param {string} userMessage - Mensaje del usuario
      * @param {Object} financialData - Datos financieros actuales
+     * @param {Object} options - Opciones adicionales (authToken, useAdvanced, etc.)
      * @returns {Promise<Object>} Promesa con la respuesta de la IA
      */
-    async processQuery(userMessage, financialData) {
+    async processQuery(userMessage, financialData, options = {}) {
         try {
-            // Validar que el chat esté inicializado
-            if (!this.isReady()) {
-                throw new Error('❌ Chat financiero no inicializado. Usa initialize() primero.');
-            }
-
             // Validar el mensaje del usuario
             if (!userMessage || userMessage.trim() === '') {
                 throw new Error('❌ El mensaje del usuario no puede estar vacío');
             }
 
-            // Crear el prompt del sistema con contexto financiero
-            const systemPrompt = this.createSystemPrompt(financialData);
-            
-            // Procesar la consulta con la IA
-            const response = await this.aiAnalyzer.analyzeText(userMessage, systemPrompt);
-            
-            if (!response.success) {
-                throw new Error(`❌ Error en el análisis: ${response.error}`);
+            const { authToken, useAdvanced = true, additionalData } = options;
+
+            // Si tenemos token de autenticación y queremos usar el sistema avanzado
+            if (authToken && useAdvanced) {
+                console.log('🧠 Usando sistema de IA avanzado con acceso completo a datos');
+                return await this.processAdvancedQuery(userMessage, authToken, financialData, additionalData);
             }
 
-            return {
-                success: true,
-                message: typeof response.data === 'string' ? response.data : 'Respuesta de IA no disponible'
-            };
+            // Sistema básico (modo público o sin autenticación)
+            console.log('💬 Usando sistema de chat básico');
+            return await this.processBasicQuery(userMessage, financialData);
 
         } catch (error) {
             console.error('❌ Error al procesar consulta del chat:', error);
@@ -113,6 +106,126 @@ export class FinancialChat {
                 message: 'Lo siento, no pude procesar tu consulta en este momento.',
                 error: error instanceof Error ? error.message : 'Error desconocido'
             };
+        }
+    }
+
+    /**
+     * Procesa consulta avanzada usando el nuevo sistema con acceso completo a datos
+     * @param {string} userMessage - Mensaje del usuario
+     * @param {string} authToken - Token de autenticación
+     * @param {Object} financialData - Datos financieros actuales
+     * @param {Object} additionalData - Datos adicionales
+     * @returns {Promise<Object>} Respuesta avanzada
+     */
+    async processAdvancedQuery(userMessage, authToken, financialData, additionalData) {
+        try {
+            console.log('🚀 Procesando consulta avanzada con API backend...');
+
+            const response = await fetch('/api/ai/advanced-query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({
+                    query: userMessage,
+                    additionalData: {
+                        ...additionalData,
+                        frontendData: financialData
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error en la API: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                return {
+                    success: true,
+                    message: result.data.response,
+                    mode: 'advanced',
+                    contextUsed: result.data.contextUsed,
+                    dataPoints: result.data.dataPoints,
+                    timestamp: result.data.timestamp
+                };
+            } else {
+                throw new Error(result.message || 'Error en la consulta avanzada');
+            }
+
+        } catch (error) {
+            console.error('❌ Error en consulta avanzada:', error);
+
+            // Fallback al sistema básico si falla el avanzado
+            console.log('🔄 Fallback a sistema básico...');
+            return await this.processBasicQuery(userMessage, financialData);
+        }
+    }
+
+    /**
+     * Procesa consulta básica (modo público o fallback)
+     * @param {string} userMessage - Mensaje del usuario
+     * @param {Object} financialData - Datos financieros actuales
+     * @returns {Promise<Object>} Respuesta básica
+     */
+    async processBasicQuery(userMessage, financialData) {
+        try {
+            // Usar el endpoint público mejorado
+            const response = await fetch('/api/public/ai/enhanced-chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: userMessage,
+                    userData: {
+                        name: financialData?.user?.name,
+                        currency: financialData?.user?.currency,
+                        summary: financialData?.summary,
+                        recentTransactions: financialData?.recentTransactions?.slice(0, 5)
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error en la API: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                return {
+                    success: true,
+                    message: result.data.response,
+                    mode: 'basic',
+                    contextUsed: result.data.contextUsed,
+                    timestamp: result.data.timestamp
+                };
+            } else {
+                throw new Error(result.message || 'Error en la consulta básica');
+            }
+
+        } catch (error) {
+            console.error('❌ Error en consulta básica:', error);
+
+            // Último fallback: usar el sistema anterior si está disponible
+            if (this.aiAnalyzer && this.isReady()) {
+                const systemPrompt = this.createSystemPrompt(financialData);
+                const response = await this.aiAnalyzer.analyzeText(userMessage, systemPrompt);
+
+                if (response.success) {
+                    return {
+                        success: true,
+                        message: typeof response.data === 'string' ? response.data : 'Respuesta de IA no disponible',
+                        mode: 'fallback',
+                        timestamp: new Date().toISOString()
+                    };
+                }
+            }
+
+            throw new Error('Todos los sistemas de IA fallaron');
         }
     }
 
@@ -225,13 +338,140 @@ IMPORTANTE: Siempre basa tus respuestas en los datos reales proporcionados y no 
     }
 
     /**
+     * Obtiene datos completos del usuario para contexto avanzado
+     * @param {string} authToken - Token de autenticación
+     * @returns {Promise<Object>} Datos completos del usuario
+     */
+    async getCompleteUserData(authToken) {
+        try {
+            console.log('📊 Obteniendo datos completos del usuario para contexto...');
+
+            const response = await fetch('/api/ai/user-data-summary', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error obteniendo datos del usuario: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                return result.data;
+            } else {
+                throw new Error(result.message || 'Error obteniendo datos del usuario');
+            }
+
+        } catch (error) {
+            console.error('❌ Error obteniendo datos completos del usuario:', error);
+            return null; // Retornar null para que el sistema siga funcionando
+        }
+    }
+
+    /**
+     * Realiza diagnóstico financiero completo
+     * @param {string} authToken - Token de autenticación
+     * @param {Object} additionalData - Datos adicionales
+     * @returns {Promise<Object>} Resultado del diagnóstico
+     */
+    async performCompleteDiagnosis(authToken, additionalData = {}) {
+        try {
+            console.log('🔍 Realizando diagnóstico financiero completo...');
+
+            const response = await fetch('/api/ai/complete-diagnosis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({
+                    additionalData: additionalData
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error en diagnóstico: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                return {
+                    success: true,
+                    diagnosis: result.data.diagnosis,
+                    dataAnalyzed: result.data.dataAnalyzed,
+                    recommendations: result.data.recommendations,
+                    timestamp: result.data.timestamp
+                };
+            } else {
+                throw new Error(result.message || 'Error en el diagnóstico');
+            }
+
+        } catch (error) {
+            console.error('❌ Error realizando diagnóstico completo:', error);
+            return {
+                success: false,
+                diagnosis: 'No se pudo completar el diagnóstico en este momento.',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Genera contexto detallado para consultas avanzadas
+     * @param {string} authToken - Token de autenticación
+     * @param {string} type - Tipo de contexto (general, diagnosis, etc.)
+     * @returns {Promise<string>} Contexto generado
+     */
+    async generateDetailedContext(authToken, type = 'general') {
+        try {
+            console.log('📝 Generando contexto detallado...');
+
+            const response = await fetch(`/api/ai/context?type=${type}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error generando contexto: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                return result.data.context;
+            } else {
+                throw new Error(result.message || 'Error generando contexto');
+            }
+
+        } catch (error) {
+            console.error('❌ Error generando contexto detallado:', error);
+            return 'Error obteniendo contexto detallado. Información limitada disponible.';
+        }
+    }
+
+    /**
      * Obtiene la configuración actual del chat
      * @returns {Object} Configuración sin datos sensibles
      */
     getConfig() {
         return {
             isInitialized: this.isInitialized,
-            model: this.aiAnalyzer ? this.aiAnalyzer.getConfig().model : 'basic'
+            model: this.aiAnalyzer ? this.aiAnalyzer.getConfig().model : 'basic',
+            hasAdvancedAccess: true, // Nuevo sistema con acceso avanzado
+            apiEndpoints: {
+                advancedQuery: '/api/ai/advanced-query',
+                completeDiagnosis: '/api/ai/complete-diagnosis',
+                userDataSummary: '/api/ai/user-data-summary',
+                context: '/api/ai/context',
+                enhancedChat: '/api/public/ai/enhanced-chat'
+            }
         };
     }
 }

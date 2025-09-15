@@ -12,7 +12,14 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const { spawn, execSync } = require('child_process');
-const { analyzeTextWithAI, checkOpenAIHealth } = require('../services/aiService');
+const {
+    analyzeTextWithAI,
+    checkOpenAIHealth,
+    getCompleteUserData,
+    generateAIContext,
+    processAdvancedQuery,
+    performCompleteFinancialDiagnosis
+} = require('../services/aiService');
 
 const router = express.Router();
 
@@ -1319,6 +1326,266 @@ function formatFinancialDataForDiagnosis(financialData) {
 
     return formattedText;
 }
+
+/**
+ * POST /api/ai/advanced-query
+ * Procesa consultas avanzadas con acceso completo a datos del usuario
+ * Requiere autenticación
+ */
+router.post('/advanced-query', authenticateToken, async (req, res) => {
+    try {
+        const { query, additionalData } = req.body;
+
+        if (!query) {
+            return res.status(400).json({
+                error: 'Consulta requerida',
+                message: 'Debes proporcionar una consulta para procesar'
+            });
+        }
+
+        console.log('🧠 Procesando consulta avanzada para usuario:', req.user.username);
+
+        const result = await processAdvancedQuery(query, req.user.id, additionalData);
+
+        res.json({
+            success: true,
+            data: result,
+            message: 'Consulta avanzada procesada exitosamente'
+        });
+
+    } catch (error) {
+        console.error('❌ Error en consulta avanzada:', error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            message: 'No se pudo procesar la consulta avanzada',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+/**
+ * POST /api/ai/complete-diagnosis
+ * Realiza diagnóstico financiero completo con acceso a todos los datos
+ * Requiere autenticación
+ */
+router.post('/complete-diagnosis', authenticateToken, async (req, res) => {
+    try {
+        const { additionalData } = req.body;
+
+        console.log('🔍 Realizando diagnóstico completo para usuario:', req.user.username);
+
+        const result = await performCompleteFinancialDiagnosis(req.user.id, additionalData);
+
+        res.json({
+            success: true,
+            data: result,
+            message: 'Diagnóstico financiero completo realizado exitosamente'
+        });
+
+    } catch (error) {
+        console.error('❌ Error en diagnóstico completo:', error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            message: 'No se pudo realizar el diagnóstico completo',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+/**
+ * GET /api/ai/user-data-summary
+ * Obtiene resumen de datos del usuario para contexto de IA
+ * Requiere autenticación
+ */
+router.get('/user-data-summary', authenticateToken, async (req, res) => {
+    try {
+        console.log('📊 Obteniendo resumen de datos para usuario:', req.user.username);
+
+        const userData = await getCompleteUserData(req.user.id);
+
+        // Crear versión resumida para el frontend (sin datos sensibles)
+        const summary = {
+            user: {
+                name: `${userData.user.firstName} ${userData.user.lastName}`,
+                currency: userData.user.currency,
+                memberSince: userData.user.createdAt
+            },
+            summary: userData.summary,
+            recentTransactions: userData.transactions.recent.slice(0, 10),
+            activeGoals: userData.goals.filter(g => !g.completed),
+            topCategories: userData.transactions.categoryStats
+                .filter(cat => cat._id && typeof cat._id === 'object' && cat._id.type === 'expense')
+                .sort((a, b) => (b.totalAmount || 0) - (a.totalAmount || 0))
+                .slice(0, 5)
+        };
+
+        res.json({
+            success: true,
+            data: summary,
+            message: 'Resumen de datos obtenido exitosamente'
+        });
+
+    } catch (error) {
+        console.error('❌ Error obteniendo resumen de datos:', error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            message: 'No se pudo obtener el resumen de datos',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+/**
+ * GET /api/ai/context
+ * Genera contexto detallado para consultas de IA
+ * Requiere autenticación
+ */
+router.get('/context', authenticateToken, async (req, res) => {
+    try {
+        const { type } = req.query;
+        console.log('📝 Generando contexto de IA para usuario:', req.user.username);
+
+        const context = await generateAIContext(req.user.id, type || 'general');
+
+        res.json({
+            success: true,
+            data: {
+                context: context,
+                type: type || 'general',
+                timestamp: new Date().toISOString()
+            },
+            message: 'Contexto de IA generado exitosamente'
+        });
+
+    } catch (error) {
+        console.error('❌ Error generando contexto:', error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            message: 'No se pudo generar el contexto de IA',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+/**
+ * POST /api/public/ai/enhanced-chat
+ * Chat mejorado con acceso a datos completos del usuario
+ * Versión pública (sin autenticación) pero con datos limitados
+ */
+router.post('/enhanced-chat', async (req, res) => {
+    try {
+        const { message, userData } = req.body;
+
+        if (!message) {
+            return res.status(400).json({
+                error: 'Mensaje requerido',
+                message: 'Debes proporcionar un mensaje'
+            });
+        }
+
+        console.log('💬 Procesando chat mejorado (modo público)');
+
+        // Verificar que OpenAI esté funcionando
+        const openaiHealth = await checkOpenAIHealth();
+        if (openaiHealth.status !== 'success') {
+            return res.status(503).json({
+                error: 'Servicio de IA no disponible',
+                message: 'OpenAI no está funcionando correctamente',
+                details: openaiHealth.message
+            });
+        }
+
+        // Crear contexto limitado para modo público
+        let context = '';
+        if (userData) {
+            context = `Usuario: ${userData.name || 'Usuario anónimo'}\n`;
+            context += `Moneda: ${userData.currency || 'UYU'}\n\n`;
+
+            if (userData.summary) {
+                context += `Resumen financiero:\n`;
+                context += `- Ingresos: $${userData.summary.totalIncome || 0}\n`;
+                context += `- Gastos: $${userData.summary.totalExpenses || 0}\n`;
+                context += `- Balance: $${userData.summary.balance || 0}\n\n`;
+            }
+
+            if (userData.recentTransactions && userData.recentTransactions.length > 0) {
+                context += `Transacciones recientes:\n`;
+                userData.recentTransactions.slice(0, 5).forEach((t, i) => {
+                    context += `${i + 1}. ${t.type === 'income' ? 'Ingreso' : 'Gasto'}: $${t.amount} - ${t.description}\n`;
+                });
+                context += '\n';
+            }
+        }
+
+        const systemPrompt = `Eres un Asistente Financiero Inteligente especializado en finanzas personales.
+
+        INSTRUCCIONES:
+        1. Responde de manera clara, profesional y útil
+        2. Usa los datos proporcionados cuando estén disponibles
+        3. Da consejos prácticos y accionables
+        4. Mantén un tono amigable y motivador
+        5. Si no tienes información específica, da consejos generales útiles
+        6. Incluye emojis para hacer las respuestas más amigables
+
+        CONTEXTO DISPONIBLE:
+        ${context || 'Información limitada disponible (modo público)'}`;
+
+        const userPrompt = `Consulta: ${message}`;
+
+        // Preparar solicitud a OpenAI
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                max_tokens: 1500,
+                temperature: 0.7
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`Error en OpenAI API: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const aiMessage = data.choices[0].message.content;
+
+        res.json({
+            success: true,
+            message: 'Chat mejorado procesado correctamente',
+            data: {
+                response: aiMessage,
+                contextUsed: !!context,
+                mode: 'enhanced_public',
+                timestamp: new Date().toISOString()
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error en chat mejorado:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error procesando el mensaje mejorado',
+            data: {
+                response: 'Lo siento, no pude procesar tu mensaje en este momento. Por favor, verifica tu conexión e intenta nuevamente.',
+                timestamp: new Date().toISOString()
+            }
+        });
+    }
+});
 
 // ==================== EXPORTAR ROUTER ====================
 

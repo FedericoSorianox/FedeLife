@@ -1010,37 +1010,78 @@ class FinanceApp {
     }
 
     /**
+     * Filtra transacciones según el período actual
+     * @returns {Array} Transacciones filtradas por período
+     */
+    filterTransactionsByPeriod() {
+        const { year, month, type } = this.currentPeriod;
+
+        return this.transactions.filter(transaction => {
+            const transactionDate = new Date(transaction.date);
+            const transactionYear = transactionDate.getFullYear();
+
+            if (type === 'yearly') {
+                // Para período anual, incluir todas las transacciones del año actual
+                return transactionYear === year;
+            } else {
+                // Para período mensual, incluir solo transacciones del mes y año actual
+                const transactionMonth = transactionDate.getMonth() + 1;
+                return transactionYear === year && transactionMonth === month;
+            }
+        });
+    }
+
+    /**
      * Calcula el resumen financiero
      */
     calculateFinancialSummary() {
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        // Usar la nueva función para filtrar por período actual
+        const periodTransactions = this.filterTransactionsByPeriod();
 
-        // Filtrar transacciones del mes actual
-        const currentMonthTransactions = this.transactions.filter(t => {
-            const transactionDate = new Date(t.date);
-            const transactionMonth = `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`;
-            return transactionMonth === currentMonth;
+        // Calcular totales separados por moneda y tipo
+        const totals = {
+            UYU: {
+                income: 0,
+                expenses: 0,
+                balance: 0
+            },
+            USD: {
+                income: 0,
+                expenses: 0,
+                balance: 0
+            },
+            total: {
+                income: 0,
+                expenses: 0,
+                balance: 0
+            }
+        };
+
+        // Procesar cada transacción del período
+        periodTransactions.forEach(transaction => {
+            const currency = transaction.currency || 'UYU';
+            const amount = transaction.amount;
+
+            if (transaction.type === TransactionType.INCOME) {
+                totals[currency].income += amount;
+                totals.total.income += amount;
+            } else if (transaction.type === TransactionType.EXPENSE) {
+                totals[currency].expenses += amount;
+                totals.total.expenses += amount;
+            }
         });
 
-        // Calcular totales
-        const totalIncome = currentMonthTransactions
-            .filter(t => t.type === TransactionType.INCOME)
-            .reduce((sum, t) => sum + t.amount, 0);
+        // Calcular balances
+        totals.UYU.balance = totals.UYU.income - totals.UYU.expenses;
+        totals.USD.balance = totals.USD.income - totals.USD.expenses;
+        totals.total.balance = totals.total.income - totals.total.expenses;
 
-        const totalExpenses = currentMonthTransactions
-            .filter(t => t.type === TransactionType.EXPENSE)
-            .reduce((sum, t) => sum + t.amount, 0);
-
-        const balance = totalIncome - totalExpenses;
         const totalSavings = this.goals.reduce((sum, g) => sum + g.currentSaved, 0);
 
         return {
-            totalIncome,
-            totalExpenses,
-            balance,
+            ...totals,
             totalSavings,
-            transactionCount: currentMonthTransactions.length
+            transactionCount: periodTransactions.length
         };
     }
 
@@ -1048,26 +1089,78 @@ class FinanceApp {
      * Renderiza el resumen financiero
      */
     renderFinancialSummary(summary) {
-        // Actualizar elementos del DOM
+        // Formatear números según moneda
+        const formatCurrency = (amount, currency) => {
+            if (currency === 'USD') {
+                return `$${amount.toLocaleString('en-US')}`;
+            } else {
+                return `$${amount.toLocaleString('es-UY')}`;
+            }
+        };
+
+        // Actualizar elementos de UYU
+        const totalIncomeUYU = document.getElementById('totalIncomeUYU');
+        if (totalIncomeUYU) {
+            totalIncomeUYU.textContent = formatCurrency(summary.UYU.income, 'UYU');
+        }
+
+        const totalExpensesUYU = document.getElementById('totalExpensesUYU');
+        if (totalExpensesUYU) {
+            totalExpensesUYU.textContent = formatCurrency(summary.UYU.expenses, 'UYU');
+        }
+
+        const totalBalanceUYU = document.getElementById('totalBalanceUYU');
+        if (totalBalanceUYU) {
+            totalBalanceUYU.textContent = formatCurrency(summary.UYU.balance, 'UYU');
+        }
+
+        // Actualizar elementos de USD
+        const totalIncomeUSD = document.getElementById('totalIncomeUSD');
+        if (totalIncomeUSD) {
+            totalIncomeUSD.textContent = formatCurrency(summary.USD.income, 'USD');
+        }
+
+        const totalExpensesUSD = document.getElementById('totalExpensesUSD');
+        if (totalExpensesUSD) {
+            totalExpensesUSD.textContent = formatCurrency(summary.USD.expenses, 'USD');
+        }
+
+        const totalBalanceUSD = document.getElementById('totalBalanceUSD');
+        if (totalBalanceUSD) {
+            totalBalanceUSD.textContent = formatCurrency(summary.USD.balance, 'USD');
+        }
+
+        // Actualizar elementos de transferencia (para mostrar montos disponibles para transferir)
+        const transferToUSD = document.getElementById('transferToUSD');
+        if (transferToUSD) {
+            transferToUSD.textContent = formatCurrency(summary.UYU.balance, 'UYU');
+        }
+
+        const transferToUYU = document.getElementById('transferToUYU');
+        if (transferToUYU) {
+            transferToUYU.textContent = formatCurrency(summary.USD.balance, 'USD');
+        }
+
+        // Mantener compatibilidad con elementos antiguos (si existen)
         const totalIncomeEl = document.getElementById('totalIncome');
         if (totalIncomeEl) {
-            totalIncomeEl.textContent = `$${summary.totalIncome.toLocaleString('es-AR')}`;
+            totalIncomeEl.textContent = formatCurrency(summary.total.income, 'UYU');
         }
 
         const totalExpensesEl = document.getElementById('totalExpenses');
         if (totalExpensesEl) {
-            totalExpensesEl.textContent = `$${summary.totalExpenses.toLocaleString('es-AR')}`;
+            totalExpensesEl.textContent = formatCurrency(summary.total.expenses, 'UYU');
         }
 
         const balanceEl = document.getElementById('balance');
         if (balanceEl) {
-            balanceEl.textContent = `$${summary.balance.toLocaleString('es-AR')}`;
-            balanceEl.className = summary.balance >= 0 ? 'positive' : 'negative';
+            balanceEl.textContent = formatCurrency(summary.total.balance, 'UYU');
+            balanceEl.className = summary.total.balance >= 0 ? 'positive' : 'negative';
         }
 
         const totalSavingsEl = document.getElementById('totalSavings');
         if (totalSavingsEl) {
-            totalSavingsEl.textContent = `$${summary.totalSavings.toLocaleString('es-AR')}`;
+            totalSavingsEl.textContent = formatCurrency(summary.totalSavings, 'UYU');
         }
     }
 
@@ -1452,12 +1545,19 @@ class FinanceApp {
     openGoalModal() {
         const modal = document.getElementById('goalModal');
         if (modal) {
-            modal.style.display = 'block';
+            // Usar !important para sobreescribir el CSS que oculta todos los modales
+            modal.style.setProperty('display', 'block', 'important');
+            modal.style.zIndex = '10000'; // Asegurar que esté por encima de otros elementos
+
             // Establecer fecha actual por defecto
             const currentDateInput = document.getElementById('currentDate');
             if (currentDateInput && !currentDateInput.value) {
                 currentDateInput.valueAsDate = new Date();
             }
+
+            console.log('🎯 Modal de metas abierto correctamente');
+        } else {
+            console.error('❌ No se encontró el modal de metas (goalModal)');
         }
     }
 
@@ -1467,12 +1567,14 @@ class FinanceApp {
     closeGoalModal() {
         const modal = document.getElementById('goalModal');
         if (modal) {
-            modal.style.display = 'none';
+            // Usar !important para sobreescribir el CSS que oculta todos los modales
+            modal.style.setProperty('display', 'none', 'important');
             // Limpiar formulario
             const form = modal.querySelector('#goalForm');
             if (form) {
                 form.reset();
             }
+            console.log('🎯 Modal de metas cerrado correctamente');
         }
     }
 
@@ -1860,34 +1962,53 @@ class FinanceApp {
      * @returns {Object} Resumen financiero
      */
     calculateFinancialSummary() {
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        
-        // Filtrar transacciones del mes actual
-        const currentMonthTransactions = this.transactions.filter(t => {
-            const transactionDate = new Date(t.date);
-            const transactionMonth = `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`;
-            return transactionMonth === currentMonth;
+        // Usar la nueva función para filtrar por período actual
+        const periodTransactions = this.filterTransactionsByPeriod();
+
+        // Calcular totales separados por moneda y tipo
+        const totals = {
+            UYU: {
+                income: 0,
+                expenses: 0,
+                balance: 0
+            },
+            USD: {
+                income: 0,
+                expenses: 0,
+                balance: 0
+            },
+            total: {
+                income: 0,
+                expenses: 0,
+                balance: 0
+            }
+        };
+
+        // Procesar cada transacción del período
+        periodTransactions.forEach(transaction => {
+            const currency = transaction.currency || 'UYU';
+            const amount = transaction.amount;
+
+            if (transaction.type === TransactionType.INCOME) {
+                totals[currency].income += amount;
+                totals.total.income += amount;
+            } else if (transaction.type === TransactionType.EXPENSE) {
+                totals[currency].expenses += amount;
+                totals.total.expenses += amount;
+            }
         });
 
-        // Calcular totales
-        const totalIncome = currentMonthTransactions
-            .filter(t => t.type === TransactionType.INCOME)
-            .reduce((sum, t) => sum + t.amount, 0);
+        // Calcular balances
+        totals.UYU.balance = totals.UYU.income - totals.UYU.expenses;
+        totals.USD.balance = totals.USD.income - totals.USD.expenses;
+        totals.total.balance = totals.total.income - totals.total.expenses;
 
-        const totalExpenses = currentMonthTransactions
-            .filter(t => t.type === TransactionType.EXPENSE)
-            .reduce((sum, t) => sum + t.amount, 0);
-
-        const balance = totalIncome - totalExpenses;
         const totalSavings = this.goals.reduce((sum, g) => sum + g.currentSaved, 0);
 
         return {
-            totalIncome,
-            totalExpenses,
-            balance,
+            ...totals,
             totalSavings,
-            transactionCount: currentMonthTransactions.length
+            transactionCount: periodTransactions.length
         };
     }
 
@@ -1896,26 +2017,78 @@ class FinanceApp {
      * @param {Object} summary - Resumen financiero
      */
     renderFinancialSummary(summary) {
-        // Actualizar elementos del DOM
+        // Formatear números según moneda
+        const formatCurrency = (amount, currency) => {
+            if (currency === 'USD') {
+                return `$${amount.toLocaleString('en-US')}`;
+            } else {
+                return `$${amount.toLocaleString('es-UY')}`;
+            }
+        };
+
+        // Actualizar elementos de UYU
+        const totalIncomeUYU = document.getElementById('totalIncomeUYU');
+        if (totalIncomeUYU) {
+            totalIncomeUYU.textContent = formatCurrency(summary.UYU.income, 'UYU');
+        }
+
+        const totalExpensesUYU = document.getElementById('totalExpensesUYU');
+        if (totalExpensesUYU) {
+            totalExpensesUYU.textContent = formatCurrency(summary.UYU.expenses, 'UYU');
+        }
+
+        const totalBalanceUYU = document.getElementById('totalBalanceUYU');
+        if (totalBalanceUYU) {
+            totalBalanceUYU.textContent = formatCurrency(summary.UYU.balance, 'UYU');
+        }
+
+        // Actualizar elementos de USD
+        const totalIncomeUSD = document.getElementById('totalIncomeUSD');
+        if (totalIncomeUSD) {
+            totalIncomeUSD.textContent = formatCurrency(summary.USD.income, 'USD');
+        }
+
+        const totalExpensesUSD = document.getElementById('totalExpensesUSD');
+        if (totalExpensesUSD) {
+            totalExpensesUSD.textContent = formatCurrency(summary.USD.expenses, 'USD');
+        }
+
+        const totalBalanceUSD = document.getElementById('totalBalanceUSD');
+        if (totalBalanceUSD) {
+            totalBalanceUSD.textContent = formatCurrency(summary.USD.balance, 'USD');
+        }
+
+        // Actualizar elementos de transferencia (para mostrar montos disponibles para transferir)
+        const transferToUSD = document.getElementById('transferToUSD');
+        if (transferToUSD) {
+            transferToUSD.textContent = formatCurrency(summary.UYU.balance, 'UYU');
+        }
+
+        const transferToUYU = document.getElementById('transferToUYU');
+        if (transferToUYU) {
+            transferToUYU.textContent = formatCurrency(summary.USD.balance, 'USD');
+        }
+
+        // Mantener compatibilidad con elementos antiguos (si existen)
         const totalIncomeEl = document.getElementById('totalIncome');
         if (totalIncomeEl) {
-            totalIncomeEl.textContent = `$${summary.totalIncome.toLocaleString('es-AR')}`;
+            totalIncomeEl.textContent = formatCurrency(summary.total.income, 'UYU');
         }
 
         const totalExpensesEl = document.getElementById('totalExpenses');
         if (totalExpensesEl) {
-            totalExpensesEl.textContent = `$${summary.totalExpenses.toLocaleString('es-AR')}`;
+            totalExpensesEl.textContent = formatCurrency(summary.total.expenses, 'UYU');
         }
 
         const balanceEl = document.getElementById('balance');
         if (balanceEl) {
-            balanceEl.textContent = `$${summary.balance.toLocaleString('es-AR')}`;
-            balanceEl.className = summary.balance >= 0 ? 'positive' : 'negative';
+            balanceEl.textContent = formatCurrency(summary.total.balance, 'UYU');
+            balanceEl.className = summary.total.balance >= 0 ? 'positive' : 'negative';
         }
 
         const totalSavingsEl = document.getElementById('totalSavings');
         if (totalSavingsEl) {
-            totalSavingsEl.textContent = `$${summary.totalSavings.toLocaleString('es-AR')}`;
+            totalSavingsEl.textContent = formatCurrency(summary.totalSavings, 'UYU');
         }
     }
 
@@ -1945,20 +2118,17 @@ class FinanceApp {
      * @param {string} type - Tipo de datos (expense/income)
      * @returns {Array} Datos formateados para gráficos
      */
-    prepareChartData(type) {
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        
-        // Filtrar transacciones del mes actual por tipo
-        const monthTransactions = this.transactions.filter(t => {
-            const transactionDate = new Date(t.date);
-            const transactionMonth = `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`;
-            return transactionMonth === currentMonth && t.type === type;
+    prepareChartData(type, currency = null) {
+        // Filtrar transacciones del período actual por tipo y opcionalmente por moneda
+        const periodTransactions = this.filterTransactionsByPeriod().filter(t => {
+            const typeMatch = t.type === type;
+            const currencyMatch = currency ? (t.currency || 'UYU') === currency : true;
+            return typeMatch && currencyMatch;
         });
 
         // Agrupar por categoría
         const categoryTotals = {};
-        monthTransactions.forEach(transaction => {
+        periodTransactions.forEach(transaction => {
             if (!categoryTotals[transaction.category]) {
                 categoryTotals[transaction.category] = 0;
             }
@@ -4139,11 +4309,57 @@ class FinanceApp {
 
             console.log('📊 Enviando datos financieros para diagnóstico:', diagnosisData);
 
-            // Usar el mismo endpoint de análisis de PDF pero con contexto de diagnóstico financiero
+            // Usar el nuevo sistema de diagnóstico avanzado
+            console.log('🔍 Usando sistema de diagnóstico avanzado...');
+
+            // Verificar autenticación para diagnóstico avanzado
+            const authData = localStorage.getItem('auth_data');
+            let authToken = null;
+
+            if (authData) {
+                try {
+                    const parsed = JSON.parse(authData);
+                    authToken = parsed.token;
+                } catch (error) {
+                    console.warn('⚠️ Error parseando datos de autenticación para diagnóstico');
+                }
+            }
+
+            if (authToken && window.financialChat && window.financialChat.performCompleteDiagnosis) {
+                // Usar diagnóstico avanzado con acceso completo a datos
+                const diagnosisResult = await window.financialChat.performCompleteDiagnosis(
+                    authToken,
+                    {
+                        currentView: this.getCurrentView(),
+                        selectedPeriod: this.currentPeriod,
+                        additionalContext: financialData
+                    }
+                );
+
+                if (diagnosisResult.success) {
+                    // Crear respuesta en formato esperado
+                    const mockDiagnosisResult = {
+                        data: {
+                            analysis: diagnosisResult.diagnosis,
+                            diagnosisType: 'complete_financial_advisor',
+                            timestamp: diagnosisResult.timestamp
+                        }
+                    };
+
+                    // Mostrar resultados
+                    this.displayDiagnosisResults(mockDiagnosisResult.data);
+                    this.showNotification('✅ Diagnóstico financiero avanzado completado', 'success');
+                    return;
+                }
+            }
+
+            // Fallback al endpoint original si el sistema avanzado no está disponible
+            console.log('🔄 Fallback al endpoint de diagnóstico original...');
             const diagnosisResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/public/ai/diagnose-goals`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
                 },
                 body: JSON.stringify(diagnosisData)
             });
@@ -4463,19 +4679,54 @@ class FinanceApp {
                 throw new Error('Token de autenticación no encontrado. Por favor, inicia sesión nuevamente.');
             }
 
-            // Usar el endpoint del servidor para chat con IA
-            console.log('💬 Enviando mensaje al servidor...');
+            // Usar el nuevo sistema de IA con acceso completo a datos
+            console.log('🧠 Usando sistema de IA avanzado con acceso completo...');
 
-            const chatResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/public/ai/chat`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({
-                    message: message
-                })
-            });
+            // Obtener datos financieros actuales del frontend
+            const financialData = this.getCurrentFinancialData();
+
+            // Usar el sistema de chat mejorado con acceso completo
+            if (window.financialChat && window.financialChat.processQuery) {
+                const result = await window.financialChat.processQuery(
+                    message,
+                    financialData,
+                    {
+                        authToken: authToken,
+                        useAdvanced: true,
+                        additionalData: {
+                            currentView: this.getCurrentView(),
+                            selectedPeriod: this.currentPeriod,
+                            userPreferences: this.getUserPreferences()
+                        }
+                    }
+                );
+
+                if (result.success) {
+                    aiResponse = result.message;
+                } else {
+                    throw new Error(result.error || 'Error en la consulta avanzada');
+                }
+            } else {
+                // Fallback al endpoint original si el sistema avanzado no está disponible
+                console.log('🔄 Fallback al endpoint original...');
+                const chatResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/public/ai/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        message: message
+                    })
+                });
+
+                if (!chatResponse.ok) {
+                    throw new Error(`Error del servidor: ${chatResponse.status}`);
+                }
+
+                const chatData = await chatResponse.json();
+                aiResponse = chatData.data?.response || chatData.message || 'Respuesta no disponible';
+            }
 
             if (!chatResponse.ok) {
                 if (chatResponse.status === 401) {
@@ -6479,27 +6730,7 @@ Responde como un economista profesional especializado en la mejor administració
             });
         });
 
-        // Botones de salto
-        const jumpToCurrentBtn = document.getElementById('jumpToCurrentBtn');
-        const jumpToPeriodBtn = document.getElementById('jumpToPeriodBtn');
-
-        if (jumpToCurrentBtn) {
-            jumpToCurrentBtn.addEventListener('click', () => {
-                console.log('🏠 Saltando al período actual');
-                this.jumpToCurrentPeriod();
-            });
-        } else {
-            console.warn('⚠️ Botón jumpToCurrentBtn no encontrado');
-        }
-
-        if (jumpToPeriodBtn) {
-            jumpToPeriodBtn.addEventListener('click', () => {
-                console.log('📅 Mostrando modal de salto a período');
-                this.showJumpToPeriodModal();
-            });
-        } else {
-            console.warn('⚠️ Botón jumpToPeriodBtn no encontrado');
-        }
+        // Botones de salto eliminados según requerimiento del usuario
 
         // Actualizar display inicial
         this.updatePeriodDisplay();
@@ -6710,6 +6941,51 @@ Responde como un economista profesional especializado en la mejor administració
         const transactions = this.getTransactionsForCurrentPeriod();
         this.updateAccountBalances(transactions);
         this.updateCharts(); // Actualizar gráficos cuando cambian las transacciones
+    }
+
+    /**
+     * Obtiene los datos financieros actuales del frontend para el sistema de IA
+     * @returns {Object} Datos financieros actuales
+     */
+    getCurrentFinancialData() {
+        const summary = this.calculateFinancialSummary();
+
+        return {
+            user: {
+                name: 'Usuario',
+                currency: 'UYU'
+            },
+            summary: summary,
+            recentTransactions: this.transactions ? this.transactions.slice(-10) : [],
+            activeGoals: this.goals ? this.goals.filter(g => !g.completed) : [],
+            categories: this.categories || [],
+            currentPeriod: this.currentPeriod || { type: 'monthly', year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
+        };
+    }
+
+    /**
+     * Obtiene la vista actual del usuario
+     * @returns {string} Vista actual
+     */
+    getCurrentView() {
+        const activeTab = document.querySelector('.tab-content.active');
+        if (activeTab) {
+            return activeTab.id || 'transactions';
+        }
+        return 'transactions';
+    }
+
+    /**
+     * Obtiene las preferencias del usuario
+     * @returns {Object} Preferencias del usuario
+     */
+    getUserPreferences() {
+        return {
+            currency: 'UYU', // Por defecto
+            language: 'es',
+            theme: 'light',
+            notifications: true
+        };
     }
 }
 

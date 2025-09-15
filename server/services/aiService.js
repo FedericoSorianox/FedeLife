@@ -1,13 +1,27 @@
 /**
- * 🤖 SERVICIO DE IA - FEDE LIFE
+ * 🤖 SERVICIO UNIFICADO DE IA - FEDE LIFE
  *
- * Servicio para análisis de PDFs usando OpenAI (GPT)
- * Incluye extracción de texto y análisis de gastos
+ * Servicio completo de IA con acceso a todos los datos del sistema
+ * Incluye análisis de PDFs, chat inteligente, diagnósticos financieros y consultas profundas
  * Autor: Senior Backend Developer
+ *
+ * FUNCIONALIDADES:
+ * - Análisis de PDFs con IA
+ * - Chat financiero inteligente con contexto completo
+ * - Diagnósticos financieros avanzados
+ * - Consultas profundas con datos históricos
+ * - Acceso unificado a base de datos completa
  */
 
 const fs = require('fs');
 const path = require('path');
+const mongoose = require('mongoose');
+
+// Importar modelos de la base de datos
+const User = require('../models/User');
+const Transaction = require('../models/Transaction');
+const Category = require('../models/Category');
+const Goal = require('../models/Goal');
 
 // ==================== CONFIGURACIÓN ====================
 
@@ -945,10 +959,425 @@ async function checkOpenAIHealth() {
     }
 }
 
+/**
+ * Obtiene datos completos del usuario para contexto de IA
+ * @param {ObjectId|string} userId - ID del usuario
+ * @returns {Promise<Object>} Datos completos del usuario
+ */
+async function getCompleteUserData(userId) {
+    try {
+        console.log('📊 Obteniendo datos completos del usuario para contexto de IA...');
+
+        // Obtener información del usuario
+        const user = await User.findById(userId).select('+aiApiKey').lean();
+        if (!user) {
+            throw new Error('Usuario no encontrado');
+        }
+
+        // Obtener transacciones del usuario (últimos 12 meses para contexto)
+        const twelveMonthsAgo = new Date();
+        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+        const transactions = await Transaction.find({
+            userId: userId,
+            date: { $gte: twelveMonthsAgo }
+        })
+        .sort({ date: -1 })
+        .limit(1000) // Limitar para no sobrecargar
+        .lean();
+
+        // Obtener categorías del usuario
+        const categories = await Category.find({
+            $or: [
+                { userId: userId },
+                { userId: null, isDefault: true } // Categorías por defecto
+            ],
+            isActive: true
+        }).sort({ type: 1, name: 1 }).lean();
+
+        // Obtener metas del usuario
+        const goals = await Goal.find({ userId: userId })
+        .sort({ createdAt: -1 })
+        .lean();
+
+        // Calcular estadísticas generales
+        const stats = await Transaction.getStats(userId);
+
+        // Calcular estadísticas por categoría
+        const categoryStats = await Transaction.getCategoryStats(userId);
+
+        // Calcular estadísticas mensuales
+        const monthlyStats = await Transaction.getMonthlyStats(
+            userId,
+            twelveMonthsAgo,
+            new Date()
+        );
+
+        const completeData = {
+            user: {
+                id: user._id,
+                username: user.username,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                currency: user.currency,
+                timezone: user.timezone,
+                createdAt: user.createdAt,
+                lastLogin: user.lastLogin
+            },
+            transactions: {
+                total: transactions.length,
+                recent: transactions.slice(0, 50), // Solo las más recientes para contexto
+                all: transactions, // Todas las transacciones del período
+                stats: stats,
+                categoryStats: categoryStats,
+                monthlyStats: monthlyStats
+            },
+            categories: categories,
+            goals: goals,
+            summary: {
+                totalIncome: stats.totalIncome || 0,
+                totalExpenses: stats.totalExpenses || 0,
+                balance: (stats.totalIncome || 0) - (stats.totalExpenses || 0),
+                totalSavings: goals.reduce((sum, goal) => sum + (goal.currentSaved || 0), 0),
+                activeGoals: goals.filter(g => !g.completed).length,
+                transactionCount: transactions.length,
+                categoriesCount: categories.length,
+                dataPeriod: 'últimos 12 meses'
+            }
+        };
+
+        console.log('✅ Datos completos obtenidos para contexto de IA');
+        return completeData;
+
+    } catch (error) {
+        console.error('❌ Error obteniendo datos completos del usuario:', error);
+        throw new Error(`Error obteniendo datos del usuario: ${error.message}`);
+    }
+}
+
+/**
+ * Genera contexto detallado para consultas de IA
+ * @param {ObjectId|string} userId - ID del usuario
+ * @param {string} queryType - Tipo de consulta (chat, diagnosis, analysis)
+ * @returns {Promise<string>} Contexto formateado para IA
+ */
+async function generateAIContext(userId, queryType = 'general') {
+    try {
+        const userData = await getCompleteUserData(userId);
+
+        let context = '';
+
+        // Información básica del usuario
+        context += `👤 USUARIO: ${userData.user.firstName} ${userData.user.lastName}\n`;
+        context += `📧 Email: ${userData.user.email}\n`;
+        context += `💱 Moneda preferida: ${userData.user.currency}\n`;
+        context += `📅 Miembro desde: ${new Date(userData.user.createdAt).toLocaleDateString('es-UY')}\n\n`;
+
+        // Resumen financiero
+        context += `📊 RESUMEN FINANCIERO (últimos 12 meses):\n`;
+        context += `- 💰 Ingresos totales: $${userData.summary.totalIncome.toLocaleString('es-UY')} ${userData.user.currency}\n`;
+        context += `- 💸 Gastos totales: $${userData.summary.totalExpenses.toLocaleString('es-UY')} ${userData.user.currency}\n`;
+        context += `- ⚖️ Balance: $${userData.summary.balance.toLocaleString('es-UY')} ${userData.user.currency}\n`;
+        context += `- 🏦 Ahorros totales: $${userData.summary.totalSavings.toLocaleString('es-UY')} ${userData.user.currency}\n`;
+        context += `- 📈 Metas activas: ${userData.summary.activeGoals}\n`;
+        context += `- 📋 Total de transacciones: ${userData.summary.transactionCount}\n\n`;
+
+        // Metas activas
+        if (userData.goals.length > 0) {
+            context += `🎯 METAS ACTIVAS:\n`;
+            userData.goals.filter(g => !g.completed).forEach((goal, index) => {
+                const progress = goal.amount > 0 ? Math.round((goal.currentSaved / goal.amount) * 100) : 0;
+                context += `${index + 1}. ${goal.name}\n`;
+                context += `   - Ahorrado: $${(goal.currentSaved || 0).toLocaleString('es-UY')} / $${goal.amount.toLocaleString('es-UY')}\n`;
+                context += `   - Progreso: ${progress}%\n`;
+                if (goal.deadline) {
+                    context += `   - Fecha límite: ${new Date(goal.deadline).toLocaleDateString('es-UY')}\n`;
+                }
+                context += '\n';
+            });
+        }
+
+        // Transacciones recientes (últimas 20)
+        if (userData.transactions.recent.length > 0) {
+            context += `🗂️ TRANSACCIONES RECIENTES:\n`;
+            userData.transactions.recent.slice(0, 20).forEach((transaction, index) => {
+                const type = transaction.type === 'income' ? '💰 INGRESO' : '💸 GASTO';
+                const currency = transaction.currency || userData.user.currency;
+                context += `${index + 1}. ${type} - ${transaction.description}\n`;
+                context += `   - Monto: ${currency} $${transaction.amount.toLocaleString('es-UY')}\n`;
+                context += `   - Categoría: ${transaction.category}\n`;
+                context += `   - Fecha: ${new Date(transaction.date).toLocaleDateString('es-UY')}\n\n`;
+            });
+        }
+
+        // Estadísticas por categoría
+        if (userData.transactions.categoryStats.length > 0) {
+            context += `📈 GASTOS POR CATEGORÍA (principales):\n`;
+            userData.transactions.categoryStats
+                .filter(cat => cat._id && typeof cat._id === 'object' && cat._id.type === 'expense')
+                .sort((a, b) => (b.totalAmount || 0) - (a.totalAmount || 0))
+                .slice(0, 10)
+                .forEach((cat, index) => {
+                    context += `${index + 1}. ${cat._id.category}: $${(cat.totalAmount || 0).toLocaleString('es-UY')} ${userData.user.currency}\n`;
+                });
+            context += '\n';
+        }
+
+        // Tendencias mensuales
+        if (userData.transactions.monthlyStats.length > 0) {
+            context += `📊 TENDENCIAS MENSUALES:\n`;
+            userData.transactions.monthlyStats
+                .sort((a, b) => {
+                    if (a._id.year !== b._id.year) return b._id.year - a._id.year;
+                    return b._id.month - a._id.month;
+                })
+                .slice(0, 6)
+                .forEach(month => {
+                    const monthName = new Date(month._id.year, month._id.month - 1, 1).toLocaleDateString('es-UY', { month: 'long', year: 'numeric' });
+                    context += `${monthName}:\n`;
+                    context += `  - Ingresos: $${(month.income || 0).toLocaleString('es-UY')}\n`;
+                    context += `  - Gastos: $${(month.expenses || 0).toLocaleString('es-UY')}\n`;
+                    context += `  - Balance: $${((month.income || 0) - (month.expenses || 0)).toLocaleString('es-UY')}\n\n`;
+                });
+        }
+
+        return context;
+
+    } catch (error) {
+        console.error('❌ Error generando contexto para IA:', error);
+        return 'Error obteniendo contexto del usuario. Información limitada disponible.';
+    }
+}
+
+/**
+ * Procesa consultas avanzadas con IA usando contexto completo
+ * @param {string} query - Consulta del usuario
+ * @param {ObjectId|string} userId - ID del usuario
+ * @param {Object} additionalData - Datos adicionales del frontend
+ * @returns {Promise<Object>} Respuesta de la IA con análisis completo
+ */
+async function processAdvancedQuery(query, userId, additionalData = {}) {
+    try {
+        console.log('🧠 Procesando consulta avanzada con contexto completo...');
+
+        // Generar contexto completo
+        const context = await generateAIContext(userId, 'advanced');
+
+        // Crear prompt avanzado para la IA
+        const systemPrompt = `Eres un Asesor Financiero Personal Inteligente especializado en finanzas uruguayas.
+        Tienes acceso a TODA la información financiera del usuario, incluyendo:
+
+        - Historial completo de transacciones (últimos 12 meses)
+        - Todas las categorías de gastos e ingresos
+        - Metas de ahorro activas y completadas
+        - Estadísticas mensuales y tendencias
+        - Información personal del usuario
+
+        INSTRUCCIONES ESPECÍFICAS:
+        1. Usa TODOS los datos disponibles para dar respuestas precisas y personalizadas
+        2. Incluye números específicos, montos y fechas cuando sea relevante
+        3. Identifica patrones en los gastos y sugiere mejoras concretas
+        4. Compara con tendencias históricas cuando sea posible
+        5. Sé específico con recomendaciones basadas en datos reales
+        6. Mantén un tono profesional pero cercano y motivador
+        7. Si no tienes suficiente información, pide datos específicos
+        8. Incluye consejos prácticos y accionables
+
+        IMPORTANTE: Base todas tus respuestas en los datos reales del usuario. No inventes información.`;
+
+        const userPrompt = `Consulta del usuario: "${query}"
+
+        Información financiera completa del usuario:
+        ${context}
+
+        ${additionalData ? `Datos adicionales del contexto actual: ${JSON.stringify(additionalData)}` : ''}
+
+        Por favor, analiza esta consulta considerando toda la información financiera disponible y proporciona una respuesta detallada, específica y útil.`;
+
+        // Preparar solicitud a OpenAI
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                max_tokens: 2000,
+                temperature: 0.7
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`Error en OpenAI API: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const aiResponse = data.choices[0].message.content;
+
+        console.log('✅ Consulta avanzada procesada exitosamente');
+
+        return {
+            success: true,
+            response: aiResponse,
+            contextUsed: true,
+            dataPoints: {
+                transactionsAnalyzed: context.includes('TRANSACCIONES RECIENTES') ? 'sí' : 'no',
+                goalsIncluded: context.includes('METAS ACTIVAS') ? 'sí' : 'no',
+                categoriesIncluded: context.includes('GASTOS POR CATEGORÍA') ? 'sí' : 'no',
+                trendsIncluded: context.includes('TENDENCIAS MENSUALES') ? 'sí' : 'no'
+            },
+            timestamp: new Date().toISOString()
+        };
+
+    } catch (error) {
+        console.error('❌ Error procesando consulta avanzada:', error);
+        return {
+            success: false,
+            response: 'Lo siento, no pude procesar tu consulta avanzada en este momento.',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        };
+    }
+}
+
+/**
+ * Realiza diagnóstico financiero completo con IA
+ * @param {ObjectId|string} userId - ID del usuario
+ * @param {Object} additionalData - Datos adicionales del frontend
+ * @returns {Promise<Object>} Diagnóstico completo con recomendaciones
+ */
+async function performCompleteFinancialDiagnosis(userId, additionalData = {}) {
+    try {
+        console.log('🔍 Realizando diagnóstico financiero completo...');
+
+        const context = await generateAIContext(userId, 'diagnosis');
+        const userData = await getCompleteUserData(userId);
+
+        const systemPrompt = `Eres un Profesional en Finanzas Personales con 20+ años de experiencia asesorando a individuos y familias en Uruguay.
+
+        Tu especialización incluye:
+        - Diagnóstico completo de situaciones financieras
+        - Análisis de patrones de gasto problemáticos
+        - Recomendaciones personalizadas de ahorro e inversión
+        - Estrategias de reducción de deudas
+        - Planificación financiera a corto y largo plazo
+        - Optimización de presupuestos familiares
+        - Asesoramiento en metas de ahorro
+
+        INSTRUCCIONES PARA DIAGNÓSTICO:
+        1. Analiza la situación financiera actual de manera profunda y detallada
+        2. Identifica fortalezas y áreas de mejora específicas
+        3. Proporciona recomendaciones prácticas basadas en datos reales
+        4. Incluye análisis de tendencias y patrones históricos
+        5. Prioriza estrategias conservadoras y realistas para el contexto uruguayo
+        6. Sé específico con números, porcentajes y plazos realistas
+        7. Mantén un tono profesional pero accesible y motivador
+        8. Incluye metas SMART (Specific, Measurable, Achievable, Relevant, Time-bound)
+
+        ESTRUCTURA DEL DIAGNÓSTICO:
+        1. 📊 RESUMEN EJECUTIVO
+        2. 💰 ANÁLISIS DE INGRESOS
+        3. 💸 ANÁLISIS DE GASTOS
+        4. 🎯 EVALUACIÓN DE METAS
+        5. 📈 TENDENCIAS Y PATRONES
+        6. ✅ FORTALEZAS IDENTIFICADAS
+        7. ⚠️ ÁREAS DE MEJORA
+        8. 🎯 RECOMENDACIONES ESPECÍFICAS
+        9. 📅 PLAN DE ACCIÓN DETALLADO
+
+        IMPORTANTE: Usa TODOS los datos disponibles del usuario para un análisis completo y personalizado.`;
+
+        const userPrompt = `Realiza un diagnóstico financiero completo y detallado basado en toda la información disponible:
+
+        ${context}
+
+        ${additionalData ? `Datos adicionales del contexto actual: ${JSON.stringify(additionalData)}` : ''}
+
+        Por favor, proporciona un diagnóstico profesional completo que incluya análisis detallado, recomendaciones específicas y un plan de acción práctico.`;
+
+        // Preparar solicitud a OpenAI
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000); // Más tiempo para diagnósticos
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                max_tokens: 3000,
+                temperature: 0.6
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`Error en OpenAI API: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const diagnosis = data.choices[0].message.content;
+
+        console.log('✅ Diagnóstico financiero completo realizado');
+
+        return {
+            success: true,
+            diagnosis: diagnosis,
+            dataAnalyzed: {
+                transactions: userData.transactions.total,
+                categories: userData.categories.length,
+                goals: userData.goals.length,
+                timePeriod: 'últimos 12 meses'
+            },
+            recommendations: {
+                // Aquí se podrían extraer recomendaciones específicas del diagnóstico
+                generated: true
+            },
+            timestamp: new Date().toISOString()
+        };
+
+    } catch (error) {
+        console.error('❌ Error realizando diagnóstico completo:', error);
+        return {
+            success: false,
+            diagnosis: 'No se pudo completar el diagnóstico en este momento.',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        };
+    }
+}
+
 // ==================== EXPORTAR FUNCIONES ====================
 
 module.exports = {
+    // Funciones originales
     analyzeTextWithAI,
     analyzeTextWithUserKey,
-    checkOpenAIHealth
+    checkOpenAIHealth,
+
+    // Nuevas funciones con acceso completo a datos
+    getCompleteUserData,
+    generateAIContext,
+    processAdvancedQuery,
+    performCompleteFinancialDiagnosis
 };
