@@ -610,14 +610,56 @@ class FinanceApp {
      * Muestra el modal para agregar una nueva transacción
      */
     showAddTransactionModal(type, currency) {
-        console.log(`📝 Mostrando modal para agregar ${type} en ${currency}`);
+        console.log(`📝 Navegando para agregar ${type} en ${currency}`);
 
-        // Aquí puedes implementar el modal de agregar transacción
-        // Por ahora, solo mostrar una notificación
-        const currencyName = currency === 'UYU' ? 'pesos uruguayos' : 'dólares';
-        const typeName = type === 'income' ? 'ingreso' : 'gasto';
+        // Cambiar a la pestaña de transacciones
+        this.switchToTab('transactions');
 
-        this.showNotification(`Funcionalidad para agregar ${typeName} en ${currencyName} próximamente`, 'info');
+        // Esperar un poco para que la transición de pestaña se complete
+        setTimeout(() => {
+            // Pre-seleccionar el tipo de transacción
+            const transactionTypeSelect = document.getElementById('transactionType');
+            if (transactionTypeSelect) {
+                transactionTypeSelect.value = type;
+                // Disparar el evento change para actualizar las categorías
+                transactionTypeSelect.dispatchEvent(new Event('change'));
+            }
+
+            // Pre-seleccionar la moneda
+            const transactionCurrencySelect = document.getElementById('transactionCurrency');
+            if (transactionCurrencySelect) {
+                transactionCurrencySelect.value = currency;
+            }
+
+            // Limpiar el formulario
+            const transactionForm = document.getElementById('transactionForm');
+            if (transactionForm) {
+                transactionForm.reset();
+                // Restaurar los valores pre-seleccionados después del reset
+                if (transactionTypeSelect) transactionTypeSelect.value = type;
+                if (transactionCurrencySelect) transactionCurrencySelect.value = currency;
+
+                // Enfocar el campo de monto
+                const amountInput = document.getElementById('transactionAmount');
+                if (amountInput) {
+                    amountInput.focus();
+                }
+            }
+
+            // Hacer scroll suave hasta el formulario
+            const addTransactionForm = document.querySelector('.add-transaction-form');
+            if (addTransactionForm) {
+                addTransactionForm.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+
+            // Mostrar notificación de éxito
+            const currencyName = currency === 'UYU' ? 'pesos uruguayos' : 'dólares';
+            const typeName = type === 'income' ? 'ingreso' : 'gasto';
+            this.showNotification(`¡Formulario listo! Agrega tu ${typeName} en ${currencyName}`, 'success');
+        }, 100);
     }
 
     /**
@@ -936,6 +978,35 @@ class FinanceApp {
      */
     setupTabSystem() {
         this.setupTabNavigation();
+    }
+
+    /**
+     * Cambia a una pestaña específica programáticamente
+     */
+    switchToTab(tabName) {
+        console.log(`🔄 Cambiando programáticamente a pestaña: ${tabName}`);
+
+        // Remover clase active de todos los botones
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+
+        // Agregar clase active al botón correspondiente
+        const targetButton = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+        if (targetButton) {
+            targetButton.classList.add('active');
+        }
+
+        // Ocultar todas las pestañas de contenido
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabContents.forEach(content => content.classList.remove('active'));
+
+        // Mostrar la pestaña de contenido correspondiente
+        const targetContent = document.getElementById(tabName);
+        if (targetContent) {
+            targetContent.classList.add('active');
+        }
+
+        console.log(`✅ Cambiado a pestaña: ${tabName}`);
     }
 
     /**
