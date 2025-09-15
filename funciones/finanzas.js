@@ -1546,7 +1546,7 @@ class FinanceApp {
         const modal = document.getElementById('goalModal');
         if (modal) {
             // Usar !important para sobreescribir el CSS que oculta todos los modales
-            modal.style.setProperty('display', 'block', 'important');
+            modal.style.setProperty('display', 'flex', 'important');
             modal.style.zIndex = '10000'; // Asegurar que esté por encima de otros elementos
 
             // Establecer fecha actual por defecto
@@ -1584,7 +1584,7 @@ class FinanceApp {
     openBudgetModal() {
         const modal = document.getElementById('budgetModal');
         if (modal) {
-            modal.style.display = 'block';
+            modal.style.display = 'flex';
             // Limpiar formulario
             const form = modal.querySelector('#budgetForm');
             if (form) {
