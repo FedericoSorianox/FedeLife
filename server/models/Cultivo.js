@@ -480,6 +480,13 @@ cultivoSchema.methods.agregarNota = async function(contenido, tipo = 'general', 
         importante: importante
     };
 
+    // Asegurar que this.notas sea un array válido
+    if (!this.notas) {
+        this.notas = [];
+    } else if (!Array.isArray(this.notas)) {
+        this.notas = [];
+    }
+
     this.notas.push(nuevaNota);
 
     // También actualizar la nota actual para compatibilidad
@@ -495,7 +502,7 @@ cultivoSchema.methods.agregarNota = async function(contenido, tipo = 'general', 
  * @returns {Promise<Cultivo>} - Cultivo actualizado
  */
 cultivoSchema.methods.actualizarNotaActual = async function(contenido) {
-    this.notaActual = contenido.trim();
+    this.notaActual = contenido ? contenido.trim() : '';
 
     // Si hay contenido, agregar también al historial como nota general
     if (contenido && contenido.trim().length > 0) {
@@ -629,6 +636,14 @@ cultivoSchema.pre('save', function(next) {
     // Asegurar que la variedad no esté vacía después del trim
     if (!this.variedad || !this.variedad.trim()) {
         return next(new Error('La variedad no puede estar vacía'));
+    }
+
+    // Asegurar que el array de notas esté siempre inicializado
+    if (!this.notas) {
+        this.notas = [];
+    } else if (!Array.isArray(this.notas)) {
+        // Si notas no es un array, intentar convertirlo o inicializarlo
+        this.notas = [];
     }
 
     // Para cultivos demo (userId null), saltar validaciones adicionales
