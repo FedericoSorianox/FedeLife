@@ -611,18 +611,28 @@ router.get('/public/tasks', async (req, res) => {
         const tasks = await Task.find(filters)
             .sort(sortOptions)
             .skip(skip)
-            .limit(parseInt(limit))
-            .lean();
+            .limit(parseInt(limit));
 
         const total = await Task.countDocuments(filters);
+
+        // Función para obtener el label de prioridad
+        const getPriorityLabel = (priority) => {
+            const labels = {
+                'low': 'Baja',
+                'medium': 'Media',
+                'high': 'Alta'
+            };
+            return labels[priority] || priority;
+        };
 
         res.json({
             success: true,
             data: {
                 tasks: tasks.map(task => ({
-                    ...task,
+                    ...task.toObject(),
                     id: task._id,
-                    _id: undefined
+                    _id: undefined,
+                    priorityLabel: getPriorityLabel(task.priority)
                 })),
                 pagination: {
                     page: parseInt(page),
@@ -685,11 +695,25 @@ router.post('/public/tasks', validateTask, async (req, res) => {
 
         await task.save();
 
+        // Función para obtener el label de prioridad
+        const getPriorityLabel = (priority) => {
+            const labels = {
+                'low': 'Baja',
+                'medium': 'Media',
+                'high': 'Alta'
+            };
+            return labels[priority] || priority;
+        };
+
         res.status(201).json({
             success: true,
             message: 'Tarea pública creada exitosamente',
             data: {
-                task: task.getSummary()
+                task: {
+                    ...task.toObject(),
+                    id: task._id,
+                    priorityLabel: getPriorityLabel(task.priority)
+                }
             }
         });
 
@@ -764,11 +788,25 @@ router.put('/public/tasks/:id/move', async (req, res) => {
 
         await task.save();
 
+        // Función para obtener el label de prioridad
+        const getPriorityLabel = (priority) => {
+            const labels = {
+                'low': 'Baja',
+                'medium': 'Media',
+                'high': 'Alta'
+            };
+            return labels[priority] || priority;
+        };
+
         res.json({
             success: true,
             message: 'Tarea pública movida exitosamente',
             data: {
-                task: task.getSummary()
+                task: {
+                    ...task.toObject(),
+                    id: task._id,
+                    priorityLabel: getPriorityLabel(task.priority)
+                }
             }
         });
 
