@@ -105,10 +105,7 @@
     </footer>
 
     <script src="auth.js"></script>
-    <script>
-        // Cargar el chat de cannabis medicinal
-        // Se cargará dinámicamente después del DOM
-    </script>
+    <script src="../funciones/cannabis_chat.js"></script>
     <script>
         class BruceAI {
             constructor() {
@@ -133,9 +130,13 @@
                 this.currentCultivo = null;
                 this.cultivos = {};
 
-                // Inicializar chat de cannabis medicinal (se cargará dinámicamente)
-                this.cannabisChat = null;
-                this.loadCannabisChatModule();
+                // Inicializar chat de cannabis medicinal
+                this.cannabisChat = window.cannabisChat || null;
+                if (this.cannabisChat) {
+                    console.log('✅ Chat de cannabis medicinal cargado exitosamente');
+                } else {
+                    console.warn('⚠️ Chat de cannabis medicinal no encontrado, se inicializará cuando esté disponible');
+                }
 
                 // Esperar a que la autenticación esté lista antes de inicializar
                 this.waitForAuth().then(() => {
@@ -149,28 +150,6 @@
                 });
             }
 
-            async loadCannabisChatModule() {
-                try {
-                    // Cargar el módulo dinámicamente
-                    const response = await fetch('../funciones/cannabis_chat.js');
-                    const scriptText = await response.text();
-
-                    // Crear una función que ejecute el código del módulo
-                    const executeModule = new Function(scriptText + '\nreturn cannabisChat;');
-
-                    // Ejecutar el módulo y obtener la instancia
-                    const CannabisChatClass = executeModule();
-
-                    if (CannabisChatClass) {
-                        this.cannabisChat = new CannabisChatClass();
-                        console.log('✅ Chat de cannabis medicinal cargado exitosamente');
-                    } else {
-                        console.error('❌ Error: No se pudo obtener la clase CannabisChat del módulo');
-                    }
-                } catch (error) {
-                    console.error('❌ Error cargando el módulo de chat de cannabis:', error);
-                }
-            }
 
             initializeEventListeners() {
                 this.sendButton.addEventListener('click', () => this.sendMessage());
@@ -368,6 +347,10 @@
                     if (this.cannabisChat) {
                         this.cannabisChat.setCurrentCultivo(this.currentCultivo);
                         await this.loadCultivoNotes(); // Cargar notas para el contexto
+                    } else if (window.cannabisChat) {
+                        this.cannabisChat = window.cannabisChat;
+                        this.cannabisChat.setCurrentCultivo(this.currentCultivo);
+                        await this.loadCultivoNotes();
                     }
 
                     this.loadCultivoChat();
@@ -379,6 +362,10 @@
 
                     // Limpiar contexto del chat
                     if (this.cannabisChat) {
+                        this.cannabisChat.setCurrentCultivo(null);
+                        this.cannabisChat.setCultivoNotes([]);
+                    } else if (window.cannabisChat) {
+                        this.cannabisChat = window.cannabisChat;
                         this.cannabisChat.setCurrentCultivo(null);
                         this.cannabisChat.setCultivoNotes([]);
                     }
@@ -651,7 +638,11 @@
                 try {
                     // Verificar si el chat de cannabis está cargado
                     if (!this.cannabisChat) {
-                        return 'Cargando sistema de IA especializado... Por favor, espera un momento e intenta nuevamente.';
+                        console.warn('⚠️ Chat de cannabis no disponible, intentando inicializar...');
+                        this.cannabisChat = window.cannabisChat || null;
+                        if (!this.cannabisChat) {
+                            return 'El sistema de IA especializado no está disponible. Verifica que el archivo cannabis_chat.js se haya cargado correctamente.';
+                        }
                     }
 
                     // Usar el nuevo chat de cannabis medicinal con OpenAI
@@ -1043,16 +1034,26 @@ Basándome en la imagen y tu descripción, puedo darte un diagnóstico más prec
                         if (this.cannabisChat) {
                             this.cannabisChat.setCultivoNotes(notes);
                             console.log('✅ Notas del cultivo cargadas para contexto:', notes.length);
+                        } else if (window.cannabisChat) {
+                            this.cannabisChat = window.cannabisChat;
+                            this.cannabisChat.setCultivoNotes(notes);
+                            console.log('✅ Notas del cultivo cargadas para contexto:', notes.length);
                         }
                     } else {
                         console.warn('⚠️ No se pudieron cargar las notas del cultivo');
                         if (this.cannabisChat) {
+                            this.cannabisChat.setCultivoNotes([]);
+                        } else if (window.cannabisChat) {
+                            this.cannabisChat = window.cannabisChat;
                             this.cannabisChat.setCultivoNotes([]);
                         }
                     }
                 } catch (error) {
                     console.error('Error cargando notas del cultivo:', error);
                     if (this.cannabisChat) {
+                        this.cannabisChat.setCultivoNotes([]);
+                    } else if (window.cannabisChat) {
+                        this.cannabisChat = window.cannabisChat;
                         this.cannabisChat.setCultivoNotes([]);
                     }
                 }
