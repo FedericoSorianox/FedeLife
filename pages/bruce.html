@@ -47,6 +47,10 @@
     </header>
     <main>
         <section class="chat-container">
+            <div class="chat-header">
+                <h1>🌱 Bruce Bugbee - Experto en Cannabis Medicinal</h1>
+                <div class="subtitle">Consultor especializado en cultivo medicinal de alta calidad</div>
+            </div>
             <div id="chat-history" class="chat-history">
                 <div class="message ai-message">
                     <div class="message-content">
@@ -987,31 +991,23 @@ Basándome en la imagen y tu descripción, puedo darte un diagnóstico más prec
                 this.chatHistory.innerHTML = `
                     <div class="message ai-message">
                         <div class="message-content">
-                            <strong>👨‍🏫 Dr. Bruce Bugbee - Especialista en Cannabis Medicinal</strong>
+                            <strong>👨‍🏫 ¡Hola! Soy Bruce Bugbee</strong>
 
-                            <br><br>¡Bienvenido al sistema de consulta especializada en cannabis medicinal!
+                            <br><br>Especialista en cannabis medicinal con más de 25 años de experiencia en investigación y cultivo terapéutico.
 
-                            <br><br><strong>Mi experiencia profesional:</strong>
-                            • PhD en Botánica y Farmacología del Cannabis - Universidad de Colorado
-                            • Director del Centro de Investigación de Cannabis Medicinal
-                            • 25+ años investigando aplicaciones terapéuticas
-                            • Consultor para programas médicos en múltiples estados
-                            • Autor de protocolos científicos de cultivo medicinal
+                            <br><br><strong>¿En qué puedo ayudarte hoy?</strong>
+                            <br>• Consultas sobre técnicas de cultivo medicinal
+                            <br>• Optimización de perfiles cannabinoides (THC/CBD)
+                            <br>• Diagnóstico de problemas en plantas
+                            <br>• Protocolos de cosecha y curado terapéutico
+                            <br>• Recomendaciones basadas en evidencia científica
 
-                            <br><br><strong>Mi especialización:</strong>
-                            • Optimización de perfiles THC/CBD para tratamientos específicos
-                            • Técnicas de cultivo indoor de máxima calidad medicinal
-                            • Investigación de interacciones medicamento-cannabis
-                            • Protocolos basados en evidencia científica
-                            • Recomendaciones personalizadas según patologías
+                            <br><br><strong>Para comenzar:</strong>
+                            <br>1. 📝 Crea un cultivo con tus parámetros específicos
+                            <br>2. 🎯 Selecciona el cultivo para consultas personalizadas
+                            <br>3. 💬 Pregúntame cualquier duda sobre tu cultivo medicinal
 
-                            <br><br><strong>Para comenzar tu consulta:</strong>
-                            <br>1. 📝 Crea un nuevo cultivo con sus características específicas
-                            <br>2. 🎯 Selecciona el cultivo para consultas contextualizadas
-                            <br>3. 💬 Realiza tus preguntas sobre cualquier aspecto del cultivo
-                            <br>4. 📸 Envía fotos para diagnóstico visual profesional
-
-                            <br><br><em>Cada cultivo mantiene su historial completo de consultas y observaciones para recomendaciones cada vez más precisas.</em>
+                            <br><br><em>Recuerda configurar tu API key de OpenAI para activar todas las funcionalidades.</em>
                         </div>
                     </div>
                 `;
@@ -1070,27 +1066,23 @@ Basándome en la imagen y tu descripción, puedo darte un diagnóstico más prec
                     'hidro': 'Hidro'
                 };
 
-                this.addMessage(`**🌱 Cultivo Seleccionado: ${this.currentCultivo.nombre}**
+                this.addMessage(`**🌱 Cultivo: ${this.currentCultivo.nombre}**
 
-**👨‍🏫 Bruce Bugbee - Especialista en Cannabis Medicinal:**
-
-Hola! Soy el Dr. Bruce Bugbee, profesor de la Universidad de Colorado y especialista en cannabis medicinal con más de 25 años de experiencia.
-
-**📋 Detalles de tu cultivo:**
+**📋 Configuración actual:**
 • **Variedad**: ${this.currentCultivo.variedad}
-• **Método**: Indoor profesional con CO2
+• **Método**: Indoor con CO2
 • **Medio**: ${medioDisplay[this.currentCultivo.medio] || this.currentCultivo.medio}
-• **Configuración**: ${this.currentCultivo.espacio}m² | ${this.currentCultivo.plantas || '?'} plantas
+• **Espacio**: ${this.currentCultivo.espacio}m²
+• **Plantas**: ${this.currentCultivo.plantas || '?'}
 • **Iluminación**: LED ${this.currentCultivo.potencia || '?'}W
-• **Objetivo**: Optimización de calidad medicinal
 
-**🎯 Mi enfoque profesional:**
-- Maximizar perfiles de cannabinoides y terpenos terapéuticos
-- Protocolos basados en evidencia científica
-- Recomendaciones específicas para aplicaciones medicinales
-- Consideración del historial completo de tu cultivo
+**🎯 Listo para ayudarte con:**
+• Técnicas de cultivo optimizadas
+• Diagnóstico de problemas específicos
+• Recomendaciones basadas en evidencia científica
+• Protocolos de cosecha y curado terapéutico
 
-¿En qué aspecto de tu cultivo de cannabis medicinal puedo ayudarte hoy? Tengo acceso completo a tus notas y observaciones previas.`, 'ai');
+¿En qué puedo ayudarte con este cultivo hoy?`, 'ai');
 
                 // Cargar historial previo desde la API
                 if (this.currentCultivo.chatHistory && this.currentCultivo.chatHistory.length > 0) {
@@ -1344,11 +1336,35 @@ Hola! Soy el Dr. Bruce Bugbee, profesor de la Universidad de Colorado y especial
                 }
 
                 if (content) {
-                    messageContent += `<span>${content}</span>`;
+                    // Procesar el contenido para mejor formato
+                    let formattedContent = content
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Negritas
+                        .replace(/^• (.*)$/gm, '<li>$1</li>') // Convertir viñetas a listas
+                        .replace(/^(\d+)\. (.*)$/gm, '<li>$1. $2</li>') // Convertir numeración a listas
+                        .replace(/\n\n/g, '</p><p>') // Convertir párrafos
+                        .replace(/\n/g, '<br>'); // Saltos de línea
+
+                    // Si hay listas, envolverlas en ul
+                    if (formattedContent.includes('<li>')) {
+                        formattedContent = '<ul>' + formattedContent.replace(/(<li>.*?<\/li>)/g, '$1') + '</ul>';
+                        formattedContent = formattedContent.replace('<ul><ul>', '<ul>').replace('</ul></ul>', '</ul>');
+                    }
+
+                    // Envolver en párrafos si no hay listas
+                    if (!formattedContent.includes('<ul>') && !formattedContent.includes('<ol>')) {
+                        formattedContent = '<p>' + formattedContent + '</p>';
+                    }
+
+                    messageContent += `<span>${formattedContent}</span>`;
                 }
 
                 messageContent += `
-                        <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+                        <div class="timestamp">${new Date().toLocaleString('es-ES', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            day: '2-digit',
+                            month: '2-digit'
+                        })}</div>
                     </div>
                 `;
 
@@ -1507,6 +1523,326 @@ Hola! Soy el Dr. Bruce Bugbee, profesor de la Universidad de Colorado y especial
                 }
             }
         }
+
+        // Estilos mejorados para el chat de Bruce
+        const chatStyles = `
+            <style>
+                /* Estilos mejorados para el chat de cannabis medicinal */
+                .chat-container {
+                    max-width: 900px;
+                    margin: 20px auto;
+                    height: 75vh;
+                    display: flex;
+                    flex-direction: column;
+                    border: 2px solid #2d5a27;
+                    border-radius: 15px;
+                    overflow: hidden;
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                    box-shadow: 0 8px 25px rgba(45, 90, 39, 0.15);
+                    position: relative;
+                }
+
+                .chat-container::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 4px;
+                    background: linear-gradient(90deg, #4CAF50, #2d5a27, #4CAF50);
+                }
+
+                .chat-history {
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 25px;
+                    background: transparent;
+                    scroll-behavior: smooth;
+                    scrollbar-width: thin;
+                    scrollbar-color: #4CAF50 #f1f1f1;
+                }
+
+                .chat-history::-webkit-scrollbar {
+                    width: 6px;
+                }
+
+                .chat-history::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                    border-radius: 10px;
+                }
+
+                .chat-history::-webkit-scrollbar-thumb {
+                    background: #4CAF50;
+                    border-radius: 10px;
+                }
+
+                .chat-history::-webkit-scrollbar-thumb:hover {
+                    background: #2d5a27;
+                }
+
+                .message {
+                    margin-bottom: 25px;
+                    padding: 20px 25px;
+                    border-radius: 18px;
+                    max-width: 85%;
+                    word-wrap: break-word;
+                    position: relative;
+                    animation: messageSlideIn 0.3s ease-out;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                    backdrop-filter: blur(10px);
+                }
+
+                @keyframes messageSlideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                .user-message {
+                    background: linear-gradient(135deg, #4CAF50, #2d5a27);
+                    color: white;
+                    margin-left: auto;
+                    border-bottom-right-radius: 5px;
+                    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+                }
+
+                .user-message::before {
+                    content: '👤';
+                    position: absolute;
+                    top: -8px;
+                    right: -8px;
+                    background: white;
+                    border-radius: 50%;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                }
+
+                .ai-message {
+                    background: linear-gradient(135deg, #ffffff, #f8f9fa);
+                    color: #2d3748;
+                    margin-right: auto;
+                    border: 2px solid #e2e8f0;
+                    border-bottom-left-radius: 5px;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+                }
+
+                .ai-message::before {
+                    content: '🌱';
+                    position: absolute;
+                    top: -8px;
+                    left: -8px;
+                    background: #4CAF50;
+                    color: white;
+                    border-radius: 50%;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+                }
+
+                .message-content {
+                    line-height: 1.6;
+                    font-size: 15px;
+                }
+
+                .message-content strong {
+                    display: block;
+                    margin-bottom: 12px;
+                    font-weight: 700;
+                    font-size: 16px;
+                    color: #1a202c;
+                    border-bottom: 2px solid #4CAF50;
+                    padding-bottom: 5px;
+                }
+
+                .ai-message .message-content strong {
+                    color: #2d5a27;
+                    border-bottom-color: #4CAF50;
+                }
+
+                .user-message .message-content strong {
+                    color: white;
+                    border-bottom-color: rgba(255, 255, 255, 0.3);
+                }
+
+                .message-content p {
+                    margin: 12px 0;
+                    padding: 8px 0;
+                }
+
+                .message-content p:first-child {
+                    margin-top: 0;
+                }
+
+                .message-content p:last-child {
+                    margin-bottom: 0;
+                }
+
+                .message-content ul, .message-content ol {
+                    margin: 15px 0;
+                    padding-left: 25px;
+                }
+
+                .message-content li {
+                    margin: 8px 0;
+                    padding: 4px 0;
+                }
+
+                .message-content code {
+                    background: rgba(0, 0, 0, 0.1);
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-family: 'Monaco', 'Consolas', monospace;
+                    font-size: 14px;
+                }
+
+                .user-message .message-content code {
+                    background: rgba(255, 255, 255, 0.2);
+                }
+
+                .message-content blockquote {
+                    border-left: 4px solid #4CAF50;
+                    padding-left: 15px;
+                    margin: 15px 0;
+                    font-style: italic;
+                    color: #4a5568;
+                }
+
+                .ai-message .message-content blockquote {
+                    border-left-color: #2d5a27;
+                }
+
+                .timestamp {
+                    font-size: 11px;
+                    opacity: 0.7;
+                    margin-top: 8px;
+                    text-align: right;
+                }
+
+                .user-message .timestamp {
+                    color: rgba(255, 255, 255, 0.8);
+                }
+
+                .ai-message .timestamp {
+                    color: #718096;
+                }
+
+                /* Estilos para el indicador de escritura */
+                .typing-indicator {
+                    animation: pulse 1.5s infinite;
+                }
+
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.6; }
+                }
+
+                .typing-dots {
+                    display: inline-block;
+                }
+
+                .typing-dots span {
+                    display: inline-block;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #4CAF50;
+                    margin: 0 2px;
+                    animation: typing 1.4s infinite;
+                }
+
+                .typing-dots span:nth-child(1) { animation-delay: 0s; }
+                .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+                .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+                @keyframes typing {
+                    0%, 60%, 100% {
+                        transform: translateY(0);
+                        opacity: 0.6;
+                    }
+                    30% {
+                        transform: translateY(-10px);
+                        opacity: 1;
+                    }
+                }
+
+                /* Estilos para errores */
+                .error-message {
+                    background: linear-gradient(135deg, #fed7d7, #feb2b2);
+                    border: 2px solid #e53e3e;
+                    color: #c53030;
+                }
+
+                .error-message::before {
+                    content: '⚠️';
+                    position: absolute;
+                    top: -8px;
+                    left: -8px;
+                    background: #e53e3e;
+                    color: white;
+                    border-radius: 50%;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                }
+
+                /* Estilos responsivos */
+                @media (max-width: 768px) {
+                    .chat-container {
+                        margin: 10px;
+                        height: 80vh;
+                        max-width: none;
+                    }
+
+                    .message {
+                        max-width: 95%;
+                        padding: 15px 20px;
+                    }
+
+                    .message-content {
+                        font-size: 14px;
+                    }
+                }
+
+                /* Estilos para el título del chat */
+                .chat-header {
+                    background: linear-gradient(135deg, #4CAF50, #2d5a27);
+                    color: white;
+                    padding: 15px 25px;
+                    text-align: center;
+                    border-bottom: 2px solid #1b4332;
+                }
+
+                .chat-header h1 {
+                    margin: 0;
+                    font-size: 1.5em;
+                    font-weight: 600;
+                    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                }
+
+                .chat-header .subtitle {
+                    margin: 5px 0 0 0;
+                    font-size: 0.9em;
+                    opacity: 0.9;
+                }
+            </style>
+        `;
 
         // Estilos para autenticación
         const authStyles = `
@@ -1757,6 +2093,9 @@ Hola! Soy el Dr. Bruce Bugbee, profesor de la Universidad de Colorado y especial
                 }
             </style>
         `;
+
+        // Agregar estilos del chat al head
+        document.head.insertAdjacentHTML('beforeend', chatStyles);
 
         // Agregar estilos al head
         document.head.insertAdjacentHTML('beforeend', authStyles);

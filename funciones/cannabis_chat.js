@@ -376,7 +376,19 @@ ${this.cultivoNotes.slice(-5).map(nota => {
      * @returns {string} Contexto formateado
      */
     buildConversationContext(message, options = {}) {
-        let context = `CONSULTA DEL ESTUDIANTE: "${message}"`;
+        // Obtener fecha actual en formato correcto
+        const currentDate = new Date();
+        const fechaActual = currentDate.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            weekday: 'long'
+        });
+
+        let context = `CONSULTA DEL ESTUDIANTE: "${message}"
+
+FECHA ACTUAL: ${fechaActual} (${currentDate.toISOString().split('T')[0]})
+INFORMACIÓN TEMPORAL: Hoy es ${currentDate.getDate()} de ${currentDate.toLocaleDateString('es-ES', { month: 'long' }).toLowerCase()} de ${currentDate.getFullYear()}.`;
 
         // Agregar información adicional si está disponible
         if (options.additionalInfo) {
