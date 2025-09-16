@@ -7,7 +7,7 @@
  * Autor: Senior Full Stack Developer
  */
 
-export class CannabisChat {
+class CannabisChat {
     constructor() {
         this.apiKey = null;
         this.isConfigured = false;
@@ -477,4 +477,4 @@ if (typeof window !== 'undefined') {
     window.cannabisChat = cannabisChat;
 }
 
-export default cannabisChat;
+module.exports = cannabisChat;
