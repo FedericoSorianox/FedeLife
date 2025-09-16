@@ -32,7 +32,7 @@ class CannabisChat {
     async initializeApiKey() {
         try {
             // Intentar obtener del servidor
-            const response = await fetch('/api/config/openai-key', {
+            const response = await fetch('/api/ai/config/openai-key', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -44,7 +44,15 @@ class CannabisChat {
                 const data = await response.json();
                 if (data.apiKey) {
                     this.setApiKey(data.apiKey);
+                    console.log('✅ API Key obtenida del servidor');
                     return;
+                } else {
+                    console.warn('⚠️ El servidor no devolvió una API key válida');
+                }
+            } else {
+                console.warn(`⚠️ Error al obtener API key del servidor: ${response.status} ${response.statusText}`);
+                if (response.status === 401) {
+                    console.warn('🔐 Usuario no autenticado - intentando fallback a localStorage');
                 }
             }
 
@@ -54,10 +62,23 @@ class CannabisChat {
 
             if (storedKey && storedKey.startsWith('sk-')) {
                 this.setApiKey(storedKey);
+                console.log('✅ API Key obtenida de localStorage');
+            } else {
+                console.warn('⚠️ No se encontró API key válida en localStorage');
             }
 
         } catch (error) {
             console.warn('No se pudo obtener API key automáticamente:', error);
+        }
+
+        // Si aún no tenemos API key configurada, mostrar instrucciones al usuario
+        if (!this.isConfigured) {
+            console.info('💡 Para usar el chat de Bruce, configura tu API key de OpenAI:');
+            console.info('   1. Ve a https://platform.openai.com/api-keys');
+            console.info('   2. Crea una nueva API key');
+            console.info('   3. Ejecuta en la consola: cannabisChat.setApiKeyManually("tu-api-key-aqui")');
+            console.info('   4. O configúrala en el servidor como OPENAI_API_KEY');
+            console.info('   💡 El chat de Bruce está listo para usar una vez configurada la API key!');
         }
     }
 
@@ -81,6 +102,20 @@ class CannabisChat {
      */
     isReady() {
         return this.isConfigured && this.apiKey !== null;
+    }
+
+    /**
+     * Método para configurar manualmente la API key desde la consola
+     * @param {string} apiKey - API key de OpenAI
+     */
+    setApiKeyManually(apiKey) {
+        if (apiKey && apiKey.startsWith('sk-')) {
+            localStorage.setItem('openai_api_key', apiKey);
+            this.setApiKey(apiKey);
+            console.log('✅ API Key configurada manualmente');
+        } else {
+            console.error('❌ API Key inválida. Debe comenzar con "sk-"');
+        }
     }
 
     /**
@@ -476,5 +511,3 @@ const cannabisChat = new CannabisChat();
 if (typeof window !== 'undefined') {
     window.cannabisChat = cannabisChat;
 }
-
-module.exports = cannabisChat;
