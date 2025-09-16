@@ -346,9 +346,23 @@ ${this.cultivoNotes.slice(-5).map(nota => {
         } catch (error) {
             console.error('❌ Error procesando consulta de cannabis:', error);
 
+            // Manejo específico de errores comunes
+            let errorMessage = 'Lo siento, tuve un problema procesando tu consulta.';
+
+            if (error.message.includes('Content Security Policy')) {
+                errorMessage = 'Error de política de seguridad. La aplicación necesita permisos para conectarse a OpenAI. Por favor, contacta al administrador del sistema.';
+                console.error('🔒 Error de CSP - Revisa la configuración del servidor');
+            } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                errorMessage = 'Error de conexión. Verifica tu conexión a internet e intenta nuevamente.';
+            } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                errorMessage = 'Error de autenticación con OpenAI. Verifica que tu API key sea válida.';
+            } else if (error.message.includes('429') || error.message.includes('rate limit')) {
+                errorMessage = 'Límite de uso de OpenAI excedido. Espera un momento antes de intentar nuevamente.';
+            }
+
             return {
                 success: false,
-                message: 'Lo siento, tuve un problema procesando tu consulta. Por favor, verifica tu conexión e intenta nuevamente.',
+                message: errorMessage,
                 error: error.message,
                 timestamp: new Date().toISOString()
             };
