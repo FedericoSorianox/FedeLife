@@ -2,6 +2,7 @@
   "name": "fede-life-finanzas",
   "version": "1.0.0",
   "description": "Sistema de finanzas personales con IA y MongoDB",
+  "type": "module",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",

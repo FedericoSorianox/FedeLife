@@ -105,6 +105,10 @@
     </footer>
 
     <script src="auth.js"></script>
+    <script type="module">
+        // Importar el chat de cannabis medicinal
+        import CannabisChat from '../funciones/cannabis_chat.js';
+    </script>
     <script>
         class BruceAI {
             constructor() {
@@ -128,6 +132,9 @@
                 this.currentImage = null;
                 this.currentCultivo = null;
                 this.cultivos = {};
+
+                // Inicializar chat de cannabis medicinal
+                this.cannabisChat = new CannabisChat();
 
                 // Esperar a que la autenticación esté lista antes de inicializar
                 this.waitForAuth().then(() => {
@@ -332,12 +339,22 @@
                     this.currentCultivo = this.cultivos[cultivoId];
                     this.editCultivoBtn.style.display = 'inline-block';
                     this.deleteCultivoBtn.style.display = 'inline-block';
+
+                    // Actualizar contexto del chat de cannabis
+                    this.cannabisChat.setCurrentCultivo(this.currentCultivo);
+                    await this.loadCultivoNotes(); // Cargar notas para el contexto
+
                     this.loadCultivoChat();
                     this.updateInfoPanel();
                 } else {
                     this.currentCultivo = null;
                     this.editCultivoBtn.style.display = 'none';
                     this.deleteCultivoBtn.style.display = 'none';
+
+                    // Limpiar contexto del chat
+                    this.cannabisChat.setCurrentCultivo(null);
+                    this.cannabisChat.setCultivoNotes([]);
+
                     this.showWelcomeMessage();
                     this.updateInfoPanel();
                 }
@@ -603,17 +620,43 @@
             }
 
             async processWithCannabiAI(text, image) {
-                await this.delay(1000 + Math.random() * 2000);
+                try {
+                    // Usar el nuevo chat de cannabis medicinal con OpenAI
+                    if (!this.cannabisChat.isReady()) {
+                        return 'Lo siento, el sistema de IA no está configurado correctamente. Verifica tu API key de OpenAI.';
+                    }
 
-                const cultivo = this.currentCultivo;
-                const context = this.buildCultivoContext(cultivo);
+                    let messageToSend = text;
 
-                if (image && text) {
-                    return this.analyzeCannabiImageWithText(text, image, context);
-                } else if (image) {
-                    return this.analyzeCannabiImage(image, context);
-                } else {
-                    return this.processCannabiText(text, context);
+                    // Si hay imagen, agregar descripción
+                    if (image) {
+                        const imageDescription = 'He enviado una imagen del cultivo para análisis.';
+                        messageToSend = text ?
+                            `${text}\n\n[Imagen adjunta: ${imageDescription}]` :
+                            imageDescription;
+
+                        // Para imágenes, usar el método específico de análisis
+                        const imageResult = await this.cannabisChat.analyzeCultivoImage(image, text);
+                        if (imageResult.success) {
+                            return imageResult.message;
+                        } else {
+                            return 'Error procesando la imagen. Por favor, intenta nuevamente.';
+                        }
+                    }
+
+                    // Procesar consulta de texto con el chat de cannabis
+                    const result = await this.cannabisChat.processQuery(messageToSend);
+
+                    if (result.success) {
+                        return result.message;
+                    } else {
+                        console.error('Error en chat de cannabis:', result.error);
+                        return 'Lo siento, tuve un problema procesando tu consulta. Por favor, verifica tu conexión e intenta nuevamente.';
+                    }
+
+                } catch (error) {
+                    console.error('Error en processWithCannabiAI:', error);
+                    return 'Lo siento, hubo un error interno. Por favor, intenta nuevamente en unos momentos.';
                 }
             }
 
@@ -920,31 +963,66 @@ Basándome en la imagen y tu descripción, puedo darte un diagnóstico más prec
                 this.chatHistory.innerHTML = `
                     <div class="message ai-message">
                         <div class="message-content">
-                            <strong>Bruce - Especialista en Cannabis Medicinal:</strong> 
-                            ¡Hola! Soy Bruce, tu consultor especializado en cultivo de cannabis medicinal de alta calidad.
-                            
-                            <br><br><strong>Mi experiencia incluye:</strong>
-                            • Cultivo medicinal indoor/outdoor/invernadero
-                            • Optimización de cannabinoides y terpenos
-                            • Diagnóstico y tratamiento de problemas
-                            • Protocolos de cosecha y curado medicinal
-                            • Variedades específicas para diferentes patologías
-                            
-                            <br><br><strong>Para comenzar:</strong>
-                            1. Crea un nuevo cultivo con las características específicas
-                            2. Selecciona el cultivo para consultas contextualizadas
-                            3. Haz tus preguntas o envía fotos para diagnóstico
-                            
-                            <br>Cada cultivo mantiene su propio historial y contexto profesional.
+                            <strong>👨‍🏫 Dr. Bruce Bugbee - Especialista en Cannabis Medicinal</strong>
+
+                            <br><br>¡Bienvenido al sistema de consulta especializada en cannabis medicinal!
+
+                            <br><br><strong>Mi experiencia profesional:</strong>
+                            • PhD en Botánica y Farmacología del Cannabis - Universidad de Colorado
+                            • Director del Centro de Investigación de Cannabis Medicinal
+                            • 25+ años investigando aplicaciones terapéuticas
+                            • Consultor para programas médicos en múltiples estados
+                            • Autor de protocolos científicos de cultivo medicinal
+
+                            <br><br><strong>Mi especialización:</strong>
+                            • Optimización de perfiles THC/CBD para tratamientos específicos
+                            • Técnicas de cultivo indoor de máxima calidad medicinal
+                            • Investigación de interacciones medicamento-cannabis
+                            • Protocolos basados en evidencia científica
+                            • Recomendaciones personalizadas según patologías
+
+                            <br><br><strong>Para comenzar tu consulta:</strong>
+                            <br>1. 📝 Crea un nuevo cultivo con sus características específicas
+                            <br>2. 🎯 Selecciona el cultivo para consultas contextualizadas
+                            <br>3. 💬 Realiza tus preguntas sobre cualquier aspecto del cultivo
+                            <br>4. 📸 Envía fotos para diagnóstico visual profesional
+
+                            <br><br><em>Cada cultivo mantiene su historial completo de consultas y observaciones para recomendaciones cada vez más precisas.</em>
                         </div>
                     </div>
                 `;
             }
 
+            async loadCultivoNotes() {
+                if (!this.currentCultivo) return;
+
+                try {
+                    const response = await fetch(`${this.getApiBaseUrl()}/cultivos/${this.currentCultivo.id}/notas`, {
+                        headers: {
+                            'Authorization': `Bearer ${this.getAuthToken()}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        const notes = result.data.notas || [];
+                        this.cannabisChat.setCultivoNotes(notes);
+                        console.log('✅ Notas del cultivo cargadas para contexto:', notes.length);
+                    } else {
+                        console.warn('⚠️ No se pudieron cargar las notas del cultivo');
+                        this.cannabisChat.setCultivoNotes([]);
+                    }
+                } catch (error) {
+                    console.error('Error cargando notas del cultivo:', error);
+                    this.cannabisChat.setCultivoNotes([]);
+                }
+            }
+
             loadCultivoChat() {
                 this.chatHistory.innerHTML = '';
 
-                // Mensaje de contexto del cultivo
+                // Mensaje de contexto del cultivo con Bruce Bugbee
                 const medioDisplay = {
                     'fibra_coco': 'Fibra de coco',
                     'fibra_coco_perlita': 'Fibra de coco + perlita',
@@ -952,17 +1030,27 @@ Basándome en la imagen y tu descripción, puedo darte un diagnóstico más prec
                     'hidro': 'Hidro'
                 };
 
-                this.addMessage(`Has seleccionado: **${this.currentCultivo.nombre}**
+                this.addMessage(`**🌱 Cultivo Seleccionado: ${this.currentCultivo.nombre}**
 
-**Detalles del cultivo:**
-• Variedad: ${this.currentCultivo.variedad}
-• Método: Indoor | Medio: ${medioDisplay[this.currentCultivo.medio] || this.currentCultivo.medio}
-• Setup: ${this.currentCultivo.espacio}m² | ${this.currentCultivo.plantas || '?'} plantas en macetas de ${this.currentCultivo.macetas || '?'}L
-• Iluminación: LED (${this.currentCultivo.potencia || '?'}W)
-• Ventilación: Sistema cerrado con CO2
-${this.currentCultivo.notas ? `• Notas: ${this.currentCultivo.notas}` : ''}
+**👨‍🏫 Bruce Bugbee - Especialista en Cannabis Medicinal:**
 
-Historial de consultas restaurado. ¿En qué puedo ayudarte con este cultivo?`, 'ai');
+Hola! Soy el Dr. Bruce Bugbee, profesor de la Universidad de Colorado y especialista en cannabis medicinal con más de 25 años de experiencia.
+
+**📋 Detalles de tu cultivo:**
+• **Variedad**: ${this.currentCultivo.variedad}
+• **Método**: Indoor profesional con CO2
+• **Medio**: ${medioDisplay[this.currentCultivo.medio] || this.currentCultivo.medio}
+• **Configuración**: ${this.currentCultivo.espacio}m² | ${this.currentCultivo.plantas || '?'} plantas
+• **Iluminación**: LED ${this.currentCultivo.potencia || '?'}W
+• **Objetivo**: Optimización de calidad medicinal
+
+**🎯 Mi enfoque profesional:**
+- Maximizar perfiles de cannabinoides y terpenos terapéuticos
+- Protocolos basados en evidencia científica
+- Recomendaciones específicas para aplicaciones medicinales
+- Consideración del historial completo de tu cultivo
+
+¿En qué aspecto de tu cultivo de cannabis medicinal puedo ayudarte hoy? Tengo acceso completo a tus notas y observaciones previas.`, 'ai');
 
                 // Cargar historial previo desde la API
                 if (this.currentCultivo.chatHistory && this.currentCultivo.chatHistory.length > 0) {

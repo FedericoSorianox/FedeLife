@@ -1587,6 +1587,53 @@ router.post('/enhanced-chat', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/config/openai-key
+ * Obtiene la API key de OpenAI para el chat de cannabis (requiere autenticación)
+ * Devuelve la API key si está configurada en el servidor
+ */
+router.get('/config/openai-key', authenticateToken, async (req, res) => {
+    try {
+        console.log('🔑 Solicitando API key de OpenAI para usuario:', req.user.username);
+
+        // Obtener API key del servidor
+        const serverApiKey = process.env.OPENAI_API_KEY;
+
+        if (!serverApiKey) {
+            return res.status(404).json({
+                success: false,
+                message: 'API Key de OpenAI no configurada en el servidor',
+                details: 'Configura OPENAI_API_KEY en las variables de entorno del servidor'
+            });
+        }
+
+        // Validar formato de la API key
+        if (!serverApiKey.startsWith('sk-')) {
+            return res.status(400).json({
+                success: false,
+                message: 'API Key de OpenAI tiene formato inválido',
+                details: 'La API key debe comenzar con "sk-"'
+            });
+        }
+
+        // Devolver la API key (solo para uso interno del frontend)
+        res.json({
+            success: true,
+            apiKey: serverApiKey,
+            message: 'API Key obtenida exitosamente',
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ Error obteniendo API key:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
 // ==================== EXPORTAR ROUTER ====================
 
 module.exports = router;

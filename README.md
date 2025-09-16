@@ -6,9 +6,33 @@ Sistema completo de finanzas personales con IA integrada, autenticación y anál
 
 - **Frontend**: HTML, CSS, JavaScript, Vite
 - **Backend**: Node.js, Express, MongoDB
-- **IA**: Google AI Studio (Gemini)
+- **IA**: OpenAI (GPT-4o-mini) + Google AI Studio (Gemini)
 - **Autenticación**: JWT
 - **Seguridad**: Helmet, Rate Limiting, CORS
+
+## 🌱 Chat de Cannabis Medicinal - Bruce Bugbee
+
+### Características del Sistema de IA Especializado
+
+**🤖 Dr. Bruce Bugbee - Experto en Cannabis Medicinal**
+- PhD en Botánica y Farmacología del Cannabis
+- 25+ años de experiencia en investigación y cultivo medicinal
+- Especialista en optimización de perfiles THC/CBD
+- Protocolos basados en evidencia científica
+
+**🎯 Funcionalidades del Chat**
+- Consultas contextualizadas por cultivo específico
+- Historial completo de notas integrado en respuestas
+- Recomendaciones para maximizar producción medicinal
+- Análisis de imágenes para diagnóstico visual
+- Consejos basados en evidencia científica
+- Optimización de cannabinoides y terpenos terapéuticos
+
+**📋 Configuración**
+- API Key de OpenAI requerida (configurar en servidor)
+- Contexto automático del cultivo seleccionado
+- Historial de notas integrado en tiempo real
+- Respuestas en español con terminología profesional
 
 ## 🚀 Despliegue en Producción
 
@@ -38,7 +62,8 @@ Sistema completo de finanzas personales con IA integrada, autenticación y anál
 4. **Configurar variables de entorno**
    - Ve a tu servicio en Render
    - En "Environment" agrega:
-     - `GOOGLE_AI_API_KEY`: Tu API key de Google AI Studio
+     - `OPENAI_API_KEY`: Tu API key de OpenAI (requerida para chat de cannabis)
+     - `GOOGLE_AI_API_KEY`: Tu API key de Google AI Studio (opcional)
      - `JWT_SECRET`: Un string aleatorio seguro
 
 5. **¡Listo!** Tu app estará en: `https://fedelife-finanzas.onrender.com`
