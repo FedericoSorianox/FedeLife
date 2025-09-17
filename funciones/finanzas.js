@@ -2458,10 +2458,209 @@ class FinanceApp {
     }
 
     /**
-     * Función placeholder para editar transacción (se puede implementar más tarde)
+     * Edita una transacción existente
+     * @param {string} transactionId - ID de la transacción a editar
      */
     editTransaction(transactionId) {
-        this.showNotification('Función de edición próximamente', 'info');
+        // Buscar la transacción por ID
+        const transaction = this.transactions.find(t => t.id === transactionId);
+        if (!transaction) {
+            this.showNotification('Transacción no encontrada', 'error');
+            return;
+        }
+
+        // Crear modal de edición
+        this.showEditTransactionModal(transaction);
+    }
+
+    /**
+     * Muestra el modal para editar una transacción
+     * @param {Object} transaction - Transacción a editar
+     */
+    showEditTransactionModal(transaction) {
+        const modal = document.createElement('div');
+        modal.className = 'modal edit-transaction-modal';
+        modal.innerHTML = `
+            <div class="modal-content edit-transaction-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-edit"></i> Editar Transacción</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+                </div>
+                <div class="modal-body">
+                    <form id="editTransactionForm" class="edit-transaction-form">
+                        <!-- Campo oculto para ID -->
+                        <input type="hidden" id="editTransactionId" value="${transaction.id}">
+
+                        <!-- Tipo de transacción -->
+                        <div class="form-group">
+                            <label for="editTransactionType">Tipo de Transacción *</label>
+                            <select id="editTransactionType" required>
+                                <option value="income" ${transaction.type === 'income' ? 'selected' : ''}>Ingreso</option>
+                                <option value="expense" ${transaction.type === 'expense' ? 'selected' : ''}>Gasto</option>
+                            </select>
+                        </div>
+
+                        <!-- Monto -->
+                        <div class="form-group">
+                            <label for="editTransactionAmount">Monto *</label>
+                            <input type="number" id="editTransactionAmount" value="${transaction.amount}" step="0.01" required>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="form-group">
+                            <label for="editTransactionDescription">Descripción *</label>
+                            <input type="text" id="editTransactionDescription" value="${transaction.description}" required>
+                        </div>
+
+                        <!-- Categoría -->
+                        <div class="form-group">
+                            <label for="editTransactionCategory">Categoría *</label>
+                            <select id="editTransactionCategory" required>
+                                <option value="">Seleccionar categoría</option>
+                                ${this.generateCategoryOptions(transaction.type, transaction.category)}
+                            </select>
+                        </div>
+
+                        <!-- Fecha -->
+                        <div class="form-group">
+                            <label for="editTransactionDate">Fecha *</label>
+                            <input type="date" id="editTransactionDate" value="${transaction.date.split('T')[0]}" required>
+                        </div>
+
+                        <!-- Moneda -->
+                        <div class="form-group">
+                            <label for="editTransactionCurrency">Moneda *</label>
+                            <select id="editTransactionCurrency" required>
+                                <option value="UYU" ${transaction.currency === 'UYU' ? 'selected' : ''}>Pesos (UYU)</option>
+                                <option value="USD" ${transaction.currency === 'USD' ? 'selected' : ''}>Dólares (USD)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Configurar event listeners
+        this.setupEditTransactionForm();
+
+        // Mostrar modal
+        modal.style.display = 'block';
+        modal.style.zIndex = '10000';
+    }
+
+    /**
+     * Genera opciones de categoría para el dropdown de edición
+     * @param {string} transactionType - Tipo de transacción (income/expense)
+     * @param {string} currentCategory - Categoría actual
+     * @returns {string} HTML de opciones
+     */
+    generateCategoryOptions(transactionType, currentCategory) {
+        const categories = this.categories.filter(cat => cat.type === transactionType);
+        return categories.map(category => `
+            <option value="${category.name}" ${category.name === currentCategory ? 'selected' : ''}>
+                ${category.name}
+            </option>
+        `).join('');
+    }
+
+    /**
+     * Configura los event listeners del formulario de edición
+     */
+    setupEditTransactionForm() {
+        const form = document.getElementById('editTransactionForm');
+        const typeSelect = document.getElementById('editTransactionType');
+        const categorySelect = document.getElementById('editTransactionCategory');
+
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleEditTransactionSubmit(e);
+            });
+        }
+
+        // Actualizar categorías cuando cambia el tipo
+        if (typeSelect && categorySelect) {
+            typeSelect.addEventListener('change', () => {
+                const selectedType = typeSelect.value;
+                const currentCategory = categorySelect.value;
+                categorySelect.innerHTML = `
+                    <option value="">Seleccionar categoría</option>
+                    ${this.generateCategoryOptions(selectedType, currentCategory)}
+                `;
+            });
+        }
+    }
+
+    /**
+     * Maneja el envío del formulario de edición de transacción
+     * @param {Event} event - Evento del formulario
+     */
+    async handleEditTransactionSubmit(event) {
+        const formData = new FormData(event.target);
+        const transactionId = formData.get('editTransactionId');
+
+        const updatedData = {
+            type: formData.get('editTransactionType'),
+            amount: parseFloat(formData.get('editTransactionAmount')),
+            description: formData.get('editTransactionDescription'),
+            category: formData.get('editTransactionCategory'),
+            date: formData.get('editTransactionDate'),
+            currency: formData.get('editTransactionCurrency')
+        };
+
+        // Validación
+        if (!updatedData.description || !updatedData.category || !updatedData.date) {
+            this.showNotification('Por favor complete todos los campos obligatorios', 'error');
+            return;
+        }
+
+        if (isNaN(updatedData.amount) || updatedData.amount <= 0) {
+            this.showNotification('El monto debe ser un número positivo', 'error');
+            return;
+        }
+
+        try {
+            // Actualizar la transacción en el servidor
+            const response = await this.apiRequest(`${this.API_BASE_URL}/api/transactions/${transactionId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedData)
+            });
+
+            if (response.success) {
+                // Actualizar en memoria
+                const index = this.transactions.findIndex(t => t.id === transactionId);
+                if (index !== -1) {
+                    this.transactions[index] = { ...this.transactions[index], ...updatedData };
+                }
+
+                // Cerrar modal y refrescar vistas
+                event.target.closest('.modal').remove();
+                this.showNotification('Transacción actualizada exitosamente', 'success');
+
+                // Refrescar datos
+                await this.loadData();
+
+            } else {
+                throw new Error(response.error || 'Error al actualizar la transacción');
+            }
+        } catch (error) {
+            console.error('Error updating transaction:', error);
+            this.showNotification('Error al actualizar la transacción', 'error');
+        }
     }
 
     /**
