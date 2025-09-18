@@ -512,15 +512,94 @@ class FinanceApp {
             }
         };
 
+        // Función para limpiar token y forzar relogin
+        window.clearAuthToken = function() {
+            console.log('🧹 Limpiando token de autenticación...');
+            try {
+                localStorage.removeItem('auth_data');
+                localStorage.removeItem('user_data');
+                console.log('✅ Token limpiado. Refresca la página y vuelve a loguearte.');
+                console.log('🔄 Redirigiendo a login en 3 segundos...');
+                setTimeout(() => {
+                    window.location.href = '/login.html';
+                }, 3000);
+            } catch (error) {
+                console.error('❌ Error limpiando token:', error);
+            }
+        };
+
+        // Función para verificar estado de autenticación
+        window.checkAuthStatus = function() {
+            console.log('🔍 Verificando estado de autenticación...');
+            const authData = localStorage.getItem('auth_data');
+            if (authData) {
+                try {
+                    const parsed = JSON.parse(authData);
+                    console.log('✅ Datos de auth encontrados:', {
+                        hasToken: !!parsed.token,
+                        tokenLength: parsed.token ? parsed.token.length : 0,
+                        tokenPreview: parsed.token ? parsed.token.substring(0, 20) + '...' : 'none',
+                        user: parsed.user ? parsed.user.username : 'unknown'
+                    });
+                    return true;
+                } catch (error) {
+                    console.error('❌ Error parseando auth data:', error);
+                    return false;
+                }
+            } else {
+                console.log('❌ No hay datos de autenticación en localStorage');
+                return false;
+            }
+        };
+
+        // Función para verificar configuración JWT del servidor
+        window.testJWTConfig = async function() {
+            console.log('🔐 Probando configuración JWT del servidor...');
+            try {
+                const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/auth/jwt-test`);
+                const result = await response.json();
+                console.log('📡 Configuración JWT del servidor:', result);
+                if (result.success) {
+                    console.log('✅ Configuración JWT obtenida correctamente');
+                    console.log('🔧 Comparando con configuración local...');
+                    const localConfig = {
+                        environment: window.location.hostname === 'localhost' ? 'development' : 'production',
+                        jwtNoExpire: window.LOCAL_CONFIG?.JWT_NO_EXPIRE || false
+                    };
+                    console.log('🏠 Configuración local:', localConfig);
+                    console.log('🆚 Comparación:', {
+                        environmentMatch: result.config.environment === localConfig.environment,
+                        jwtNoExpireMatch: result.config.jwtNoExpire === localConfig.jwtNoExpire
+                    });
+                } else {
+                    console.error('❌ Error obteniendo configuración JWT');
+                }
+                return result;
+            } catch (error) {
+                console.error('💥 Error probando configuración JWT:', error);
+                return { success: false, error: error.message };
+            }
+        };
+
         // Agregar función al objeto global para debugging
         window.debugCategoryCreation = function() {
             console.log('🔧 Funciones de debug disponibles:');
+            console.log('   • clearAuthToken() - 🔥 LIMPIA TOKEN Y FUERZA RELOGIN (PRIMERO)');
+            console.log('   • checkAuthStatus() - Verifica estado de autenticación');
+            console.log('   • testJWTConfig() - Verifica configuración JWT del servidor');
             console.log('   • testCreateCategory() - Prueba básica de creación');
             console.log('   • debugCategoryRequest() - Debug avanzado (MÁS ÚTIL)');
             console.log('📝 Ejemplos:');
+            console.log('   clearAuthToken() // Si hay problemas de login');
+            console.log('   checkAuthStatus() // Para ver qué token tienes');
+            console.log('   testJWTConfig().then(result => console.log(result))');
             console.log('   testCreateCategory().then(result => console.log(result))');
             console.log('   debugCategoryRequest().then(result => console.log(result))');
-            console.log('🔍 IMPORTANTE: Usa debugCategoryRequest() para comparar con curl');
+            console.log('🔍 FLUJO RECOMENDADO:');
+            console.log('   1. clearAuthToken()');
+            console.log('   2. Refrescar página y loguearte de nuevo');
+            console.log('   3. checkAuthStatus()');
+            console.log('   4. testCreateCategory()');
         };
 
         // Ejecutar debug automáticamente

@@ -823,6 +823,25 @@ router.post('/refresh', authenticateToken, async (req, res) => {
     }
 });
 
+// Endpoint para verificar configuración JWT
+router.get('/jwt-test', (req, res) => {
+    const jwtSecret = process.env.JWT_SECRET || 'fede-life-secret-key';
+    const jwtNoExpire = process.env.JWT_NO_EXPIRE === 'true' ||
+                       (typeof window !== 'undefined' && window.LOCAL_CONFIG?.JWT_NO_EXPIRE);
+
+    res.json({
+        success: true,
+        message: 'Configuración JWT verificada',
+        config: {
+            jwtSecretConfigured: !!process.env.JWT_SECRET,
+            jwtSecretLength: jwtSecret.length,
+            jwtSecretPreview: jwtSecret.substring(0, 10) + '...',
+            jwtNoExpire: jwtNoExpire,
+            environment: process.env.NODE_ENV || 'development'
+        }
+    });
+});
+
 // ==================== EXPORTAR ROUTER ====================
 
 module.exports = router;

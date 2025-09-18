@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Login - Fede Life</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; color: #856404; }
+        button { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .logs { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+        pre { margin: 0; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Debug Login - Fede Life Finanzas</h1>
+        <p><strong>Problema identificado:</strong> Error de firma JWT inválida</p>
+        <p><strong>Solución:</strong> Limpiar token antiguo y hacer nuevo login</p>
+
+        <div class="section info">
+            <h3>📋 Pasos para resolver:</h3>
+            <ol>
+                <li>Haz clic en "Limpiar Token Antiguo"</li>
+                <li>Espera a que te redirija al login</li>
+                <li>Logueate de nuevo con tus credenciales</li>
+                <li>Vuelve aquí y verifica que todo funciona</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h3>🧹 Limpieza de Token</h3>
+            <button class="btn-danger" onclick="clearOldToken()">Limpiar Token Antiguo</button>
+            <div id="clear-result"></div>
+        </div>
+
+        <div class="section">
+            <h3>🔍 Verificación del Estado</h3>
+            <button class="btn-info" onclick="checkCurrentStatus()">Verificar Estado Actual</button>
+            <div id="status-result"></div>
+        </div>
+
+        <div class="section">
+            <h3>🔐 Verificar Configuración JWT</h3>
+            <button class="btn-primary" onclick="testJWTConfiguration()">Probar Configuración JWT</button>
+            <div id="jwt-result"></div>
+        </div>
+
+        <div class="section">
+            <h3>📝 Logs de Depuración</h3>
+            <button class="btn-success" onclick="clearLogs()">Limpiar Logs</button>
+            <div class="logs" id="debug-logs"></div>
+        </div>
+
+        <div class="section warning">
+            <h3>🚨 Si nada funciona:</h3>
+            <p>1. Limpia completamente el navegador (Ctrl+Shift+Delete)</p>
+            <p>2. Borra cookies y datos del sitio</p>
+            <p>3. Cierra y vuelve a abrir el navegador</p>
+            <p>4. Ve a <a href="/login.html">/login.html</a> y logueate</p>
+        </div>
+    </div>
+
+    <script>
+        const API_CONFIG = {
+            baseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'http://localhost:3000/api'
+                : 'https://fedelife-finanzas.onrender.com/api'
+        };
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('debug-logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = type;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function clearLogs() {
+            document.getElementById('debug-logs').innerHTML = '';
+        }
+
+        async function clearOldToken() {
+            const resultDiv = document.getElementById('clear-result');
+            log('🧹 Iniciando limpieza de token...');
+
+            try {
+                // Limpiar localStorage
+                localStorage.removeItem('auth_data');
+                localStorage.removeItem('user_data');
+                localStorage.clear();
+
+                // Limpiar sessionStorage también
+                sessionStorage.clear();
+
+                log('✅ Token limpiado del localStorage');
+                resultDiv.innerHTML = '<div class="success">✅ Token limpiado exitosamente. Redirigiendo al login...</div>';
+                log('🔄 Redirigiendo a login en 3 segundos...');
+
+                setTimeout(() => {
+                    window.location.href = '/login.html';
+                }, 3000);
+
+            } catch (error) {
+                log('❌ Error limpiando token: ' + error.message, 'error');
+                resultDiv.innerHTML = '<div class="error">❌ Error limpiando token: ' + error.message + '</div>';
+            }
+        }
+
+        function checkCurrentStatus() {
+            const resultDiv = document.getElementById('status-result');
+            log('🔍 Verificando estado actual...');
+
+            const authData = localStorage.getItem('auth_data');
+            const userData = localStorage.getItem('user_data');
+
+            const status = {
+                hasAuthData: !!authData,
+                hasUserData: !!userData,
+                environment: window.location.hostname === 'localhost' ? 'development' : 'production',
+                url: window.location.href
+            };
+
+            log('📊 Estado actual: ' + JSON.stringify(status, null, 2));
+
+            if (authData) {
+                try {
+                    const parsed = JSON.parse(authData);
+                    log('🔑 Token encontrado: ' + (parsed.token ? 'Presente' : 'Ausente'));
+                    log('👤 Usuario: ' + (parsed.user ? parsed.user.username : 'Desconocido'));
+                } catch (error) {
+                    log('❌ Error parseando auth data: ' + error.message, 'error');
+                }
+            }
+
+            resultDiv.innerHTML = `
+                <div class="${status.hasAuthData ? 'success' : 'error'}">
+                    <strong>Auth Data:</strong> ${status.hasAuthData ? '✅ Presente' : '❌ Ausente'}
+                </div>
+                <div class="${status.hasUserData ? 'success' : 'warning'}">
+                    <strong>User Data:</strong> ${status.hasUserData ? '✅ Presente' : '⚠️ Ausente'}
+                </div>
+                <div class="info">
+                    <strong>Environment:</strong> ${status.environment}
+                </div>
+            `;
+        }
+
+        async function testJWTConfiguration() {
+            const resultDiv = document.getElementById('jwt-result');
+            log('🔐 Probando configuración JWT del servidor...');
+
+            try {
+                const response = await fetch(`${API_CONFIG.baseUrl}/auth/jwt-test`);
+                const result = await response.json();
+
+                log('📡 Respuesta del servidor: ' + JSON.stringify(result, null, 2));
+
+                if (result.success) {
+                    const config = result.config;
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Configuración obtenida correctamente</div>
+                        <div class="info">
+                            <strong>Environment:</strong> ${config.environment}<br>
+                            <strong>JWT Secret:</strong> ${config.jwtSecretConfigured ? '✅ Configurado' : '❌ No configurado'}<br>
+                            <strong>JWT No Expire:</strong> ${config.jwtNoExpire ? '✅ Activado' : '❌ Desactivado'}<br>
+                            <strong>Secret Length:</strong> ${config.jwtSecretLength}
+                        </div>
+                    `;
+
+                    log('✅ Configuración JWT verificada correctamente');
+                } else {
+                    resultDiv.innerHTML = '<div class="error">❌ Error obteniendo configuración</div>';
+                    log('❌ Error en configuración JWT', 'error');
+                }
+            } catch (error) {
+                log('💥 Error de conexión: ' + error.message, 'error');
+                resultDiv.innerHTML = '<div class="error">❌ Error de conexión: ' + error.message + '</div>';
+            }
+        }
+
+        // Verificar estado automáticamente al cargar
+        window.addEventListener('load', function() {
+            log('🚀 Página de debug cargada');
+            log('🌐 Configuración API: ' + JSON.stringify(API_CONFIG));
+            setTimeout(() => {
+                checkCurrentStatus();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
