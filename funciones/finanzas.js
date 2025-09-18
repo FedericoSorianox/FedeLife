@@ -418,14 +418,6 @@ class FinanceApp {
             diagnoseBtn.addEventListener('click', () => this.diagnoseGoalsWithAI());
         }
 
-        // Modal de presupuesto
-        const addBudgetBtn = document.getElementById('addBudgetBtn');
-        if (addBudgetBtn) {
-            addBudgetBtn.addEventListener('click', () => this.openBudgetModal());
-        }
-
-        // Configurar event listeners del modal de presupuesto
-        this.setupBudgetModalListeners();
 
         if (sendChatBtn && chatInput) {
             chatInput.addEventListener('input', () => {
@@ -1541,106 +1533,9 @@ class FinanceApp {
         }
     }
 
-    /**
-     * Abre el modal para configurar presupuesto
-     */
-    openBudgetModal() {
-        const modal = document.getElementById('budgetModal');
-        if (modal) {
-            modal.style.display = 'flex';
-            // Limpiar formulario
-            const form = modal.querySelector('#budgetForm');
-            if (form) {
-                form.reset();
-            }
-        }
-    }
 
-    /**
-     * Cierra el modal de presupuesto
-     */
-    closeBudgetModal() {
-        const modal = document.getElementById('budgetModal');
-        if (modal) {
-            modal.style.display = 'none';
-            // Limpiar formulario
-            const form = modal.querySelector('#budgetForm');
-            if (form) {
-                form.reset();
-            }
-        }
-    }
 
-    /**
-     * Configura los event listeners del modal de presupuesto
-     */
-    setupBudgetModalListeners() {
-        // Formulario de presupuesto
-        const budgetForm = document.getElementById('budgetForm');
-        if (budgetForm) {
-            budgetForm.addEventListener('submit', (e) => this.handleBudgetSubmit(e));
-        }
 
-        // Cerrar modal con la X
-        const budgetModal = document.getElementById('budgetModal');
-        if (budgetModal) {
-            const closeBtn = budgetModal.querySelector('.close');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', () => this.closeBudgetModal());
-            }
-
-            // Cerrar modal haciendo clic fuera
-            budgetModal.addEventListener('click', (e) => {
-                if (e.target === budgetModal) {
-                    this.closeBudgetModal();
-                }
-            });
-        }
-    }
-
-    /**
-     * Maneja el envío del formulario de presupuesto
-     */
-    async handleBudgetSubmit(e) {
-        e.preventDefault();
-
-        const budgetCategory = document.getElementById('budgetCategory').value;
-        const budgetAmount = parseFloat(document.getElementById('budgetAmount').value);
-
-        if (!budgetCategory || isNaN(budgetAmount) || budgetAmount <= 0) {
-            this.showNotification('Por favor, complete todos los campos correctamente', 'error');
-            return;
-        }
-
-        try {
-            // Crear nuevo presupuesto
-            const newBudget = {
-                id: Date.now().toString(),
-                category: budgetCategory,
-                amount: budgetAmount,
-                spent: 0,
-                createdAt: new Date().toISOString()
-            };
-
-            // Agregar a la lista de presupuestos
-            this.budgets.push(newBudget);
-
-            // Guardar en localStorage
-            localStorage.setItem('fede_life_budgets', JSON.stringify(this.budgets));
-
-            // Cerrar modal
-            this.closeBudgetModal();
-
-            // Mostrar notificación de éxito
-            this.showNotification('Presupuesto configurado correctamente', 'success');
-
-            // Renderizar presupuestos actualizados
-            this.renderBudgets();
-
-        } catch (error) {
-            this.showNotification('Error al guardar el presupuesto', 'error');
-        }
-    }
 
     /**
      * Renderiza la lista de presupuestos
