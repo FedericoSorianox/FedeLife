@@ -393,6 +393,12 @@ class FinanceApp {
             transactionType.addEventListener('change', () => this.populateTransactionCategories());
         }
 
+        // Botón para agregar nueva categoría
+        const addCategoryBtn = document.getElementById('addCategoryBtn');
+        if (addCategoryBtn) {
+            addCategoryBtn.addEventListener('click', () => this.showAddCategoryModal());
+        }
+
         // CSV Uploader
         const csvFile = document.getElementById('csvFile');
         const processCsvBtn = document.getElementById('processCsvBtn');
@@ -2664,6 +2670,8 @@ class FinanceApp {
      * Muestra el modal para agregar categoría
      */
     showAddCategoryModal() {
+        console.log('🔍 showAddCategoryModal called - Stack trace:', new Error().stack);
+
         try {
             // Crear modal
             const modal = document.createElement('div');
@@ -2691,6 +2699,10 @@ class FinanceApp {
                                 <label for="categoryColor">Color:</label>
                                 <input type="color" id="categoryColor" value="#3498db">
                             </div>
+                            <div class="form-group">
+                                <label for="categoryDescription">Descripción (opcional):</label>
+                                <textarea id="categoryDescription" rows="2" placeholder="Descripción breve de la categoría..."></textarea>
+                            </div>
                             <div class="form-actions">
                                 <button type="button" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
                                 <button type="submit">Agregar Categoría</button>
@@ -2717,47 +2729,77 @@ class FinanceApp {
 
     /**
      * Agrega una nueva categoría
+     * Ahora hace una llamada al backend API para guardar en la base de datos
      */
-    addNewCategory() {
+    async addNewCategory() {
         try {
             const name = document.getElementById('categoryName').value.trim();
             const type = document.getElementById('categoryType').value;
             const color = document.getElementById('categoryColor').value;
+            const description = document.getElementById('categoryDescription')?.value?.trim() || '';
 
             if (!name) {
                 this.showNotification('El nombre de la categoría es requerido', 'error');
                 return;
             }
 
-            // Verificar que no exista una categoría con el mismo nombre
-            if (this.categories.some(cat => cat.name.toLowerCase() === name.toLowerCase())) {
-                this.showNotification('Ya existe una categoría con ese nombre', 'error');
-                return;
-            }
-
-            // Crear nueva categoría
-            const newCategory = {
-                id: this.generateId(),
+            // Preparar datos para enviar al backend
+            const categoryData = {
                 name: name,
                 type: type,
                 color: color,
-                createdAt: new Date()
+                description: description
             };
 
-            // Agregar a la lista
-            this.categories.push(newCategory);
+            // Mostrar loading
+            this.showNotification('Guardando categoría...', 'info');
 
-            // Guardar en localStorage
-            this.saveDataToStorage();
+            // Hacer llamada al backend API
+            const response = await fetch('/api/categories', {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify(categoryData)
+            });
 
-            // Re-renderizar categorías
-            this.renderCategories();
+            const result = await response.json();
 
-            // Mostrar notificación
-            this.showNotification(`Categoría "${name}" agregada correctamente`, 'success');
+            if (!response.ok) {
+                throw new Error(result.message || 'Error al crear la categoría');
+            }
+
+            if (result.success) {
+                // Agregar la categoría guardada al array local
+                const savedCategory = {
+                    id: result.data.category.id,
+                    name: result.data.category.name,
+                    type: result.data.category.type,
+                    color: result.data.category.color,
+                    description: result.data.category.description,
+                    isCustom: result.data.category.isCustom,
+                    usageStats: result.data.category.usageStats,
+                    createdAt: result.data.category.createdAt
+                };
+
+                // Agregar a la lista local
+                this.categories.push(savedCategory);
+
+                // Guardar en localStorage (para mantener sincronización)
+                this.saveDataToStorage();
+
+                // Re-renderizar categorías
+                this.renderCategories();
+
+                // Mostrar notificación de éxito
+                this.showNotification(`Categoría "${name}" agregada correctamente`, 'success');
+
+                console.log('✅ Categoría creada exitosamente:', savedCategory);
+            } else {
+                throw new Error(result.message || 'Error desconocido al crear la categoría');
+            }
 
         } catch (error) {
-            this.showNotification('Error al agregar la categoría', 'error');
+            console.error('❌ Error al agregar la categoría:', error);
+            this.showNotification(error.message || 'Error al agregar la categoría', 'error');
         }
     }
 

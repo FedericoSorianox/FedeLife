@@ -291,24 +291,39 @@ router.post('/', authenticateToken, validateCategory, async (req, res) => {
             });
         }
         
-        // Para categorías personalizadas, solo las guardamos en memoria por ahora
-        // En una implementación más avanzada, podrías crear un modelo Category separado
-        
-        const newCategory = {
+        // Crear nueva categoría personalizada y guardarla en la base de datos
+        const newCategory = new Category({
+            userId: userId,
             name: name.trim(),
             type,
             color,
             description: description?.trim() || '',
             isCustom: true,
-            count: 0,
-            totalAmount: 0
-        };
-        
+            usageStats: {
+                transactionCount: 0,
+                totalAmount: 0,
+                lastUsed: null,
+                averageAmount: 0
+            }
+        });
+
+        // Guardar en la base de datos
+        const savedCategory = await newCategory.save();
+
         res.status(201).json({
             success: true,
             message: 'Categoría creada exitosamente',
             data: {
-                category: newCategory
+                category: {
+                    id: savedCategory._id,
+                    name: savedCategory.name,
+                    type: savedCategory.type,
+                    color: savedCategory.color,
+                    description: savedCategory.description,
+                    isCustom: savedCategory.isCustom,
+                    usageStats: savedCategory.usageStats,
+                    createdAt: savedCategory.createdAt
+                }
             }
         });
         
