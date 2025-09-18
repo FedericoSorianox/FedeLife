@@ -1480,6 +1480,8 @@ class FinanceApp {
      * Abre el modal para crear una nueva meta
      */
     openGoalModal() {
+        console.log('🔍 openGoalModal called - Stack trace:', new Error().stack);
+
         const modal = document.getElementById('goalModal');
         if (modal) {
             // Usar !important para sobreescribir el CSS que oculta todos los modales
@@ -1529,13 +1531,15 @@ class FinanceApp {
     closeGoalModal() {
         const modal = document.getElementById('goalModal');
         if (modal) {
-            // Usar !important para sobreescribir el CSS que oculta todos los modales
+            console.log('🔒 Closing goal modal...');
+            // Usar !important para sobreescribir cualquier estilo que pueda estar mostrándolo
             modal.style.setProperty('display', 'none', 'important');
             // Limpiar formulario
             const form = modal.querySelector('#goalForm');
             if (form) {
                 form.reset();
             }
+            console.log('✅ Goal modal closed successfully');
         }
     }
 
@@ -6840,6 +6844,15 @@ Responde como un economista profesional especializado en la mejor administració
 
 // ==================== INICIALIZACIÓN ====================
 
+// Asegurar que el modal de metas esté cerrado antes de cualquier inicialización
+(function ensureModalClosed() {
+    const goalModal = document.getElementById('goalModal');
+    if (goalModal) {
+        goalModal.style.setProperty('display', 'none', 'important');
+        console.log('🔒 Goal modal closed on page load');
+    }
+})();
+
 // Crear instancia global
 const financeApp = new FinanceApp();
 console.log('🏗️ FinanceApp instance created:', financeApp);
@@ -6885,6 +6898,16 @@ if (typeof window !== 'undefined') {
             });
         });
     };
+
+    // Asegurar que todos los modales estén cerrados por defecto
+    setTimeout(() => {
+        console.log('🔒 Ensuring all modals are closed by default...');
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            modal.style.setProperty('display', 'none', 'important');
+        });
+        console.log(`✅ Closed ${modals.length} modals by default`);
+    }, 50);
 
     // Verificar que todos los métodos críticos estén disponibles
     setTimeout(() => {
