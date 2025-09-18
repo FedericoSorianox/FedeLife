@@ -395,28 +395,30 @@ categorySchema.statics.updateOrder = async function(userId, categoryOrder) {
 /**
  * Middleware pre-save para validaciones
  */
-categorySchema.pre('save', function(next) {
-    // Validar que el nombre no esté vacío después del trim
-    if (!this.name || !this.name.trim()) {
-        return next(new Error('El nombre de la categoría no puede estar vacío'));
-    }
+categorySchema.pre('save', async function(next) {
+    try {
+        // Validar que el nombre no esté vacío después del trim
+        if (!this.name || !this.name.trim()) {
+            return next(new Error('El nombre de la categoría no puede estar vacío'));
+        }
 
-    // Validar unicidad para categorías del mismo usuario
-    if (this.userId) {
-        this.constructor.findOne({
-            userId: this.userId,
-            name: this.name.trim(),
-            type: this.type,
-            _id: { $ne: this._id }
-        }, (err, existingCategory) => {
-            if (err) return next(err);
+        // Validar unicidad para categorías del mismo usuario
+        if (this.userId) {
+            const existingCategory = await this.constructor.findOne({
+                userId: this.userId,
+                name: this.name.trim(),
+                type: this.type,
+                _id: { $ne: this._id }
+            });
+
             if (existingCategory) {
                 return next(new Error('Ya existe una categoría con este nombre y tipo'));
             }
-            next();
-        });
-    } else {
+        }
+
         next();
+    } catch (error) {
+        next(error);
     }
 });
 

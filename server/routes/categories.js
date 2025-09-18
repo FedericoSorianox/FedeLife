@@ -108,15 +108,38 @@ router.get('/', authenticateToken, async (req, res) => {
         }
         
         const userCategories = await Transaction.aggregate(pipeline);
-        
+
+        // Obtener categorías personalizadas guardadas en la base de datos
+        const customCategories = await Category.find({
+            userId: req.userId,
+            isCustom: true
+        }).select('name type color description usageStats createdAt').lean();
+
+
         // Combinar con categorías por defecto
         const allCategories = [...DEFAULT_CATEGORIES];
-        
+
+        // Agregar categorías personalizadas de la base de datos
+        customCategories.forEach(customCat => {
+            allCategories.push({
+                id: customCat._id,
+                name: customCat.name,
+                type: customCat.type,
+                color: customCat.color,
+                description: customCat.description,
+                count: customCat.usageStats.transactionCount,
+                totalAmount: customCat.usageStats.totalAmount,
+                lastUsed: customCat.usageStats.lastUsed,
+                isCustom: true,
+                createdAt: customCat.createdAt
+            });
+        });
+
         userCategories.forEach(userCat => {
             const existingIndex = allCategories.findIndex(
                 cat => cat.name === userCat.name && cat.type === userCat.type
             );
-            
+
             if (existingIndex >= 0) {
                 // Actualizar categoría existente con datos del usuario
                 allCategories[existingIndex] = {
@@ -278,22 +301,24 @@ router.get('/popular', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, validateCategory, async (req, res) => {
     try {
         const { name, type, color, description } = req.body;
-        
+
+
         // Verificar si la categoría ya existe
         const existingCategory = DEFAULT_CATEGORIES.find(
             cat => cat.name.toLowerCase() === name.toLowerCase() && cat.type === type
         );
-        
+
         if (existingCategory) {
+            console.log('⚠️ Category already exists in defaults:', existingCategory);
             return res.status(409).json({
                 error: 'Categoría ya existe',
                 message: 'Ya existe una categoría con este nombre y tipo'
             });
         }
-        
+
         // Crear nueva categoría personalizada y guardarla en la base de datos
         const newCategory = new Category({
-            userId: userId,
+            userId: req.userId,
             name: name.trim(),
             type,
             color,
@@ -326,12 +351,10 @@ router.post('/', authenticateToken, validateCategory, async (req, res) => {
                 }
             }
         });
-        
-        console.log(`✅ Nueva categoría creada: ${name} (${type})`);
-        
+
     } catch (error) {
         console.error('❌ Error creando categoría:', error);
-        
+
         res.status(500).json({
             error: 'Error interno del servidor',
             message: 'No se pudo crear la categoría'

@@ -1480,8 +1480,6 @@ class FinanceApp {
      * Abre el modal para crear una nueva meta
      */
     openGoalModal() {
-        console.log('🔍 openGoalModal called - Stack trace:', new Error().stack);
-
         const modal = document.getElementById('goalModal');
         if (modal) {
             // Usar !important para sobreescribir el CSS que oculta todos los modales
@@ -1531,7 +1529,6 @@ class FinanceApp {
     closeGoalModal() {
         const modal = document.getElementById('goalModal');
         if (modal) {
-            console.log('🔒 Closing goal modal...');
             // Usar !important para sobreescribir cualquier estilo que pueda estar mostrándolo
             modal.style.setProperty('display', 'none', 'important');
             // Limpiar formulario
@@ -1539,7 +1536,6 @@ class FinanceApp {
             if (form) {
                 form.reset();
             }
-            console.log('✅ Goal modal closed successfully');
         }
     }
 
@@ -1866,8 +1862,6 @@ class FinanceApp {
     async handleCategorySubmit(event) {
         event.preventDefault();
 
-        console.log('🔍 handleCategorySubmit called - Stack trace:', new Error().stack);
-
         try {
             const type = document.getElementById('categoryType').value;
             const name = document.getElementById('categoryName').value;
@@ -1932,7 +1926,6 @@ class FinanceApp {
                 // Mostrar notificación de éxito
                 this.showNotification(`Categoría "${name}" agregada correctamente`, 'success');
 
-                console.log('✅ Categoría creada exitosamente desde formulario:', savedCategory);
             } else {
                 throw new Error(result.message || 'Error desconocido al crear la categoría');
             }
