@@ -46,7 +46,16 @@ const authenticateToken = async (req, res, next) => {
             // Verificación normal con expiración
             decoded = jwt.verify(token, JWT_SECRET);
         }
-        
+
+        // Verificar conexión a base de datos antes de hacer consultas
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                error: 'Servicio no disponible',
+                message: 'La base de datos no está disponible temporalmente'
+            });
+        }
+
         // Buscar el usuario en la base de datos
         const user = await User.findById(decoded.id).select('-password');
         

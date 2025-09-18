@@ -3,8 +3,8 @@ services:
     name: fedelife-finanzas
     env: node
     plan: free
-    buildCommand: npm install && npm run build
-    startCommand: cd server && node index.js
+    buildCommand: npm install --production && npm run build
+    startCommand: NODE_ENV=production npm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -12,5 +12,7 @@ services:
         value: 10000
       - key: MONGODB_URI
         fromSecret: mongodb_uri
+      - key: JWT_NO_EXPIRE
+        value: false
     healthCheckPath: /api/health
     autoDeploy: true

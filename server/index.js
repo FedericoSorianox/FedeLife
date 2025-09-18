@@ -557,6 +557,15 @@ function setupRoutes() {
     // Handlers específicos para rutas públicas sin reutilizar routers con auth
     app.get('/api/public/transactions', async (req, res) => {
         try {
+            // Verificar conexión a base de datos
+            if (mongoose.connection.readyState !== 1) {
+                return res.status(503).json({
+                    success: false,
+                    error: 'Servicio no disponible',
+                    message: 'La base de datos no está disponible temporalmente'
+                });
+            }
+
             const {
                 page = 1,
                 limit = 20,
@@ -622,6 +631,15 @@ function setupRoutes() {
 
     app.post('/api/public/transactions', async (req, res) => {
         try {
+            // Verificar conexión a base de datos
+            if (mongoose.connection.readyState !== 1) {
+                return res.status(503).json({
+                    success: false,
+                    error: 'Servicio no disponible',
+                    message: 'La base de datos no está disponible temporalmente'
+                });
+            }
+
             const {
                 type,
                 amount,
@@ -674,6 +692,15 @@ function setupRoutes() {
 
     app.delete('/api/public/transactions/:id', async (req, res) => {
         try {
+            // Verificar conexión a base de datos
+            if (mongoose.connection.readyState !== 1) {
+                return res.status(503).json({
+                    success: false,
+                    error: 'Servicio no disponible',
+                    message: 'La base de datos no está disponible temporalmente'
+                });
+            }
+
             const { id } = req.params;
 
             // Verificar que el ID sea válido
@@ -728,6 +755,15 @@ function setupRoutes() {
     // Endpoint PUT para transacciones públicas (transferencias)
     app.put('/api/public/transactions', async (req, res) => {
         try {
+            // Verificar conexión a base de datos
+            if (mongoose.connection.readyState !== 1) {
+                return res.status(503).json({
+                    success: false,
+                    error: 'Servicio no disponible',
+                    message: 'La base de datos no está disponible temporalmente'
+                });
+            }
+
             console.log('🔄 PUT /api/public/transactions - Request received');
             console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
 

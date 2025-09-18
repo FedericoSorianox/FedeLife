@@ -1,98 +1,93 @@
 #!/bin/bash
 
-# 🚀 SCRIPT DE DESPLIEGUE PARA PRODUCCIÓN - FEDE LIFE
+# 🚀 SCRIPT DE DESPLIEGUE - PRODUCCIÓN
+#
+# Despliega la aplicación en Render con verificaciones previas
 # Autor: Senior Backend Developer
 
 echo "🚀 Iniciando despliegue a producción..."
 
-# Verificar que estemos en el directorio correcto
+# Verificar que estamos en el directorio correcto
 if [ ! -f "package.json" ]; then
-    echo "❌ Error: No estás en el directorio raíz del proyecto"
+    echo "❌ Error: Ejecutar desde el directorio raíz del proyecto"
     exit 1
 fi
 
-# Verificar que Git esté configurado
-if ! git status > /dev/null 2>&1; then
-    echo "❌ Error: No hay repositorio Git configurado"
+# Verificar que las dependencias estén instaladas
+echo "📦 Verificando dependencias..."
+if [ ! -d "node_modules" ]; then
+    echo "⚠️  Instalando dependencias..."
+    npm install
+fi
+
+# Verificar que el build sea exitoso
+echo "🔨 Construyendo aplicación..."
+if npm run build; then
+    echo "✅ Build exitoso"
+else
+    echo "❌ Error en el build"
     exit 1
 fi
 
-# Verificar que no haya cambios pendientes
+# Verificar conexión a MongoDB
+echo "🗄️  Verificando conexión a MongoDB..."
+if node test-mongodb-connection.js; then
+    echo "✅ Conexión a MongoDB OK"
+else
+    echo "❌ Error de conexión a MongoDB"
+    echo "🔧 Verificar credenciales y configuración de MongoDB Atlas"
+    exit 1
+fi
+
+# Verificar que el servidor local funcione
+echo "🖥️  Verificando servidor local..."
+npm start &
+SERVER_PID=$!
+sleep 5
+
+if curl -s http://localhost:3000/api/health > /dev/null; then
+    echo "✅ Servidor local OK"
+    kill $SERVER_PID
+else
+    echo "❌ Error en servidor local"
+    kill $SERVER_PID
+    exit 1
+fi
+
+# Commit de cambios si es necesario
+echo "📝 Verificando cambios pendientes..."
 if [ -n "$(git status --porcelain)" ]; then
-    echo "⚠️ Hay cambios pendientes en Git. ¿Quieres hacer commit antes del despliegue? (y/n)"
-    read -r response
-    if [[ "$response" =~ ^[Yy]$ ]]; then
-        echo "📝 Haciendo commit de cambios..."
+    echo "⚠️  Hay cambios sin commit"
+    echo "📋 Cambios detectados:"
+    git status --short
+
+    read -p "¿Quieres hacer commit de los cambios? (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         git add .
-        git commit -m "🚀 Despliegue a producción - $(date)"
-    else
-        echo "❌ Despliegue cancelado. Haz commit de tus cambios primero."
-        exit 1
+        git commit -m "Deploy: $(date +'%Y-%m-%d %H:%M:%S')"
+        git push origin main
+        echo "✅ Cambios commited y pusheados"
     fi
+else
+    echo "✅ No hay cambios pendientes"
 fi
-
-# Verificar que estemos en la rama principal
-current_branch=$(git branch --show-current)
-if [ "$current_branch" != "main" ] && [ "$current_branch" != "master" ]; then
-    echo "⚠️ Estás en la rama '$current_branch'. ¿Quieres cambiar a main/master? (y/n)"
-    read -r response
-    if [[ "$response" =~ ^[Yy]$ ]]; then
-        if git show-ref --verify --quiet refs/remotes/origin/main; then
-            git checkout main
-        elif git show-ref --verify --quiet refs/remotes/origin/master; then
-            git checkout master
-        else
-            echo "❌ No se encontró la rama principal"
-            exit 1
-        fi
-    else
-        echo "❌ Despliegue cancelado. Cambia a la rama principal primero."
-        exit 1
-    fi
-fi
-
-# Hacer pull de los últimos cambios
-echo "📥 Actualizando repositorio local..."
-git pull origin $(git branch --show-current)
-
-# Verificar que el servidor simplificado existe
-if [ ! -f "server/index-simple.js" ]; then
-    echo "❌ Error: No se encontró server/index-simple.js"
-    exit 1
-fi
-
-# Verificar que la configuración de producción existe
-if [ ! -f "funciones/config-production-fixed.js" ]; then
-    echo "❌ Error: No se encontró funciones/config-production-fixed.js"
-    exit 1
-fi
-
-# Verificar que el frontend simplificado existe
-if [ ! -f "funciones/finanzas-simple.js" ]; then
-    echo "❌ Error: No se encontró funciones/finanzas-simple.js"
-    exit 1
-fi
-
-echo "✅ Todos los archivos necesarios están presentes"
-
-# Hacer push a producción
-echo "🚀 Haciendo push a producción..."
-git push origin $(git branch --show-current)
 
 echo ""
-echo "🎉 Despliegue completado exitosamente!"
+echo "🎯 DESPLIEGUE COMPLETADO"
 echo ""
-echo "📋 Resumen del despliegue:"
-echo "   • Servidor: index-simple.js (con endpoints públicos)"
-echo "   • Frontend: finanzas-simple.js (sin autenticación)"
-echo "   • Configuración: config-production-fixed.js"
-echo "   • Endpoints públicos disponibles:"
-echo "     - POST /api/public/transactions/public"
-echo "     - GET /api/public/categories/public"
-echo "     - POST /api/public/ai/analyze-pdf"
+echo "📋 Próximos pasos:"
+echo "   1. Verificar que Render haya detectado el push automático"
+echo "   2. Monitorear el build en el dashboard de Render"
+echo "   3. Una vez desplegado, ejecutar: node monitor-production.js"
+echo "   4. Verificar que todos los endpoints respondan correctamente"
 echo ""
-echo "🌐 Tu aplicación estará disponible en:"
-echo "   https://fedelife-finanzas.onrender.com"
+echo "🔗 URLs importantes:"
+echo "   • Dashboard Render: https://dashboard.render.com"
+echo "   • App desplegada: https://fedelife-finanzas.onrender.com"
+echo "   • Health check: https://fedelife-finanzas.onrender.com/api/health"
 echo ""
-echo "⚠️ Nota: El primer despliegue puede tomar varios minutos."
-echo "   Puedes verificar el estado en el dashboard de Render."
+echo "📞 Si hay problemas:"
+echo "   • Revisar logs en Render dashboard"
+echo "   • Ejecutar: node monitor-production.js"
+echo "   • Verificar configuración de MongoDB Atlas"
