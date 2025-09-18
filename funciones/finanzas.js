@@ -2378,10 +2378,52 @@ class FinanceApp {
         document.body.appendChild(modal);
         console.log('✅ Modal added to DOM');
 
-        // Hacer visible el modal
-        modal.style.display = 'block';
-        modal.style.zIndex = '10000';
+        // Hacer visible el modal con debugging visual y forzar estilos
+        modal.style.display = 'flex !important';
+        modal.style.zIndex = '999999 !important';
+        modal.style.position = 'fixed !important';
+        modal.style.top = '0 !important';
+        modal.style.left = '0 !important';
+        modal.style.width = '100vw !important';
+        modal.style.height = '100vh !important';
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8) !important';
+        modal.style.justifyContent = 'center !important';
+        modal.style.alignItems = 'center !important';
+
+        // Agregar indicadores visuales de debugging
+        modal.style.border = '5px solid red !important';
+
+        // Forzar estilos del contenido del modal
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.style.position = 'relative !important';
+            modalContent.style.zIndex = '1000000 !important';
+            modalContent.style.backgroundColor = 'white !important';
+            modalContent.style.borderRadius = '12px !important';
+            modalContent.style.boxShadow = '0 10px 40px rgba(0, 0, 0, 0.3) !important';
+            modalContent.style.maxWidth = '90vw !important';
+            modalContent.style.maxHeight = '90vh !important';
+            modalContent.style.overflowY = 'auto !important';
+            modalContent.style.visibility = 'visible !important';
+            modalContent.style.opacity = '1 !important';
+        }
+
+        // Agregar texto de debugging
+        const debugInfo = document.createElement('div');
+        debugInfo.innerHTML = `
+            <div style="position: fixed; top: 10px; right: 10px; background: yellow; padding: 10px; z-index: 10001; border: 2px solid red;">
+                🔧 DEBUG: Modal creado<br>
+                ID: ${categoryId}<br>
+                Timestamp: ${new Date().toLocaleTimeString()}<br>
+                <button onclick="this.parentElement.remove(); document.querySelector('.modal').style.border='none';">Cerrar Debug</button>
+            </div>
+        `;
+        document.body.appendChild(debugInfo);
+
         console.log('✅ Modal displayed');
+        console.log('🔍 Modal element:', modal);
+        console.log('🔍 Modal styles:', window.getComputedStyle(modal));
+        console.log('🔍 Modal position:', modal.getBoundingClientRect());
 
     }
 
@@ -6870,6 +6912,43 @@ if (typeof window !== 'undefined') {
     window.financeApp = financeApp;
     console.log('✅ window.financeApp assigned successfully');
 
+    // Función de debugging para forzar visibilidad de modales
+    window.forceShowModals = function() {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach((modal, index) => {
+            modal.style.display = 'flex !important';
+            modal.style.zIndex = '999999 !important';
+            modal.style.position = 'fixed !important';
+            modal.style.top = '0 !important';
+            modal.style.left = '0 !important';
+            modal.style.width = '100vw !important';
+            modal.style.height = '100vh !important';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8) !important';
+            console.log(`🔧 Forced modal ${index} to be visible`);
+        });
+
+        if (modals.length === 0) {
+            console.log('❌ No modals found in DOM');
+        } else {
+            console.log(`✅ Found ${modals.length} modals, forced visibility`);
+        }
+    };
+
+    // Función para listar todos los modales
+    window.listModals = function() {
+        const modals = document.querySelectorAll('.modal');
+        console.log('📋 Modals in DOM:', modals.length);
+        modals.forEach((modal, index) => {
+            console.log(`Modal ${index}:`, {
+                display: modal.style.display,
+                zIndex: modal.style.zIndex,
+                visible: modal.offsetWidth > 0 && modal.offsetHeight > 0,
+                classes: modal.className,
+                html: modal.innerHTML.substring(0, 100) + '...'
+            });
+        });
+    };
+
     // Verificar que todos los métodos críticos estén disponibles
     setTimeout(() => {
         const criticalMethods = ['showCategoryDetails', 'editTransaction', 'renderDashboard'];
@@ -6885,6 +6964,7 @@ if (typeof window !== 'undefined') {
             console.error('❌ Missing critical methods:', missingMethods);
         } else {
             console.log('✅ All critical methods available');
+            console.log('🔧 Debugging functions available: forceShowModals(), listModals()');
         }
     }, 100);
 } else {

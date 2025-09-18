@@ -45,7 +45,56 @@ Esto debería mostrar:
 ✅ editTransaction method available
 ✅ renderDashboard method available
 ✅ renderCategories method available
+🔧 Debugging functions available: forceShowModals(), listModals()
 🔍 === FIN DEL DIAGNÓSTICO ===
+```
+
+### Paso 3: Probar la Visibilidad de Modales
+
+Después del diagnóstico, prueba estas funciones:
+
+#### Forzar Visibilidad de Modales
+```javascript
+forceShowModals()
+```
+Esta función buscará todos los modales ocultos y los forzará a ser visibles.
+
+#### Listar Modales en el DOM
+```javascript
+listModals()
+```
+Esta función mostrará información detallada sobre todos los modales en el DOM.
+
+#### Crear Modal de Prueba
+```javascript
+// Visita esta URL para probar modales básicos:
+// http://localhost:3000/test-modal.html
+```
+
+### Paso 4: Verificar Indicadores Visuales
+
+Cuando hagas click en una categoría, deberías ver:
+
+1. **Borde rojo en el modal** (indicador de debugging)
+2. **Mensaje amarillo en la esquina superior derecha** con información de debug
+3. **Fondo oscuro** del modal visible
+4. **Contenido blanco del modal** centrado en pantalla
+
+Si NO ves estos indicadores:
+
+#### Problema: Modal no visible
+**Solución:**
+```javascript
+// Forzar visibilidad
+forceShowModals()
+
+// Ver información detallada
+listModals()
+
+// Verificar estilos computados
+const modal = document.querySelector('.modal');
+console.log('Computed styles:', window.getComputedStyle(modal));
+console.log('Position:', modal.getBoundingClientRect());
 ```
 
 ### Paso 3: Verificar Inicialización
