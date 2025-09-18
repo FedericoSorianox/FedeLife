@@ -66,6 +66,10 @@ class FinanceApp {
         this.currentView = 'expenses';
 
         console.log('✅ FinanceApp constructor completed');
+
+        // Configurar API
+        this.API_BASE_URL = FINANCE_API_CONFIG.baseUrl;
+
         this.categoryColors = {
             'Alimentación': '#FF6384',
             'Transporte': '#36A2EB',
@@ -2758,7 +2762,7 @@ class FinanceApp {
                         <!-- Fecha -->
                         <div class="form-group">
                             <label for="editTransactionDate">Fecha *</label>
-                            <input type="date" id="editTransactionDate" value="${transaction.date.toISOString().split('T')[0]}" required>
+                            <input type="date" id="editTransactionDate" value="${this.formatDateForInput(transaction.date)}" required>
                         </div>
 
                         <!-- Moneda -->
@@ -2855,9 +2859,32 @@ class FinanceApp {
             currency: formData.get('editTransactionCurrency')
         };
 
-        // Validación
-        if (!updatedData.description || !updatedData.category || !updatedData.date) {
-            this.showNotification('Por favor complete todos los campos obligatorios', 'error');
+        // Debug: Mostrar datos del formulario
+        console.log('🔍 Datos del formulario de edición:', updatedData);
+
+        // Validación mejorada
+        if (!updatedData.type) {
+            this.showNotification('El tipo de transacción es obligatorio', 'error');
+            return;
+        }
+
+        if (!updatedData.description || updatedData.description.trim() === '') {
+            this.showNotification('La descripción es obligatoria', 'error');
+            return;
+        }
+
+        if (!updatedData.category || updatedData.category.trim() === '') {
+            this.showNotification('La categoría es obligatoria', 'error');
+            return;
+        }
+
+        if (!updatedData.date) {
+            this.showNotification('La fecha es obligatoria', 'error');
+            return;
+        }
+
+        if (!updatedData.currency) {
+            this.showNotification('La moneda es obligatoria', 'error');
             return;
         }
 
@@ -2868,15 +2895,19 @@ class FinanceApp {
 
         try {
             // Actualizar la transacción en el servidor
-            const response = await this.apiRequest(`${this.API_BASE_URL}/api/transactions/${transactionId}`, {
+            const authHeaders = this.getAuthHeaders();
+            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/api/transactions/${transactionId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...authHeaders
                 },
                 body: JSON.stringify(updatedData)
             });
 
-            if (response.success) {
+            const result = await response.json();
+
+            if (response.ok && result.success) {
                 // Actualizar en memoria
                 const index = this.transactions.findIndex(t => t.id === transactionId);
                 if (index !== -1) {
@@ -3201,11 +3232,23 @@ class FinanceApp {
      * Elimina una categoría
      * @param {string} categoryId - ID de la categoría
      */
-    deleteCategory(categoryId) {
+    async deleteCategory(categoryId) {
         try {
             const category = this.categories.find(cat => cat.id === categoryId);
             if (!category) {
                 this.showNotification('Categoría no encontrada', 'error');
+                return;
+            }
+
+            // Verificar si es una categoría por defecto
+            const isDefaultCategory = [
+                'Salario', 'Freelance', 'Inversiones', 'Otros Ingresos',
+                'Alimentación', 'Transporte', 'Servicios', 'Entretenimiento',
+                'Salud', 'Educación', 'Ropa', 'Otros Gastos'
+            ].includes(category.name);
+
+            if (isDefaultCategory) {
+                this.showNotification('No se pueden eliminar las categorías por defecto', 'error');
                 return;
             }
 
@@ -3214,26 +3257,113 @@ class FinanceApp {
             if (transactionsUsingCategory.length > 0) {
                 const confirmDelete = confirm(
                     `La categoría "${category.name}" tiene ${transactionsUsingCategory.length} transacciones. ` +
-                    '¿Estás seguro de que quieres eliminarla? Las transacciones quedarán sin categoría.'
+                    '¿Estás seguro de que quieres eliminarla? Las transacciones se reasignarán a "Otros".'
                 );
-                
+
+                if (!confirmDelete) return;
+            } else {
+                const confirmDelete = confirm(
+                    `¿Estás seguro de que quieres eliminar la categoría "${category.name}"?`
+                );
+
                 if (!confirmDelete) return;
             }
 
-            // Eliminar categoría
-            this.categories = this.categories.filter(cat => cat.id !== categoryId);
+            // Mostrar loading
+            this.showNotification('Eliminando categoría...', 'info');
 
-            // Guardar en localStorage
-            this.saveDataToStorage();
+            try {
+                // Hacer petición al servidor para eliminar la categoría
+                const authHeaders = this.getAuthHeaders();
+                const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/api/categories/${encodeURIComponent(category.name)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...authHeaders
+                    }
+                });
 
-            // Re-renderizar categorías
-            this.renderCategories();
+                const result = await response.json();
 
-            // Mostrar notificación
-            this.showNotification(`Categoría "${category.name}" eliminada correctamente`, 'success');
+                if (response.ok && result.success) {
+                    // Eliminar categoría del array local
+                    this.categories = this.categories.filter(cat => cat.id !== categoryId);
+
+                    // Actualizar transacciones que usaban esta categoría
+                    this.transactions.forEach(transaction => {
+                        if (transaction.category === category.name) {
+                            transaction.category = 'Otros Gastos';
+                        }
+                    });
+
+                    // Guardar en localStorage
+                    this.saveDataToStorage();
+
+                    // Re-renderizar vistas
+                    this.renderCategories();
+                    this.renderDashboard();
+
+                    // Mostrar notificación de éxito
+                    this.showNotification(`Categoría "${category.name}" eliminada correctamente`, 'success');
+
+                    console.log(`✅ Categoría eliminada: ${category.name}`);
+                } else {
+                    throw new Error(result.message || `Error ${response.status}: ${response.statusText}`);
+                }
+
+            } catch (serverError) {
+                console.error('❌ Error del servidor:', serverError);
+
+                // Si el servidor falla, mostrar mensaje específico
+                if (serverError.message?.includes('500') || response?.status === 500) {
+                    this.showNotification('Error interno del servidor. Intente nuevamente.', 'error');
+                } else if (serverError.message?.includes('404') || response?.status === 404) {
+                    this.showNotification('Categoría no encontrada en el servidor', 'error');
+                } else if (serverError.message?.includes('401') || response?.status === 401) {
+                    this.showNotification('Sesión expirada. Inicie sesión nuevamente.', 'error');
+                } else {
+                    this.showNotification(serverError.message || 'Error al eliminar la categoría', 'error');
+                }
+            }
 
         } catch (error) {
+            console.error('❌ Error eliminando categoría:', error);
             this.showNotification('Error al eliminar la categoría', 'error');
+        }
+    }
+
+    // ==================== UTILIDADES ====================
+
+    /**
+     * Formatea una fecha para input de tipo date
+     * @param {string|Date} date - Fecha a formatear
+     * @returns {string} Fecha en formato YYYY-MM-DD
+     */
+    formatDateForInput(date) {
+        try {
+            if (!date) return '';
+
+            let dateObj;
+            if (date instanceof Date) {
+                dateObj = date;
+            } else if (typeof date === 'string') {
+                // Intentar parsear diferentes formatos
+                dateObj = new Date(date);
+            } else {
+                return '';
+            }
+
+            // Verificar si la fecha es válida
+            if (isNaN(dateObj.getTime())) {
+                console.warn('Fecha inválida:', date);
+                return '';
+            }
+
+            // Formatear como YYYY-MM-DD
+            return dateObj.toISOString().split('T')[0];
+        } catch (error) {
+            console.error('Error formateando fecha:', error, date);
+            return '';
         }
     }
 
