@@ -2727,12 +2727,12 @@ class FinanceApp {
                 <div class="modal-body">
                     <form id="editTransactionForm" class="edit-transaction-form">
                         <!-- Campo oculto para ID -->
-                        <input type="hidden" id="editTransactionId" value="${transaction.id}">
+                        <input type="hidden" id="editTransactionId" name="editTransactionId" value="${transaction.id}">
 
                         <!-- Tipo de transacción -->
                         <div class="form-group">
                             <label for="editTransactionType">Tipo de Transacción *</label>
-                            <select id="editTransactionType" required>
+                            <select id="editTransactionType" name="editTransactionType" required>
                                 <option value="income" ${transaction.type === 'income' ? 'selected' : ''}>Ingreso</option>
                                 <option value="expense" ${transaction.type === 'expense' ? 'selected' : ''}>Gasto</option>
                             </select>
@@ -2741,19 +2741,19 @@ class FinanceApp {
                         <!-- Monto -->
                         <div class="form-group">
                             <label for="editTransactionAmount">Monto *</label>
-                            <input type="number" id="editTransactionAmount" value="${transaction.amount}" step="0.01" required>
+                            <input type="number" id="editTransactionAmount" name="editTransactionAmount" value="${transaction.amount}" step="0.01" required>
                         </div>
 
                         <!-- Descripción -->
                         <div class="form-group">
                             <label for="editTransactionDescription">Descripción *</label>
-                            <input type="text" id="editTransactionDescription" value="${transaction.description}" required>
+                            <input type="text" id="editTransactionDescription" name="editTransactionDescription" value="${transaction.description}" required>
                         </div>
 
                         <!-- Categoría -->
                         <div class="form-group">
                             <label for="editTransactionCategory">Categoría *</label>
-                            <select id="editTransactionCategory" required>
+                            <select id="editTransactionCategory" name="editTransactionCategory" required>
                                 <option value="">Seleccionar categoría</option>
                                 ${this.generateCategoryOptions(transaction.type, transaction.category)}
                             </select>
@@ -2762,13 +2762,13 @@ class FinanceApp {
                         <!-- Fecha -->
                         <div class="form-group">
                             <label for="editTransactionDate">Fecha *</label>
-                            <input type="date" id="editTransactionDate" value="${this.formatDateForInput(transaction.date)}" required>
+                            <input type="date" id="editTransactionDate" name="editTransactionDate" value="${this.formatDateForInput(transaction.date)}" required>
                         </div>
 
                         <!-- Moneda -->
                         <div class="form-group">
                             <label for="editTransactionCurrency">Moneda *</label>
-                            <select id="editTransactionCurrency" required>
+                            <select id="editTransactionCurrency" name="editTransactionCurrency" required>
                                 <option value="UYU" ${transaction.currency === 'UYU' ? 'selected' : ''}>Pesos (UYU)</option>
                                 <option value="USD" ${transaction.currency === 'USD' ? 'selected' : ''}>Dólares (USD)</option>
                             </select>
@@ -2896,7 +2896,7 @@ class FinanceApp {
         try {
             // Actualizar la transacción en el servidor
             const authHeaders = this.getAuthHeaders();
-            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/api/transactions/${transactionId}`, {
+            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/transactions/${transactionId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -3252,6 +3252,12 @@ class FinanceApp {
                 return;
             }
 
+            // Validar que la categoría tenga un nombre válido
+            if (!category.name || category.name.trim() === '' || category.name === 'wit') {
+                this.showNotification('Nombre de categoría inválido', 'error');
+                return;
+            }
+
             // Verificar si hay transacciones usando esta categoría
             const transactionsUsingCategory = this.transactions.filter(t => t.category === category.name);
             if (transactionsUsingCategory.length > 0) {
@@ -3275,7 +3281,7 @@ class FinanceApp {
             try {
                 // Hacer petición al servidor para eliminar la categoría
                 const authHeaders = this.getAuthHeaders();
-                const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/api/categories/${encodeURIComponent(category.name)}`, {
+                const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/categories/${encodeURIComponent(category.name)}`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
@@ -3315,11 +3321,11 @@ class FinanceApp {
                 console.error('❌ Error del servidor:', serverError);
 
                 // Si el servidor falla, mostrar mensaje específico
-                if (serverError.message?.includes('500') || response?.status === 500) {
+                if (serverError.message?.includes('500')) {
                     this.showNotification('Error interno del servidor. Intente nuevamente.', 'error');
-                } else if (serverError.message?.includes('404') || response?.status === 404) {
+                } else if (serverError.message?.includes('404')) {
                     this.showNotification('Categoría no encontrada en el servidor', 'error');
-                } else if (serverError.message?.includes('401') || response?.status === 401) {
+                } else if (serverError.message?.includes('401')) {
                     this.showNotification('Sesión expirada. Inicie sesión nuevamente.', 'error');
                 } else {
                     this.showNotification(serverError.message || 'Error al eliminar la categoría', 'error');
