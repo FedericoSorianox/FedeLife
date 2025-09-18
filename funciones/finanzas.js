@@ -1437,7 +1437,7 @@ class FinanceApp {
             if (headers['Authorization']) {
             }
 
-            const response = await fetch('/api/goals', {
+            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/goals`, {
                 method: 'GET',
                 headers: headers
             });
@@ -1872,6 +1872,12 @@ class FinanceApp {
                 throw new Error('Tipo y nombre son requeridos');
             }
 
+            // Verificar autenticación
+            const authHeaders = this.getAuthHeaders();
+            if (!authHeaders['Authorization']) {
+                throw new Error('No hay sesión activa. Por favor inicia sesión nuevamente.');
+            }
+
             // Preparar datos para enviar al backend
             const categoryData = {
                 name: name.trim(),
@@ -1883,17 +1889,21 @@ class FinanceApp {
             // Mostrar loading
             this.showNotification('Guardando categoría...', 'info');
 
+            console.log('🔍 Enviando categoría:', categoryData);
+            console.log('🔗 URL:', `${FINANCE_API_CONFIG.baseUrl}/categories`);
+
             // Hacer llamada al backend API
-            const response = await fetch('/api/categories', {
+            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/categories`, {
                 method: 'POST',
-                headers: this.getAuthHeaders(),
+                headers: authHeaders,
                 body: JSON.stringify(categoryData)
             });
 
             const result = await response.json();
+            console.log('📡 Respuesta del servidor:', { status: response.status, result });
 
             if (!response.ok) {
-                throw new Error(result.message || 'Error al crear la categoría');
+                throw new Error(result.message || `Error ${response.status}: ${response.statusText}`);
             }
 
             if (result.success) {
@@ -2787,20 +2797,30 @@ class FinanceApp {
                 description: description
             };
 
+            // Verificar autenticación
+            const authHeaders = this.getAuthHeaders();
+            if (!authHeaders['Authorization']) {
+                throw new Error('No hay sesión activa. Por favor inicia sesión nuevamente.');
+            }
+
             // Mostrar loading
             this.showNotification('Guardando categoría...', 'info');
 
+            console.log('🔍 Enviando categoría (modal):', categoryData);
+            console.log('🔗 URL:', `${FINANCE_API_CONFIG.baseUrl}/categories`);
+
             // Hacer llamada al backend API
-            const response = await fetch('/api/categories', {
+            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/categories`, {
                 method: 'POST',
-                headers: this.getAuthHeaders(),
+                headers: authHeaders,
                 body: JSON.stringify(categoryData)
             });
 
             const result = await response.json();
+            console.log('📡 Respuesta del servidor (modal):', { status: response.status, result });
 
             if (!response.ok) {
-                throw new Error(result.message || 'Error al crear la categoría');
+                throw new Error(result.message || `Error ${response.status}: ${response.statusText}`);
             }
 
             if (result.success) {
