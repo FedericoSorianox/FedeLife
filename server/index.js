@@ -160,7 +160,7 @@ function setupSecurityMiddleware() {
                 workerSrc: ["'self'", "blob:"],
                 imgSrc: ["'self'", "data:", "https:"],
                 fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
-                connectSrc: ["'self'", "https://generativelanguage.googleapis.com", "https://api.exchangerate.host", "https://api.openai.com"]
+                connectSrc: ["'self'", "https://generativelanguage.googleapis.com", "https://api.exchangerate.host", "https://api.openai.com", "https://cdn.jsdelivr.net"]
             }
         }
     }));

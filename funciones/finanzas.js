@@ -399,6 +399,55 @@ class FinanceApp {
             addCategoryBtn.addEventListener('click', () => this.showAddCategoryModal());
         }
 
+        // Función de debug para probar creación de categorías
+        window.testCreateCategory = async function() {
+            console.log('🧪 Testeando creación de categoría...');
+
+            const testData = {
+                name: 'Test Category ' + Date.now(),
+                type: 'expense',
+                color: '#FF5733',
+                description: 'Categoría de prueba creada desde función de debug'
+            };
+
+            try {
+                const authHeaders = window.financeApp.getAuthHeaders();
+                console.log('🔐 Headers de autenticación en test:', {
+                    hasAuthorization: !!authHeaders['Authorization'],
+                    authTokenPreview: authHeaders['Authorization'] ? authHeaders['Authorization'].substring(0, 20) + '...' : 'none'
+                });
+
+                const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/categories`, {
+                    method: 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify(testData)
+                });
+
+                const result = await response.json();
+                console.log('📡 Resultado del test:', { status: response.status, result });
+
+                if (response.ok && result.success) {
+                    console.log('✅ Test exitoso: Categoría creada correctamente');
+                } else {
+                    console.error('❌ Test fallido:', result);
+                }
+
+                return { success: response.ok, result };
+            } catch (error) {
+                console.error('💥 Error en test:', error);
+                return { success: false, error: error.message };
+            }
+        };
+
+        // Agregar función al objeto global para debugging
+        window.debugCategoryCreation = function() {
+            console.log('🔧 Función de debug disponible: Ejecuta testCreateCategory() en la consola para probar la creación de categorías');
+            console.log('📝 Ejemplo: testCreateCategory().then(result => console.log(result))');
+        };
+
+        // Ejecutar debug automáticamente
+        window.debugCategoryCreation();
+
         // CSV Uploader
         const csvFile = document.getElementById('csvFile');
         const processCsvBtn = document.getElementById('processCsvBtn');
@@ -1891,6 +1940,11 @@ class FinanceApp {
 
             console.log('🔍 Enviando categoría:', categoryData);
             console.log('🔗 URL:', `${FINANCE_API_CONFIG.baseUrl}/categories`);
+            console.log('🔐 Headers de autenticación:', {
+                hasAuthorization: !!authHeaders['Authorization'],
+                contentType: authHeaders['Content-Type'],
+                authTokenPreview: authHeaders['Authorization'] ? authHeaders['Authorization'].substring(0, 20) + '...' : 'none'
+            });
 
             // Hacer llamada al backend API
             const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/categories`, {
@@ -1901,8 +1955,15 @@ class FinanceApp {
 
             const result = await response.json();
             console.log('📡 Respuesta del servidor:', { status: response.status, result });
+            console.log('🔍 Respuesta completa del servidor:', response);
 
             if (!response.ok) {
+                console.error('❌ Error HTTP:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    result,
+                    responseHeaders: Object.fromEntries(response.headers.entries())
+                });
                 throw new Error(result.message || `Error ${response.status}: ${response.statusText}`);
             }
 
