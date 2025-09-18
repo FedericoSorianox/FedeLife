@@ -52,6 +52,8 @@ const ReportPeriod = {
  */
 class FinanceApp {
     constructor() {
+        console.log('🏗️ Initializing FinanceApp...');
+
         this.transactions = [];
         this.categories = [];
         this.budgets = [];
@@ -62,6 +64,8 @@ class FinanceApp {
         this.chart1 = null;
         this.chart2 = null;
         this.currentView = 'expenses';
+
+        console.log('✅ FinanceApp constructor completed');
         this.categoryColors = {
             'Alimentación': '#FF6384',
             'Transporte': '#36A2EB',
@@ -89,7 +93,7 @@ class FinanceApp {
      * Inicializa la aplicación de finanzas
      */
     async initializeApp() {
-
+        console.log('🚀 Initializing FinanceApp...');
 
         try {
 
@@ -129,7 +133,10 @@ class FinanceApp {
             this.renderBudgets();
             this.updateCharts();
 
+            console.log('✅ FinanceApp initialization completed successfully');
+
         } catch (error) {
+            console.error('❌ Error during FinanceApp initialization:', error);
         }
     }
 
@@ -2327,39 +2334,54 @@ class FinanceApp {
      * @param {string} categoryId - ID de la categoría
      */
     showCategoryDetails(categoryId) {
+        console.log('🔍 showCategoryDetails called with categoryId:', categoryId);
 
         // Verificar que categoryId sea válido
         if (!categoryId || typeof categoryId !== 'string' || categoryId.trim() === '') {
+            console.error('❌ Invalid categoryId:', categoryId);
             this.showNotification('ID de categoría inválido', 'error');
             return;
         }
 
         // Verificar que tengamos categorías cargadas
         if (!this.categories || !Array.isArray(this.categories)) {
+            console.error('❌ Categories not loaded:', this.categories);
             this.showNotification('Error: Categorías no cargadas', 'error');
             return;
         }
 
-
+        console.log('✅ Categories loaded:', this.categories.length);
         const category = this.categories.find(c => c.id === categoryId);
         if (!category) {
+            console.error('❌ Category not found:', categoryId, 'in categories:', this.categories);
             this.showNotification(`Categoría no encontrada: ${categoryId}`, 'error');
             return;
         }
 
+        console.log('✅ Category found:', category);
 
         // Obtener transacciones de esta categoría
         const categoryTransactions = this.transactions
             .filter(t => t.category === category.name)
             .sort((a, b) => new Date(b.date) - new Date(a.date));
 
+        console.log('✅ Category transactions found:', categoryTransactions.length);
+
         // Crear modal con detalles
         const modal = this.createCategoryDetailsModal(category, categoryTransactions);
+        if (!modal) {
+            console.error('❌ Failed to create modal');
+            this.showNotification('Error al crear el modal', 'error');
+            return;
+        }
+
         document.body.appendChild(modal);
+        console.log('✅ Modal added to DOM');
 
         // Hacer visible el modal
         modal.style.display = 'block';
         modal.style.zIndex = '10000';
+        console.log('✅ Modal displayed');
 
     }
 
@@ -6841,10 +6863,75 @@ Responde como un economista profesional especializado en la mejor administració
 
 // Crear instancia global
 const financeApp = new FinanceApp();
+console.log('🏗️ FinanceApp instance created:', financeApp);
 
 // Hacer disponible globalmente
 if (typeof window !== 'undefined') {
     window.financeApp = financeApp;
+    console.log('✅ window.financeApp assigned successfully');
+
+    // Verificar que todos los métodos críticos estén disponibles
+    setTimeout(() => {
+        const criticalMethods = ['showCategoryDetails', 'editTransaction', 'renderDashboard'];
+        let missingMethods = [];
+
+        criticalMethods.forEach(method => {
+            if (typeof window.financeApp[method] !== 'function') {
+                missingMethods.push(method);
+            }
+        });
+
+        if (missingMethods.length > 0) {
+            console.error('❌ Missing critical methods:', missingMethods);
+        } else {
+            console.log('✅ All critical methods available');
+        }
+    }, 100);
+} else {
+    console.error('❌ Window object not available');
+}
+
+// ==================== FUNCIONES DE DIAGNÓSTICO ====================
+
+/**
+ * Función de diagnóstico para verificar el estado de la aplicación
+ */
+function diagnoseFinanceApp() {
+    console.log('🔍 === DIAGNÓSTICO DE FINANZAS ===');
+
+    // Verificar si window.financeApp existe
+    if (typeof window !== 'undefined') {
+        console.log('✅ Window object available');
+
+        if (window.financeApp) {
+            console.log('✅ window.financeApp exists');
+            console.log('📊 Transactions:', window.financeApp.transactions ? window.financeApp.transactions.length : 0);
+            console.log('📂 Categories:', window.financeApp.categories ? window.financeApp.categories.length : 0);
+            console.log('🎯 Goals:', window.financeApp.goals ? window.financeApp.goals.length : 0);
+            console.log('📈 API_BASE_URL:', window.financeApp.API_BASE_URL);
+
+            // Verificar métodos
+            const methods = ['showCategoryDetails', 'editTransaction', 'renderDashboard', 'renderCategories'];
+            methods.forEach(method => {
+                if (typeof window.financeApp[method] === 'function') {
+                    console.log(`✅ ${method} method available`);
+                } else {
+                    console.error(`❌ ${method} method NOT available`);
+                }
+            });
+        } else {
+            console.error('❌ window.financeApp is undefined');
+        }
+    } else {
+        console.error('❌ Window object not available');
+    }
+
+    console.log('🔍 === FIN DEL DIAGNÓSTICO ===');
+}
+
+// Hacer la función global
+if (typeof window !== 'undefined') {
+    window.diagnoseFinanceApp = diagnoseFinanceApp;
 }
 
 // ==================== FUNCIONES GLOBALES PARA EVENTOS ====================
@@ -6854,14 +6941,20 @@ if (typeof window !== 'undefined') {
  * @param {string} categoryId - ID de la categoría
  */
 function showCategoryDetailsGlobal(categoryId) {
+    console.log('🔍 showCategoryDetailsGlobal called with categoryId:', categoryId);
 
     if (window.financeApp && typeof window.financeApp.showCategoryDetails === 'function') {
+        console.log('✅ Calling window.financeApp.showCategoryDetails');
         window.financeApp.showCategoryDetails(categoryId);
     } else {
+        console.error('❌ window.financeApp.showCategoryDetails not available');
         if (window.financeApp) {
+            console.log('⚠️ window.financeApp exists but showCategoryDetails method not found');
+            console.log('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(window.financeApp)));
+        } else {
+            console.error('❌ window.financeApp is not defined');
         }
     }
-
 }
 
 /**
