@@ -2483,7 +2483,7 @@ class FinanceApp {
                         <!-- Fecha -->
                         <div class="form-group">
                             <label for="editTransactionDate">Fecha *</label>
-                            <input type="date" id="editTransactionDate" value="${transaction.date.split('T')[0]}" required>
+                            <input type="date" id="editTransactionDate" value="${transaction.date.toISOString().split('T')[0]}" required>
                         </div>
 
                         <!-- Moneda -->
