@@ -1861,9 +1861,12 @@ class FinanceApp {
 
     /**
      * Maneja el envío del formulario de categorías
+     * Ahora guarda en la base de datos MongoDB
      */
-    handleCategorySubmit(event) {
+    async handleCategorySubmit(event) {
         event.preventDefault();
+
+        console.log('🔍 handleCategorySubmit called - Stack trace:', new Error().stack);
 
         try {
             const type = document.getElementById('categoryType').value;
@@ -1875,34 +1878,68 @@ class FinanceApp {
                 throw new Error('Tipo y nombre son requeridos');
             }
 
-            // Crear nueva categoría
-            const newCategory = {
-                id: this.generateId(),
+            // Preparar datos para enviar al backend
+            const categoryData = {
                 name: name.trim(),
                 type: type,
                 color: color,
-                description: description?.trim(),
-                createdAt: new Date()
+                description: description?.trim() || ''
             };
 
-            // Agregar a la lista
-            this.categories.push(newCategory);
+            // Mostrar loading
+            this.showNotification('Guardando categoría...', 'info');
 
-            // Guardar en localStorage
-            this.saveDataToStorage();
+            // Hacer llamada al backend API
+            const response = await fetch('/api/categories', {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify(categoryData)
+            });
 
-            // Re-renderizar categorías
-            this.renderCategories();
+            const result = await response.json();
 
-            // Limpiar formulario
-            const form = event.target;
-            form.reset();
-            document.getElementById('categoryColor').value = '#3498db';
+            if (!response.ok) {
+                throw new Error(result.message || 'Error al crear la categoría');
+            }
 
-            this.showNotification(`Categoría "${name}" agregada correctamente`, 'success');
+            if (result.success) {
+                // Agregar la categoría guardada al array local
+                const savedCategory = {
+                    id: result.data.category.id,
+                    name: result.data.category.name,
+                    type: result.data.category.type,
+                    color: result.data.category.color,
+                    description: result.data.category.description,
+                    isCustom: result.data.category.isCustom,
+                    usageStats: result.data.category.usageStats,
+                    createdAt: result.data.category.createdAt
+                };
+
+                // Agregar a la lista local
+                this.categories.push(savedCategory);
+
+                // Guardar en localStorage (para mantener sincronización)
+                this.saveDataToStorage();
+
+                // Re-renderizar categorías
+                this.renderCategories();
+
+                // Limpiar formulario
+                const form = event.target;
+                form.reset();
+                document.getElementById('categoryColor').value = '#3498db';
+
+                // Mostrar notificación de éxito
+                this.showNotification(`Categoría "${name}" agregada correctamente`, 'success');
+
+                console.log('✅ Categoría creada exitosamente desde formulario:', savedCategory);
+            } else {
+                throw new Error(result.message || 'Error desconocido al crear la categoría');
+            }
 
         } catch (error) {
-            this.showNotification(error.message, 'error');
+            console.error('❌ Error al agregar la categoría:', error);
+            this.showNotification(error.message || 'Error al agregar la categoría', 'error');
         }
     }
 
