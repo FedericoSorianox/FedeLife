@@ -2565,10 +2565,11 @@ class FinanceApp {
      * @returns {string} HTML de opciones
      */
     generateCategoryOptions(transactionType, currentCategory) {
-        const categories = this.categories.filter(cat => cat.type === transactionType);
-        return categories.map(category => `
+        // Mostrar todas las categorías disponibles, no solo del tipo actual
+        // Esto permite cambiar el tipo de transacción y elegir cualquier categoría
+        return this.categories.map(category => `
             <option value="${category.name}" ${category.name === currentCategory ? 'selected' : ''}>
-                ${category.name}
+                ${category.name} (${category.type === 'income' ? 'Ingreso' : 'Gasto'})
             </option>
         `).join('');
     }
@@ -2588,15 +2589,16 @@ class FinanceApp {
             });
         }
 
-        // Actualizar categorías cuando cambia el tipo
+        // Actualizar categorías cuando cambia el tipo (ya no es necesario filtrar)
         if (typeSelect && categorySelect) {
             typeSelect.addEventListener('change', () => {
-                const selectedType = typeSelect.value;
                 const currentCategory = categorySelect.value;
-                categorySelect.innerHTML = `
-                    <option value="">Seleccionar categoría</option>
-                    ${this.generateCategoryOptions(selectedType, currentCategory)}
-                `;
+                // Mantener las mismas opciones ya que ahora mostramos todas las categorías
+                // Solo actualizar la selección actual
+                const options = categorySelect.querySelectorAll('option');
+                options.forEach(option => {
+                    option.selected = option.value === currentCategory;
+                });
             });
         }
     }
@@ -4151,23 +4153,13 @@ class FinanceApp {
     }
 
     /**
-     * Genera las opciones de categorías para el dropdown
+     * Genera las opciones de categorías para el dropdown (usado en procesamiento de PDFs)
+     * Ahora usa las categorías dinámicas disponibles
      */
     generateCategoryOptions() {
-        const categories = [
-            'Alimentación',
-            'Transporte',
-            'Entretenimiento',
-            'Salud',
-            'Educación',
-            'Vivienda',
-            'Ropa',
-            'Servicios',
-            'Otros'
-        ];
-
-        return categories.map(category =>
-            `<option value="${category}">${category}</option>`
+        // Usar todas las categorías disponibles en lugar de lista hardcodeada
+        return this.categories.map(category =>
+            `<option value="${category.name}">${category.name}</option>`
         ).join('');
     }
 
