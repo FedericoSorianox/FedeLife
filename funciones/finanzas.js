@@ -439,10 +439,88 @@ class FinanceApp {
             }
         };
 
+        // Función de debug avanzada para comparar con curl
+        window.debugCategoryRequest = async function() {
+            console.log('🔍 Debug avanzado de petición de categoría...');
+
+            // Obtener datos actuales del formulario si existe
+            const nameInput = document.getElementById('categoryName');
+            const typeInput = document.getElementById('categoryType');
+            const colorInput = document.getElementById('categoryColor');
+            const descInput = document.getElementById('categoryDescription');
+
+            const currentData = {
+                name: nameInput ? nameInput.value : 'wit',
+                type: typeInput ? typeInput.value : 'expense',
+                color: colorInput ? colorInput.value : '#33db74',
+                description: descInput ? descInput.value : ''
+            };
+
+            console.log('📝 Datos actuales del formulario:', currentData);
+
+            const authHeaders = window.financeApp.getAuthHeaders();
+            console.log('🔑 Token completo (primeros 50 chars):', authHeaders['Authorization'] ? authHeaders['Authorization'].substring(0, 50) + '...' : 'NONE');
+
+            // Crear la petición manualmente como hace el formulario
+            const requestOptions = {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...authHeaders
+                },
+                body: JSON.stringify(currentData)
+            };
+
+            console.log('🌐 Request options:', {
+                url: `${FINANCE_API_CONFIG.baseUrl}/categories`,
+                method: requestOptions.method,
+                headers: requestOptions.headers,
+                body: requestOptions.body
+            });
+
+            try {
+                console.log('🚀 Enviando petición...');
+                const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/categories`, requestOptions);
+
+                console.log('📡 Respuesta completa:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    url: response.url
+                });
+
+                const result = await response.json();
+                console.log('📄 Cuerpo de respuesta:', result);
+
+                if (response.ok && result.success) {
+                    console.log('✅ Petición exitosa');
+                    return { success: true, result };
+                } else {
+                    console.error('❌ Petición fallida');
+                    console.error('🔍 Comparación con curl exitoso:');
+                    console.log('   - El servidor funciona con curl usando los mismos datos');
+                    console.log('   - El problema podría estar en:');
+                    console.log('     1. Token diferente al que funciona en curl');
+                    console.log('     2. Headers adicionales del navegador');
+                    console.log('     3. CORS o políticas de seguridad');
+                    console.log('     4. Datos enviados ligeramente diferentes');
+                    return { success: false, result, debug: 'Ver logs arriba para comparación con curl' };
+                }
+            } catch (error) {
+                console.error('💥 Error de red:', error);
+                return { success: false, error: error.message };
+            }
+        };
+
         // Agregar función al objeto global para debugging
         window.debugCategoryCreation = function() {
-            console.log('🔧 Función de debug disponible: Ejecuta testCreateCategory() en la consola para probar la creación de categorías');
-            console.log('📝 Ejemplo: testCreateCategory().then(result => console.log(result))');
+            console.log('🔧 Funciones de debug disponibles:');
+            console.log('   • testCreateCategory() - Prueba básica de creación');
+            console.log('   • debugCategoryRequest() - Debug avanzado (MÁS ÚTIL)');
+            console.log('📝 Ejemplos:');
+            console.log('   testCreateCategory().then(result => console.log(result))');
+            console.log('   debugCategoryRequest().then(result => console.log(result))');
+            console.log('🔍 IMPORTANTE: Usa debugCategoryRequest() para comparar con curl');
         };
 
         // Ejecutar debug automáticamente
