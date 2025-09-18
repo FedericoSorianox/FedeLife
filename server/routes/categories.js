@@ -111,7 +111,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
         // Obtener categorías personalizadas guardadas en la base de datos
         const customCategories = await Category.find({
-            userId: req.userId,
+            userId: req.user._id,
             isCustom: true
         }).select('name type color description usageStats createdAt').lean();
 
@@ -318,7 +318,7 @@ router.post('/', authenticateToken, validateCategory, async (req, res) => {
 
         // Crear nueva categoría personalizada y guardarla en la base de datos
         const newCategory = new Category({
-            userId: req.userId,
+            userId: req.user._id,
             name: name.trim(),
             type,
             color,

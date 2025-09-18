@@ -273,7 +273,14 @@ class FinanceApp {
      */
     async loadCategoriesFromBackend() {
         try {
-            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.categories}`);
+            // Obtener headers de autenticación
+            const authHeaders = this.getAuthHeaders();
+
+            // Usar endpoint con autenticación para obtener categorías del usuario
+            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/categories`, {
+                method: 'GET',
+                headers: authHeaders
+            });
 
             if (response.ok) {
                 const result = await response.json();
