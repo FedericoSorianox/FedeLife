@@ -2850,6 +2850,10 @@ class FinanceApp {
         const formData = new FormData(event.target);
         const transactionId = formData.get('editTransactionId');
 
+        console.log('🔍 Transaction ID obtenido del formulario:', transactionId);
+        console.log('🔍 Tipo del transactionId:', typeof transactionId);
+        console.log('🔍 Longitud del transactionId:', transactionId ? transactionId.length : 'null');
+
         const updatedData = {
             type: formData.get('editTransactionType'),
             amount: parseFloat(formData.get('editTransactionAmount')),
@@ -2896,7 +2900,11 @@ class FinanceApp {
         try {
             // Actualizar la transacción en el servidor
             const authHeaders = this.getAuthHeaders();
-            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/transactions/${transactionId}`, {
+            const url = `${FINANCE_API_CONFIG.baseUrl}/api/transactions/${transactionId}`;
+            console.log('🔗 URL de actualización:', url);
+            console.log('🔗 Transaction ID en URL:', transactionId);
+
+            const response = await fetch(url, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
