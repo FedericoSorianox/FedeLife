@@ -1770,6 +1770,23 @@ Por favor, proporciona un análisis detallado y profesional basado en lo que obs
 });
 
 /**
+ * GET /api/public/ai/debug-auth
+ * Endpoint de debug para verificar estado de autenticación
+ */
+router.get('/debug-auth', (req, res) => {
+    res.json({
+        success: true,
+        auth: {
+            headers: req.headers.authorization ? 'Presente' : 'Ausente',
+            user: req.user ? 'Presente' : 'Ausente',
+            userId: req.userId || 'No disponible',
+            token: req.headers.authorization ? 'Token presente en headers' : 'No hay token en headers'
+        },
+        timestamp: new Date().toISOString()
+    });
+});
+
+/**
  * GET /api/public/ai/check-vision-support
  * Verifica si la API key actual soporta GPT-4 Vision (versión pública)
  */

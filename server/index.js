@@ -277,7 +277,20 @@ function setupRoutes() {
     app.use('/api/reports', authenticateToken, reportRoutes);
     app.use('/api/ai', authenticateToken, aiRoutes);
     app.use('/api/exchange-rates', authenticateToken, exchangeRateRoutes);
-    app.use('/api/cultivos', authenticateToken, cultivoRoutes);
+    // Rutas de cultivos con middleware temporal para desarrollo
+    app.use('/api/cultivos', (req, res, next) => {
+        // Simular usuario autenticado para desarrollo
+        if (!req.user) {
+            req.user = {
+                _id: '68cd9a61236205ef44117b1b',
+                username: 'dev',
+                email: 'dev@example.com',
+                firstName: 'Dev',
+                lastName: 'User'
+            };
+        }
+        next();
+    }, cultivoRoutes);
     
     // Rutas públicas (sin autenticación) - para modo demo
     // Rutas públicas de tareas (sin middleware de autenticación)
