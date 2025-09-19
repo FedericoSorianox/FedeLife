@@ -1424,7 +1424,7 @@ class FinanceApp {
 
             // Intentar guardar en el backend
             try {
-                const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}`, {
+                const response = await this.authenticatedFetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1620,6 +1620,239 @@ class FinanceApp {
         }
     }
 
+    // ==================== SISTEMA DE REFRESH AUTOMÁTICO DE TOKENS ====================
+
+    /**
+     * Estado del sistema de refresh para evitar loops infinitos
+     */
+    #isRefreshing = false;
+    #refreshPromise = null;
+
+    /**
+     * Cola de solicitudes pendientes mientras se refresca el token
+     */
+    #pendingRequests = [];
+
+    /**
+     * Refresca el token JWT automáticamente
+     * @returns {Promise<string|null>} Nuevo token o null si falla
+     */
+    async refreshToken() {
+        // Si ya hay un refresh en progreso, esperar a que termine
+        if (this.#refreshPromise) {
+            return this.#refreshPromise;
+        }
+
+        // Marcar que estamos refrescando
+        this.#isRefreshing = true;
+
+        // Crear la promesa de refresh
+        this.#refreshPromise = (async () => {
+            try {
+                console.log('🔄 Refrescando token JWT...');
+
+                const headers = this.getAuthHeaders();
+                if (!headers['Authorization']) {
+                    throw new Error('No hay token disponible para refrescar');
+                }
+
+                const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/auth/refresh`, {
+                    method: 'POST',
+                    headers: headers
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Error al refrescar token');
+                }
+
+                // Guardar el nuevo token
+                const authData = JSON.parse(localStorage.getItem('auth_data') || '{}');
+                authData.token = result.data.token;
+                localStorage.setItem('auth_data', JSON.stringify(authData));
+
+                console.log('✅ Token refrescado exitosamente');
+                return result.data.token;
+
+            } catch (error) {
+                console.error('❌ Error refrescando token:', error);
+
+                // Si el refresh falla, limpiar datos de autenticación
+                localStorage.removeItem('auth_data');
+
+                // Mostrar mensaje al usuario
+                this.showNotification('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'error');
+
+                // Redirigir al login si es posible
+                if (window.location.pathname !== '/login' && window.location.pathname !== '/login.html') {
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                }
+
+                return null;
+            } finally {
+                this.#isRefreshing = false;
+                this.#refreshPromise = null;
+            }
+        })();
+
+        return this.#refreshPromise;
+    }
+
+    /**
+     * Fetch con manejo automático de refresh de tokens
+     * @param {string} url - URL de la solicitud
+     * @param {object} options - Opciones de fetch
+     * @param {boolean} retryOnAuthError - Si debe reintentar automáticamente en error 401
+     * @returns {Promise<Response>}
+     */
+    async authenticatedFetch(url, options = {}, retryOnAuthError = true) {
+        try {
+            // Agregar headers de autenticación si no están presentes
+            const headers = {
+                ...this.getAuthHeaders(),
+                ...options.headers
+            };
+
+            // Hacer la solicitud inicial
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+
+            // Si no es error de autenticación, devolver respuesta normal
+            if (response.status !== 401 || !retryOnAuthError) {
+                return response;
+            }
+
+            console.log('🔐 Error 401 detectado, intentando refresh automático...');
+
+            // Intentar refrescar el token
+            const newToken = await this.refreshToken();
+
+            if (!newToken) {
+                // Refresh falló, devolver la respuesta original de error
+                return response;
+            }
+
+            // Reintentar la solicitud con el nuevo token
+            console.log('🔄 Reintentando solicitud con token nuevo...');
+
+            const newHeaders = {
+                ...headers,
+                'Authorization': `Bearer ${newToken}`
+            };
+
+            const retryResponse = await fetch(url, {
+                ...options,
+                headers: newHeaders
+            });
+
+            console.log('✅ Solicitud reintentada exitosamente');
+            return retryResponse;
+
+        } catch (error) {
+            console.error('❌ Error en authenticatedFetch:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Procesa respuesta de API con manejo automático de errores de autenticación
+     * @param {Response} response - Respuesta de fetch
+     * @param {boolean} autoRetry - Si debe manejar automáticamente errores 401
+     * @returns {Promise<object>} Datos parseados de la respuesta
+     */
+    async processApiResponse(response, autoRetry = true) {
+        const result = await response.json();
+
+        // Si hay error de autenticación y está habilitado el auto-retry
+        if (response.status === 401 && autoRetry && !this.#isRefreshing) {
+            console.log('🔐 Error 401 en respuesta, intentando refresh...');
+
+            // Intentar refrescar token
+            const newToken = await this.refreshToken();
+
+            if (newToken) {
+                // Si el refresh fue exitoso, devolver los datos originales
+                // La próxima solicitud debería funcionar con el nuevo token
+                console.log('✅ Token refrescado, la próxima solicitud debería funcionar');
+                return result; // Devolver los datos originales por ahora
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Verifica si el token está próximo a expirar y lo refresca preventivamente
+     * @param {number} minutesBeforeExpiry - Minutos antes de la expiración para refrescar (default: 5)
+     * @returns {Promise<boolean>} true si el token es válido o fue refrescado
+     */
+    async ensureValidToken(minutesBeforeExpiry = 5) {
+        try {
+            const authData = localStorage.getItem('auth_data');
+            if (!authData) {
+                return false;
+            }
+
+            const parsed = JSON.parse(authData);
+            if (!parsed.token) {
+                return false;
+            }
+
+            // Intentar decodificar el token para verificar expiración
+            const tokenParts = parsed.token.split('.');
+            if (tokenParts.length !== 3) {
+                return false;
+            }
+
+            const payload = JSON.parse(atob(tokenParts[1]));
+            const currentTime = Math.floor(Date.now() / 1000);
+            const timeToExpiry = payload.exp - currentTime;
+
+            // Si el token expira en menos de X minutos, refrescarlo
+            if (timeToExpiry < (minutesBeforeExpiry * 60)) {
+                console.log(`⏰ Token expira en ${Math.floor(timeToExpiry / 60)} minutos, refrescando preventivamente...`);
+                const newToken = await this.refreshToken();
+                return !!newToken;
+            }
+
+            return true;
+        } catch (error) {
+            console.error('❌ Error verificando token:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Método helper para hacer llamadas API con manejo automático de autenticación
+     * @param {string} endpoint - Endpoint de la API (sin baseUrl)
+     * @param {object} options - Opciones de fetch
+     * @returns {Promise<object>} Resultado de la API
+     */
+    async apiCall(endpoint, options = {}) {
+        try {
+            // Asegurar que el token esté válido antes de hacer la llamada
+            await this.ensureValidToken();
+
+            const url = `${FINANCE_API_CONFIG.baseUrl}${endpoint}`;
+            const response = await this.authenticatedFetch(url, options);
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || `Error HTTP ${response.status}`);
+            }
+
+            return result;
+        } catch (error) {
+            console.error('❌ Error en apiCall:', error);
+            throw error;
+        }
+    }
+
     /**
      * Obtiene los headers con autenticación para las peticiones API
      */
@@ -1654,9 +1887,8 @@ class FinanceApp {
             if (headers['Authorization']) {
             }
 
-            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/goals`, {
-                method: 'GET',
-                headers: headers
+            const response = await this.authenticatedFetch(`${FINANCE_API_CONFIG.baseUrl}/goals`, {
+                method: 'GET'
             });
             const result = await response.json();
 
@@ -2904,11 +3136,10 @@ class FinanceApp {
             console.log('🔗 URL de actualización:', url);
             console.log('🔗 Transaction ID en URL:', transactionId);
 
-            const response = await fetch(url, {
+            const response = await this.authenticatedFetch(url, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    ...authHeaders
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(updatedData)
             });
@@ -6539,7 +6770,7 @@ Responde como un economista profesional especializado en la mejor administració
 
         try {
             // Intentar eliminar del backend primero usando la API DELETE
-            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}/${transactionId}`, {
+            const response = await this.authenticatedFetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}/${transactionId}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json'
