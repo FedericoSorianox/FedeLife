@@ -40,28 +40,54 @@ const DEFAULT_CATEGORIES = [
  */
 const validateCategory = (req, res, next) => {
     const { name, type, color, description } = req.body;
-    
+
     const errors = [];
-    
+
     if (!name || name.trim().length === 0) {
         errors.push('El nombre de la categoría es requerido');
     }
-    
+
     if (!type || !['income', 'expense'].includes(type)) {
         errors.push('El tipo debe ser "income" o "expense"');
     }
-    
+
     if (!color || !/^#[0-9A-F]{6}$/i.test(color)) {
         errors.push('El color debe ser un código hexadecimal válido (ej: #FF0000)');
     }
-    
+
     if (errors.length > 0) {
         return res.status(400).json({
             error: 'Datos de categoría inválidos',
             details: errors
         });
     }
-    
+
+    next();
+};
+
+/**
+ * Valida datos para actualizar una categoría
+ */
+const validateCategoryUpdate = (req, res, next) => {
+    const { newName, color, description } = req.body;
+
+    const errors = [];
+
+    if (!newName || newName.trim().length === 0) {
+        errors.push('El nuevo nombre de la categoría es requerido');
+    }
+
+    if (color && !/^#[0-9A-F]{6}$/i.test(color)) {
+        errors.push('El color debe ser un código hexadecimal válido (ej: #FF0000)');
+    }
+
+    if (errors.length > 0) {
+        return res.status(400).json({
+            error: 'Datos de actualización inválidos',
+            details: errors
+        });
+    }
+
     next();
 };
 
@@ -366,7 +392,7 @@ router.post('/', authenticateToken, validateCategory, async (req, res) => {
  * PUT /api/categories/:name
  * Actualiza una categoría personalizada
  */
-router.put('/:name', authenticateToken, validateCategory, async (req, res) => {
+router.put('/:name', authenticateToken, validateCategoryUpdate, async (req, res) => {
     try {
         const { name } = req.params;
         const { newName, color, description } = req.body;

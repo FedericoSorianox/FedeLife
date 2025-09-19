@@ -3419,7 +3419,7 @@ class FinanceApp {
      * Actualiza una categoría existente
      * @param {string} categoryId - ID de la categoría
      */
-    updateCategory(categoryId) {
+    async updateCategory(categoryId) {
         try {
             const name = document.getElementById('editCategoryName').value.trim();
             const type = document.getElementById('editCategoryType').value;
@@ -3430,38 +3430,84 @@ class FinanceApp {
                 return;
             }
 
+            // Obtener la categoría actual
+            const currentCategory = this.categories.find(cat => cat.id === categoryId);
+            if (!currentCategory) {
+                this.showNotification('Categoría no encontrada', 'error');
+                return;
+            }
+
             // Verificar que no exista otra categoría con el mismo nombre
-            const existingCategory = this.categories.find(cat => 
+            const existingCategory = this.categories.find(cat =>
                 cat.id !== categoryId && cat.name.toLowerCase() === name.toLowerCase()
             );
-            
+
             if (existingCategory) {
                 this.showNotification('Ya existe otra categoría con ese nombre', 'error');
                 return;
             }
 
-            // Actualizar categoría
-            const categoryIndex = this.categories.findIndex(cat => cat.id === categoryId);
-            if (categoryIndex !== -1) {
-                this.categories[categoryIndex] = {
-                    ...this.categories[categoryIndex],
-                    name: name,
-                    type: type,
+            // Mostrar loading
+            this.showNotification('Actualizando categoría...', 'info');
+
+            try {
+                // Hacer petición al servidor para actualizar la categoría
+                const authHeaders = this.getAuthHeaders();
+                const updateData = {
+                    newName: name,
                     color: color,
-                    updatedAt: new Date()
+                    description: currentCategory.description || ''
                 };
 
-                // Guardar en localStorage
-                this.saveDataToStorage();
+                const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/categories/${encodeURIComponent(currentCategory.name)}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...authHeaders
+                    },
+                    body: JSON.stringify(updateData)
+                });
 
-                // Re-renderizar categorías
-                this.renderCategories();
+                const result = await response.json();
 
-                // Mostrar notificación
-                this.showNotification(`Categoría "${name}" actualizada correctamente`, 'success');
+                if (response.ok && result.success) {
+                    // Actualizar categoría en memoria
+                    const categoryIndex = this.categories.findIndex(cat => cat.id === categoryId);
+                    if (categoryIndex !== -1) {
+                        this.categories[categoryIndex] = {
+                            ...this.categories[categoryIndex],
+                            name: name,
+                            type: type,
+                            color: color,
+                            updatedAt: new Date()
+                        };
 
+                        // Actualizar transacciones que usan esta categoría
+                        this.transactions.forEach(transaction => {
+                            if (transaction.category === currentCategory.name) {
+                                transaction.category = name;
+                            }
+                        });
+
+                        // Guardar en localStorage
+                        this.saveDataToStorage();
+
+                        // Re-renderizar categorías y transacciones
+                        this.renderCategories();
+                        this.renderTransactions();
+
+                        // Mostrar notificación de éxito
+                        this.showNotification(`Categoría "${name}" actualizada correctamente`, 'success');
+                    }
+                } else {
+                    throw new Error(result.message || 'Error al actualizar la categoría');
+                }
+            } catch (apiError) {
+                console.error('Error updating category via API:', apiError);
+                this.showNotification('Error al actualizar la categoría en el servidor', 'error');
             }
         } catch (error) {
+            console.error('Error updating category:', error);
             this.showNotification('Error al actualizar la categoría', 'error');
         }
     }
