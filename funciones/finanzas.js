@@ -3130,13 +3130,12 @@ class FinanceApp {
         }
 
         try {
-            // Actualizar la transacción en el servidor
-            const authHeaders = this.getAuthHeaders();
-            const url = `${FINANCE_API_CONFIG.baseUrl}/transactions/${transactionId}`;
+            // Actualizar la transacción en el servidor usando endpoint público con ID
+            const url = `${FINANCE_API_CONFIG.baseUrl}/public/transactions/${transactionId}`;
             console.log('🔗 URL de actualización:', url);
             console.log('🔗 Transaction ID en URL:', transactionId);
 
-            const response = await this.authenticatedFetch(url, {
+            const response = await fetch(url, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'

@@ -858,6 +858,102 @@ function setupRoutes() {
         }
     });
 
+    // Endpoint PUT para actualizar una transacción pública específica por ID
+    app.put('/api/public/transactions/:id', async (req, res) => {
+        try {
+            // Verificar conexión a base de datos
+            if (mongoose.connection.readyState !== 1) {
+                return res.status(503).json({
+                    success: false,
+                    error: 'Servicio no disponible',
+                    message: 'La base de datos no está disponible temporalmente'
+                });
+            }
+
+            const { id } = req.params;
+            const updateData = req.body;
+
+            console.log(`🔄 PUT /api/public/transactions/${id} - Actualizando transacción`);
+            console.log('📋 Datos de actualización:', JSON.stringify(updateData, null, 2));
+
+            // Buscar transacción existente (usuario público)
+            const transaction = await Transaction.findOne({ _id: id, userId: null });
+
+            if (!transaction) {
+                console.log('❌ Transacción no encontrada:', id);
+                return res.status(404).json({
+                    success: false,
+                    error: 'Transacción no encontrada',
+                    message: 'La transacción especificada no existe'
+                });
+            }
+
+            // Actualizar campos
+            if (updateData.type) transaction.type = updateData.type;
+            if (updateData.amount !== undefined) transaction.amount = parseFloat(updateData.amount);
+            if (updateData.description) transaction.description = updateData.description.trim();
+            if (updateData.category) transaction.category = updateData.category.trim();
+            if (updateData.date) transaction.date = new Date(updateData.date);
+            if (updateData.currency) transaction.currency = updateData.currency;
+            if (updateData.tags) transaction.tags = updateData.tags.filter(tag => tag && tag.trim());
+            if (updateData.notes !== undefined) transaction.notes = updateData.notes?.trim();
+
+            // Mantener valores por defecto para transacciones públicas
+            transaction.convertedAmount = transaction.amount;
+            transaction.userBaseCurrency = transaction.currency;
+            transaction.exchangeRate = 1;
+            transaction.exchangeRateDate = new Date();
+
+            await transaction.save();
+
+            console.log(`✅ Transacción pública actualizada: ${transaction.type} - $${transaction.amount} - ${transaction.description}`);
+
+            res.json({
+                success: true,
+                message: 'Transacción actualizada exitosamente',
+                data: {
+                    transaction: {
+                        ...transaction.toObject(),
+                        id: transaction._id.toString(),
+                        formattedAmount: new Intl.NumberFormat('es-UY', {
+                            style: 'currency',
+                            currency: transaction.currency,
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 2
+                        }).format(transaction.amount),
+                        typeLabel: transaction.type === 'income' ? 'Ingreso' : 'Gasto'
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error actualizando transacción pública:', error);
+
+            if (error.name === 'CastError') {
+                return res.status(400).json({
+                    success: false,
+                    error: 'ID inválido',
+                    message: 'El ID de la transacción no es válido'
+                });
+            }
+
+            if (error.name === 'ValidationError') {
+                const errors = Object.values(error.errors).map(err => err.message);
+                return res.status(400).json({
+                    success: false,
+                    error: 'Error de validación',
+                    details: errors
+                });
+            }
+
+            res.status(500).json({
+                success: false,
+                error: 'Error interno del servidor',
+                message: 'No se pudo actualizar la transacción'
+            });
+        }
+    });
+
     // Endpoint de prueba para verificar que PUT funciona
     app.put('/api/test', (req, res) => {
         console.log('🧪 PUT /api/test - Test endpoint called');
