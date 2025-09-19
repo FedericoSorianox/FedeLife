@@ -2900,7 +2900,7 @@ class FinanceApp {
         try {
             // Actualizar la transacción en el servidor
             const authHeaders = this.getAuthHeaders();
-            const url = `${FINANCE_API_CONFIG.baseUrl}/api/transactions/${transactionId}`;
+            const url = `${FINANCE_API_CONFIG.baseUrl}/transactions/${transactionId}`;
             console.log('🔗 URL de actualización:', url);
             console.log('🔗 Transaction ID en URL:', transactionId);
 
