@@ -1634,6 +1634,296 @@ router.get('/config/openai-key', authenticateToken, async (req, res) => {
     }
 });
 
+/**
+ * POST /api/public/ai/analyze-image
+ * Analiza una imagen usando GPT-4 Vision (versión pública)
+ */
+router.post('/analyze-image', async (req, res) => {
+    try {
+        const { imageData, description, cultivoId } = req.body;
+
+        if (!imageData) {
+            return res.status(400).json({
+                error: 'Imagen requerida',
+                message: 'Debes proporcionar los datos de la imagen para analizar'
+            });
+        }
+
+        console.log('🖼️ Analizando imagen con GPT-4 Vision (modo público)');
+
+        // Verificar que OpenAI esté funcionando
+        const serverApiKey = process.env.OPENAI_API_KEY;
+        if (!serverApiKey) {
+            return res.status(404).json({
+                error: 'API Key requerida',
+                message: 'Se requiere una API Key válida de OpenAI para análisis de imágenes'
+            });
+        }
+
+        // Procesar la imagen
+        let processedImageData = imageData;
+        if (!imageData.startsWith('data:image/')) {
+            processedImageData = `data:image/jpeg;base64,${imageData}`;
+        }
+
+        // Crear prompt del sistema para análisis de imágenes
+        const systemPrompt = `Eres Bruce Bugbee, profesor profesional y especialista en cannabis medicinal de la Universidad de Utah.
+Tiene más de 25 años de experiencia en cultivo medicinal, investigación científica y educación sobre cannabis terapéutico.
+
+INSTRUCCIONES ESPECÍFICAS PARA ANÁLISIS VISUAL:
+- Analiza detalladamente el estado visual de las plantas de cannabis
+- Identifica posibles problemas: deficiencias nutricionales, plagas, enfermedades, estrés
+- Evalúa el estado de desarrollo y madurez de las plantas
+- Examina el color, textura y forma de las hojas
+- Verifica la estructura general de la planta y ramificación
+- Identifica signos de sobre-riego, bajo-riego, o problemas ambientales
+- Proporciona diagnósticos específicos basados en evidencia visual
+- Incluye recomendaciones de tratamiento orgánico y preventivas
+- Sé específico sobre qué aspectos visuales te indican cada conclusión
+- Mantén un tono profesional pero accesible y educativo
+
+IMPORTANTE: Base tu análisis en evidencia visual científica.`;
+
+        // Crear el mensaje del usuario con la imagen
+        const userMessage = {
+            role: 'user',
+            content: [
+                {
+                    type: 'text',
+                    text: `Analiza esta imagen de mi cultivo de cannabis medicinal:
+
+DESCRIPCIÓN PROPORCIONADA: ${description || 'Imagen del cultivo actual para análisis visual'}
+
+Por favor, proporciona un análisis detallado y profesional basado en lo que observas en la imagen.`
+                },
+                {
+                    type: 'image_url',
+                    image_url: {
+                        url: processedImageData,
+                        detail: 'high'
+                    }
+                }
+            ]
+        };
+
+        console.log('🚀 Enviando imagen a GPT-4 Vision...');
+
+        // Preparar solicitud a OpenAI con GPT-4 Vision
+        const response = await fetch(`${process.env.OPENAI_API_BASE_URL || 'https://api.openai.com/v1'}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${serverApiKey}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o',
+                messages: [
+                    {
+                        role: 'system',
+                        content: systemPrompt
+                    },
+                    userMessage
+                ],
+                max_tokens: 1500,
+                temperature: 0.3
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('❌ Error en GPT-4 Vision API:', response.status, errorData);
+
+            return res.status(response.status).json({
+                success: false,
+                message: 'Error procesando la imagen con GPT-4 Vision',
+                error: errorData.error?.message || 'Error de API',
+                details: `Código de error: ${response.status}`
+            });
+        }
+
+        const data = await response.json();
+        const aiResponse = data.choices[0].message.content;
+
+        console.log('✅ Análisis visual completado exitosamente');
+
+        res.json({
+            success: true,
+            message: aiResponse,
+            metadata: {
+                imageAnalysis: true,
+                visualAnalysisAvailable: true,
+                modelUsed: 'gpt-4o',
+                timestamp: new Date().toISOString(),
+                tokensUsed: data.usage?.total_tokens || 'N/A'
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error analizando imagen:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor',
+            error: error.message,
+            details: 'Hubo un problema técnico procesando la imagen'
+        });
+    }
+});
+
+/**
+ * GET /api/public/ai/check-vision-support
+ * Verifica si la API key actual soporta GPT-4 Vision (versión pública)
+ */
+router.get('/check-vision-support', async (req, res) => {
+    try {
+        console.log('🔍 Verificando soporte de GPT-4 Vision (modo público)...');
+
+        // Obtener API key del servidor
+        const serverApiKey = process.env.OPENAI_API_KEY;
+
+        if (!serverApiKey) {
+            return res.status(404).json({
+                success: false,
+                message: 'API Key de OpenAI no configurada',
+                visionSupport: false,
+                details: 'No hay API key configurada en el servidor'
+            });
+        }
+
+        // Verificar formato de la API key
+        if (!serverApiKey.startsWith('sk-')) {
+            return res.status(400).json({
+                success: false,
+                message: 'API Key tiene formato inválido',
+                visionSupport: false,
+                details: 'La API key debe comenzar con "sk-"'
+            });
+        }
+
+        console.log('🔑 Verificando modelos disponibles con la API key...');
+
+        // Intentar obtener la lista de modelos disponibles
+        const modelsResponse = await fetch('https://api.openai.com/v1/models', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${serverApiKey}`
+            }
+        });
+
+        if (!modelsResponse.ok) {
+            const errorData = await modelsResponse.json().catch(() => ({}));
+            console.error('❌ Error verificando modelos:', modelsResponse.status, errorData);
+
+            return res.status(modelsResponse.status).json({
+                success: false,
+                message: 'Error verificando modelos disponibles',
+                visionSupport: false,
+                error: errorData.error?.message || 'Error de API',
+                details: `Código de error: ${modelsResponse.status}`
+            });
+        }
+
+        const modelsData = await modelsResponse.json();
+        const availableModels = modelsData.data.map(model => model.id);
+
+        console.log('📋 Modelos disponibles:', availableModels);
+
+        // Modelos que soportan visión
+        const visionModels = ['gpt-4o', 'gpt-4-vision-preview', 'gpt-4-turbo'];
+
+        // Verificar si tiene acceso a modelos de visión
+        const hasVisionSupport = visionModels.some(model => availableModels.includes(model));
+
+        // Información detallada sobre el soporte
+        const visionSupportDetails = {
+            gpt4o: availableModels.includes('gpt-4o'),
+            gpt4VisionPreview: availableModels.includes('gpt-4-vision-preview'),
+            gpt4Turbo: availableModels.includes('gpt-4-turbo')
+        };
+
+        // Verificar límites de uso si es posible
+        let usageLimits = null;
+        try {
+            // Hacer una petición de prueba con GPT-4o para verificar límites
+            if (hasVisionSupport) {
+                const testResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${serverApiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o',
+                        messages: [{ role: 'user', content: 'Test' }],
+                        max_tokens: 10
+                    })
+                });
+
+                if (testResponse.status === 429) {
+                    // Rate limit alcanzado
+                    const retryAfter = testResponse.headers.get('retry-after');
+                    usageLimits = {
+                        rateLimited: true,
+                        retryAfter: retryAfter,
+                        message: 'API key tiene límites de uso activos'
+                    };
+                } else if (testResponse.ok) {
+                    usageLimits = {
+                        rateLimited: false,
+                        message: 'API key funcional y sin límites activos'
+                    };
+                }
+            }
+        } catch (testError) {
+            console.warn('⚠️ No se pudo verificar límites de uso:', testError.message);
+        }
+
+        const response = {
+            success: true,
+            visionSupport: hasVisionSupport,
+            apiKeyConfigured: true,
+            availableModels: visionModels.filter(model => availableModels.includes(model)),
+            allModels: availableModels,
+            usageLimits: usageLimits,
+            details: hasVisionSupport
+                ? '✅ Tu API key soporta análisis de imágenes con GPT-4 Vision'
+                : '❌ Tu API key NO soporta análisis de imágenes con GPT-4 Vision'
+        };
+
+        // Agregar recomendaciones si no tiene soporte
+        if (!hasVisionSupport) {
+            response.recommendations = [
+                'Actualiza tu plan de OpenAI a uno que incluya GPT-4 Vision',
+                'Los planes "Plus" o superiores incluyen acceso a GPT-4 Vision',
+                'Puedes verificar tu plan actual en https://platform.openai.com/account/billing',
+                'Mientras tanto, puedes usar el análisis basado en descripción de texto'
+            ];
+
+            // Verificar si tiene acceso a GPT-4 sin visión
+            const hasGpt4Access = availableModels.some(model =>
+                model.includes('gpt-4') && !visionModels.includes(model)
+            );
+
+            if (hasGpt4Access) {
+                response.alternative = 'Tu API key tiene acceso a GPT-4 pero no a la versión con visión. Para análisis de imágenes necesitas específicamente GPT-4 Vision.';
+            }
+        }
+
+        console.log('✅ Verificación de soporte de visión completada:', response.visionSupport);
+
+        res.json(response);
+
+    } catch (error) {
+        console.error('❌ Error verificando soporte de visión:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error verificando soporte de GPT-4 Vision',
+            visionSupport: false,
+            error: error.message,
+            details: 'Hubo un problema técnico verificando la compatibilidad'
+        });
+    }
+});
+
 // ==================== EXPORTAR ROUTER ====================
 
 module.exports = router;
