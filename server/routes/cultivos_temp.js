@@ -216,8 +216,7 @@ const validateCultivo = (req, res, next) => {
  */
 router.get('/', tempAuthMiddleware, async (req, res) => {
     try {
-        // Usar el userId correcto del cultivo existente
-        const userId = '68b4e62705eb16e4fc9a2f98';
+        const userId = req.user._id;
         const {
             page = 1,
             limit = 20,
