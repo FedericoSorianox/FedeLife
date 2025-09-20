@@ -4791,12 +4791,14 @@ class FinanceApp {
         // Mostrar gastos
         if (data.expenses && data.expenses.length > 0) {
             html += '<h3>💸 Gastos Encontrados</h3>';
-            // Generar opciones de categorías de gastos
-            const expenseCategoryOptions = this.generateExpenseCategoryOptions();
 
             const expensesHTML = data.expenses.map((expense, index) => {
                 const symbol = expense.currency === 'UYU' ? '$U' : '$';
-                const defaultCategory = expense.category || 'Otros';
+                const defaultCategory = expense.category || 'Otros Gastos';
+                
+                // Generar opciones de categorías con la categoría de la IA pre-seleccionada
+                const expenseCategoryOptions = this.generateExpenseCategoryOptions(defaultCategory);
+                
                 return `
                     <div class="expense-item">
                         <input type="checkbox" class="expense-checkbox"
@@ -4811,6 +4813,7 @@ class FinanceApp {
                             <div class="expense-header">
                                 <span class="expense-description">${expense.description}</span>
                                 <span class="expense-amount">${symbol}${expense.amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                ${expense.category ? '<span class="ai-category-badge">🤖 IA</span>' : ''}
                             </div>
                             <div class="expense-category-selector">
                                 <label>Categoría:</label>
@@ -4951,8 +4954,9 @@ class FinanceApp {
 
     /**
      * Genera las opciones de categorías SOLO PARA GASTOS (usado en análisis de PDFs)
+     * @param {string} selectedCategory - Categoría que debe estar pre-seleccionada (viene de la IA)
      */
-    generateExpenseCategoryOptions() {
+    generateExpenseCategoryOptions(selectedCategory = null) {
         // Filtrar solo categorías de tipo 'expense'
         const expenseCategories = this.categories.filter(category => category.type === 'expense');
 
@@ -4966,17 +4970,25 @@ class FinanceApp {
                 'Salud',
                 'Educación',
                 'Ropa',
-                'Otros'
+                'Otros Gastos'
             ];
-            return defaultExpenseCategories.map(category =>
-                `<option value="${category}">${category}</option>`
-            ).join('');
+            return defaultExpenseCategories.map(category => {
+                // Pre-seleccionar la categoría que viene de la IA
+                const isSelected = selectedCategory && 
+                    (category === selectedCategory || 
+                     (category === 'Otros Gastos' && selectedCategory === 'Otros'));
+                return `<option value="${category}" ${isSelected ? 'selected' : ''}>${category}</option>`;
+            }).join('');
         }
 
         // Usar categorías dinámicas de gastos
-        return expenseCategories.map(category =>
-            `<option value="${category.name}">${category.name}</option>`
-        ).join('');
+        return expenseCategories.map(category => {
+            // Pre-seleccionar la categoría que viene de la IA
+            const isSelected = selectedCategory && 
+                (category.name === selectedCategory || 
+                 (category.name === 'Otros Gastos' && selectedCategory === 'Otros'));
+            return `<option value="${category.name}" ${isSelected ? 'selected' : ''}>${category.name}</option>`;
+        }).join('');
     }
 
     /**

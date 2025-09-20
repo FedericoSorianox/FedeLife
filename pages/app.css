@@ -7445,3 +7445,101 @@ nav {
         align-self: flex-end;
     }
 }
+
+/* ==================== BADGE IA PARA CATEGORÍAS PRE-SELECCIONADAS ==================== */
+
+/**
+ * Badge que indica cuando una categoría fue pre-seleccionada automáticamente por la IA
+ * Aparece junto a la descripción del gasto en los resultados del PDF
+ */
+.ai-category-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 8px;
+    margin-left: 8px;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+    animation: aiGlow 2s ease-in-out infinite alternate;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Animación suave para el badge de IA */
+@keyframes aiGlow {
+    0% {
+        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+        transform: scale(1);
+    }
+    100% {
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.5);
+        transform: scale(1.02);
+    }
+}
+
+/* Efecto hover para el badge de IA */
+.ai-category-badge:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+    cursor: help;
+    animation: none;
+    transform: scale(1.05);
+    transition: all 0.2s ease-in-out;
+}
+
+/* Tooltip informativo para el badge de IA */
+.ai-category-badge::after {
+    content: "Categoría sugerida automáticamente por Inteligencia Artificial";
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 5px;
+    z-index: 1000;
+    pointer-events: none;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.ai-category-badge:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Ajustes para el contenedor de la información del gasto */
+.expense-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Responsivo para móviles */
+@media (max-width: 768px) {
+    .ai-category-badge {
+        font-size: 9px;
+        padding: 1px 4px;
+        margin-left: 4px;
+    }
+    
+    .ai-category-badge::after {
+        font-size: 11px;
+        padding: 6px 10px;
+        left: 0;
+        transform: none;
+        white-space: normal;
+        max-width: 200px;
+    }
+}
