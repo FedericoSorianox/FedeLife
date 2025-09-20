@@ -18,7 +18,9 @@ const {
     getCompleteUserData,
     generateAIContext,
     processAdvancedQuery,
-    performCompleteFinancialDiagnosis
+    performCompleteFinancialDiagnosis,
+    getExpenseCategories,
+    validateAndCorrectCategories
 } = require('../services/aiService');
 
 const router = express.Router();
@@ -371,7 +373,7 @@ function parseStandardCSV(lines) {
                     description: descripcion ? descripcion.trim() : 'Sin descripción',
                     amount: amount,
                     currency: currency,
-                    category: categoria || 'Otros',
+                    category: categoria || 'Otros Gastos',
                     original_pesos: importe_pesos || '',
                     original_dolares: importe_dolares || ''
                 });
@@ -707,7 +709,7 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
                                 description: description,
                                 amount: amount,
                                 currency: currency,
-                                category: 'Otros'
+                                category: 'Otros Gastos'
                             });
                         }
                     } else {
@@ -773,7 +775,9 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
 
             // Categorización para ambos formatos
             if (desc.includes('supermercado') || desc.includes('mercado') || desc.includes('alimentacion') ||
-                desc.includes('comida') || desc.includes('restaurant') || desc.includes('carniceria')) {
+                desc.includes('comida') || desc.includes('restaurant') || desc.includes('carniceria') ||
+                desc.includes('drogueria') || desc.includes('verduleria') || desc.includes('panaderia') ||
+                desc.includes('almacen') || desc.includes('fiambreria') || desc.includes('delivery')) {
                 category = 'Alimentación';
             } else if (desc.includes('combustible') || desc.includes('gasolina') || desc.includes('transporte') ||
                        desc.includes('taxi') || desc.includes('uber')) {
@@ -785,7 +789,8 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
                        desc.includes('netflix') || desc.includes('hobby') || desc.includes('entretenimiento')) {
                 category = 'Entretenimiento';
             } else if (desc.includes('medico') || desc.includes('farmacia') || desc.includes('seguro') ||
-                       desc.includes('salud') || desc.includes('hospital')) {
+                       desc.includes('salud') || desc.includes('hospital') || desc.includes('clinica') ||
+                       desc.includes('medicamento') || desc.includes('consulta')) {
                 category = 'Salud';
             } else if (desc.includes('curso') || desc.includes('libro') || desc.includes('educacion') ||
                        desc.includes('udemy') || desc.includes('capacitacion')) {
@@ -813,6 +818,16 @@ router.post('/analyze-pdf', upload.single('pdf'), async (req, res) => {
                 expenseCount: categorizedExpenses.length
             }
         };
+
+        // Aplicar validación de categorías para asegurar que sean correctas
+        console.log('🔍 Aplicando validación de categorías...');
+        try {
+            const validCategories = await getExpenseCategories();
+            analysis = validateAndCorrectCategories(analysis, validCategories);
+            console.log('✅ Validación de categorías completada');
+        } catch (validationError) {
+            console.warn('⚠️ Error en validación de categorías, continuando sin validar:', validationError.message);
+        }
 
         // Categorización completada localmente - no necesitamos IA para esto
         analysisMode = 'categorized_locally';
