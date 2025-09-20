@@ -627,8 +627,24 @@
     </footer>    
     <!-- config-local.js no se carga desde el cliente por seguridad -->
     <script src="/funciones/config-production-fixed.js"></script>
+    <script type="module" src="/funciones/financial_chat.js"></script>
     <script src="/funciones/finanzas.js"></script>
     <script src="/pages/auth.js"></script>
+
+    <!-- Inicialización del sistema de chat -->
+    <script>
+        // Esperar a que se cargue el módulo de chat antes de inicializar la aplicación
+        window.addEventListener('load', function() {
+            // Verificar que el chat esté disponible después de un breve delay
+            setTimeout(() => {
+                if (window.financialChat) {
+                    console.log('✅ Sistema de chat de IA inicializado correctamente');
+                } else {
+                    console.warn('⚠️ Sistema de chat de IA no disponible, usando fallback');
+                }
+            }, 1000);
+        });
+    </script>
 
     <script>
         // Configurar menú hamburguesa para móviles

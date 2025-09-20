@@ -658,6 +658,7 @@ router.post('/bulk', authenticateToken, async (req, res) => {
             success: true,
             message: `Se crearon ${createdTransactions.length} transacciones exitosamente`,
             data: {
+                transactions: createdTransactions,
                 created: createdTransactions.length,
                 total: transactions.length,
                 errors: errors.length > 0 ? errors : undefined

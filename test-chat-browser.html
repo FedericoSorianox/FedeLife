@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Chat de IA - Fede Life</title>
+</head>
+<body>
+    <h1>🧪 Prueba del Chat de IA</h1>
+
+    <div id="status">
+        <h2>Estado del Sistema</h2>
+        <div id="systemStatus">Verificando...</div>
+    </div>
+
+    <div id="testChat">
+        <h2>Probar Chat</h2>
+        <input type="text" id="testMessage" placeholder="Escribe un mensaje de prueba..." style="width: 300px; padding: 8px;">
+        <button onclick="testChatMessage()">Enviar Mensaje</button>
+        <div id="chatResponse" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; min-height: 50px;"></div>
+    </div>
+
+    <!-- Cargar scripts en el mismo orden que en finanzas.html -->
+    <script src="/funciones/config-production-fixed.js"></script>
+    <script type="module" src="/funciones/financial_chat.js"></script>
+
+    <script>
+        // Verificar estado del sistema
+        function checkSystemStatus() {
+            const statusDiv = document.getElementById('systemStatus');
+
+            setTimeout(() => {
+                const status = {
+                    financialChatAvailable: !!window.financialChat,
+                    processQueryAvailable: !!(window.financialChat && typeof window.financialChat.processQuery === 'function'),
+                    isReady: !!(window.financialChat && window.financialChat.isReady && window.financialChat.isReady()),
+                    timestamp: new Date().toISOString()
+                };
+
+                statusDiv.innerHTML = `
+                    <strong>Estado del Sistema de Chat:</strong><br>
+                    ✅ FinancialChat disponible: ${status.financialChatAvailable ? 'SÍ' : 'NO'}<br>
+                    ✅ processQuery disponible: ${status.processQueryAvailable ? 'SÍ' : 'NO'}<br>
+                    ✅ Sistema listo: ${status.isReady ? 'SÍ' : 'NO'}<br>
+                    📅 Timestamp: ${status.timestamp}
+                `;
+
+                if (status.financialChatAvailable && status.processQueryAvailable) {
+                    statusDiv.style.color = 'green';
+                } else {
+                    statusDiv.style.color = 'red';
+                }
+            }, 1500); // Dar tiempo para que se cargue el módulo
+        }
+
+        // Función para probar el chat
+        async function testChatMessage() {
+            const message = document.getElementById('testMessage').value.trim();
+            const responseDiv = document.getElementById('chatResponse');
+
+            if (!message) {
+                responseDiv.innerHTML = '❌ Por favor escribe un mensaje';
+                return;
+            }
+
+            responseDiv.innerHTML = '⏳ Procesando mensaje...';
+
+            try {
+                // Datos de prueba
+                const testFinancialData = {
+                    summary: {
+                        totalIncome: 50000,
+                        totalExpenses: 35000,
+                        balance: 15000
+                    },
+                    transactions: [
+                        { type: 'income', amount: 50000, description: 'Salario', date: '2024-01-01' },
+                        { type: 'expense', amount: 15000, description: 'Alquiler', date: '2024-01-02' }
+                    ],
+                    goals: [],
+                    categories: [
+                        { name: 'Alimentación', type: 'expense' },
+                        { name: 'Transporte', type: 'expense' }
+                    ]
+                };
+
+                let aiResponse = '';
+                let methodUsed = '';
+
+                // Intentar usar el sistema avanzado primero
+                if (window.financialChat && typeof window.financialChat.processQuery === 'function') {
+                    console.log('🤖 Probando sistema avanzado...');
+                    methodUsed = 'Sistema Avanzado';
+
+                    const result = await window.financialChat.processQuery(
+                        message,
+                        testFinancialData,
+                        {
+                            authToken: null, // Sin autenticación para esta prueba
+                            useAdvanced: false, // Usar modo básico para evitar problemas de auth
+                            additionalData: {}
+                        }
+                    );
+
+                    if (result && result.success) {
+                        aiResponse = result.message;
+                    } else {
+                        throw new Error(result?.error || 'Error en sistema avanzado');
+                    }
+                } else {
+                    // Fallback directo
+                    console.log('🔄 Usando fallback directo...');
+                    methodUsed = 'Fallback Directo';
+
+                    const response = await fetch('/api/public/ai/enhanced-chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            userData: {
+                                name: 'Usuario de Prueba',
+                                currency: 'UYU',
+                                summary: testFinancialData.summary,
+                                recentTransactions: testFinancialData.transactions.slice(0, 3)
+                            }
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.data) {
+                            aiResponse = data.data.response;
+                        } else {
+                            throw new Error(data.message || 'Error en respuesta del servidor');
+                        }
+                    } else {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                }
+
+                // Mostrar respuesta
+                responseDiv.innerHTML = `
+                    <strong>✅ Mensaje procesado correctamente</strong><br>
+                    <strong>Método usado:</strong> ${methodUsed}<br>
+                    <strong>Mensaje:</strong> ${message}<br><br>
+                    <strong>Respuesta de IA:</strong><br>
+                    ${aiResponse}
+                `;
+                responseDiv.style.color = 'green';
+
+            } catch (error) {
+                console.error('❌ Error en prueba del chat:', error);
+                responseDiv.innerHTML = `
+                    <strong>❌ Error al procesar el mensaje</strong><br>
+                    <strong>Error:</strong> ${error.message}<br>
+                    <strong>Stack:</strong> ${error.stack}
+                `;
+                responseDiv.style.color = 'red';
+            }
+        }
+
+        // Verificar estado al cargar la página
+        window.addEventListener('load', checkSystemStatus);
+    </script>
+</body>
+</html>

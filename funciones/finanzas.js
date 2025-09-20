@@ -4672,7 +4672,7 @@ class FinanceApp {
         if (data.expenses && data.expenses.length > 0) {
             html += '<h3>💸 Gastos Encontrados</h3>';
             // Generar opciones de categorías de gastos
-            const expenseCategoryOptions = this.generateCategoryOptions();
+            const expenseCategoryOptions = this.generateExpenseCategoryOptions();
 
             const expensesHTML = data.expenses.map((expense, index) => {
                 const symbol = expense.currency === 'UYU' ? '$U' : '$';
@@ -4705,8 +4705,9 @@ class FinanceApp {
                                     </select>
                                 </div>
                                 <div class="expense-comments" id="comments-${index}" style="display: ${defaultCategory === 'Otros' ? 'block' : 'none'};">
-                                    <label>Comentarios:</label>
-                                    <textarea class="expense-comment-textarea" data-index="${index}" placeholder="Agrega comentarios sobre este gasto..." rows="2">${defaultCategory === 'Otros' ? expense.description : ''}</textarea>
+                                    <label>Comentarios adicionales:</label>
+                                    <textarea class="expense-comment-textarea" data-index="${index}" placeholder="Agrega detalles específicos sobre este gasto (opcional)..." rows="2">${defaultCategory === 'Otros' ? (expense.description && expense.description.length > 20 ? expense.description : '') : ''}</textarea>
+                                    <small class="comment-hint">💡 Útil para recordar detalles específicos de este gasto</small>
                                 </div>
                             </div>
                         </div>
@@ -4824,6 +4825,36 @@ class FinanceApp {
     generateCategoryOptions() {
         // Usar todas las categorías disponibles en lugar de lista hardcodeada
         return this.categories.map(category =>
+            `<option value="${category.name}">${category.name}</option>`
+        ).join('');
+    }
+
+    /**
+     * Genera las opciones de categorías SOLO PARA GASTOS (usado en análisis de PDFs)
+     */
+    generateExpenseCategoryOptions() {
+        // Filtrar solo categorías de tipo 'expense'
+        const expenseCategories = this.categories.filter(category => category.type === 'expense');
+
+        // Si no hay categorías de gastos, usar una lista básica
+        if (expenseCategories.length === 0) {
+            const defaultExpenseCategories = [
+                'Alimentación',
+                'Transporte',
+                'Servicios',
+                'Entretenimiento',
+                'Salud',
+                'Educación',
+                'Ropa',
+                'Otros'
+            ];
+            return defaultExpenseCategories.map(category =>
+                `<option value="${category}">${category}</option>`
+            ).join('');
+        }
+
+        // Usar categorías dinámicas de gastos
+        return expenseCategories.map(category =>
             `<option value="${category.name}">${category.name}</option>`
         ).join('');
     }
@@ -5446,67 +5477,79 @@ class FinanceApp {
                 throw new Error('Token de autenticación no encontrado. Por favor, inicia sesión nuevamente.');
             }
 
-            // Usar el nuevo sistema de IA con acceso completo a datos
-
             // Obtener datos financieros actuales del frontend
             const financialData = this.getCurrentFinancialData();
 
             // Usar el sistema de chat mejorado con acceso completo
-            if (window.financialChat && window.financialChat.processQuery) {
-                const result = await window.financialChat.processQuery(
-                    message,
-                    financialData,
-                    {
-                        authToken: authToken,
-                        useAdvanced: true,
-                        additionalData: {
-                            currentView: this.getCurrentView(),
-                            selectedPeriod: this.currentPeriod,
-                            userPreferences: this.getUserPreferences()
-                        }
-                    }
-                );
+            if (window.financialChat && typeof window.financialChat.processQuery === 'function') {
+                console.log('🤖 Usando sistema avanzado de chat con financialChat');
 
-                if (result.success) {
-                    aiResponse = result.message;
-                } else {
-                    throw new Error(result.error || 'Error en la consulta avanzada');
+                try {
+                    const result = await window.financialChat.processQuery(
+                        message,
+                        financialData,
+                        {
+                            authToken: authToken,
+                            useAdvanced: true,
+                            additionalData: {
+                                currentView: this.getCurrentView(),
+                                selectedPeriod: this.currentPeriod,
+                                userPreferences: this.getUserPreferences()
+                            }
+                        }
+                    );
+
+                    if (result && result.success) {
+                        aiResponse = result.message;
+                        console.log('✅ Respuesta obtenida del sistema avanzado');
+                    } else {
+                        console.warn('⚠️ Sistema avanzado falló, intentando fallback');
+                        throw new Error(result?.error || 'Error en la consulta avanzada');
+                    }
+                } catch (chatError) {
+                    console.warn('⚠️ Error en sistema avanzado, usando fallback:', chatError.message);
+                    // Continuar con el fallback en lugar de tirar error
+                    aiResponse = null; // Forzar fallback
                 }
-            } else {
-                // Fallback al endpoint original si el sistema avanzado no está disponible
-                const chatResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/public/ai/chat`, {
+            }
+
+            // Fallback directo si el sistema avanzado no está disponible o falló
+            if (!aiResponse) {
+                console.log('🔄 Usando fallback directo al endpoint de chat');
+
+                // Fallback directo al endpoint mejorado
+                const chatResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/public/ai/enhanced-chat`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${authToken}`
                     },
                     body: JSON.stringify({
-                        message: message
+                        message: message,
+                        userData: {
+                            name: financialData?.user?.name || 'Usuario',
+                            currency: financialData?.user?.currency || 'UYU',
+                            summary: financialData?.summary,
+                            recentTransactions: financialData?.transactions?.slice(0, 5)
+                        }
                     })
                 });
 
                 if (!chatResponse.ok) {
+                    if (chatResponse.status === 401) {
+                        throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+                    }
                     throw new Error(`Error del servidor: ${chatResponse.status}`);
                 }
 
                 const chatData = await chatResponse.json();
-                aiResponse = chatData.data?.response || chatData.message || 'Respuesta no disponible';
-            }
 
-            if (!chatResponse.ok) {
-                if (chatResponse.status === 401) {
-                    throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+                if (chatData.success && chatData.data) {
+                    aiResponse = chatData.data.response;
+                    console.log('✅ Respuesta obtenida del fallback directo');
+                } else {
+                    throw new Error(chatData.message || 'Error procesando la respuesta del fallback');
                 }
-                throw new Error(`Error del servidor: ${chatResponse.status}`);
-            }
-
-            const chatData = await chatResponse.json();
-            let aiResponse;
-
-            if (chatData.success && chatData.data) {
-                aiResponse = chatData.data.response;
-            } else {
-                throw new Error(chatData.message || 'Error procesando la respuesta');
             }
 
             // Remover indicador de escritura
@@ -5955,8 +5998,8 @@ Responde como un economista profesional especializado en la mejor administració
                         const category = cb.dataset.category || 'Otros';
                         let comments = '';
 
-                        // Obtener comentarios si la categoría es "Otros"
-                        if (category === 'Otros') {
+                        // Obtener comentarios si la categoría es "Otros" o "Otros Ingresos"
+                        if (category === 'Otros' || category === 'Otros Ingresos') {
                             const textarea = document.querySelector(`.expense-comment-textarea[data-index="${index}"]`);
                             if (textarea) {
                                 comments = textarea.value.trim();
@@ -5999,25 +6042,117 @@ Responde como un economista profesional especializado en la mejor administració
 
 
                 if (selectedExpenses.length > 0) {
-                    // LIMPIEZA AUTOMÁTICA DE DESCRIPCIONES
-                    const cleanedExpenses = this.cleanPdfDescriptions(selectedExpenses);
+                    try {
+                        // LIMPIEZA AUTOMÁTICA DE DESCRIPCIONES
+                        const cleanedExpenses = this.cleanPdfDescriptions(selectedExpenses);
 
+                        // Preparar transacciones para enviar al servidor
+                        const transactionsToSend = cleanedExpenses.map(expense => ({
+                            type: expense.type,
+                            amount: expense.amount,
+                            description: expense.description,
+                            category: expense.category,
+                            currency: expense.currency,
+                            date: expense.date,
+                            notes: expense.comments || '',
+                            tags: [],
+                            status: 'completed'
+                        }));
 
-                    cleanedExpenses.forEach(expense => {
-                        expense.id = this.generateId();
-                        expense.createdAt = new Date();
-                        this.transactions.push(expense);
-                    });
+                        console.log('📤 Enviando transacciones al servidor:', transactionsToSend);
 
+                        // Obtener headers de autenticación
+                        const authHeaders = this.getAuthHeaders();
 
-                    this.saveDataToStorage();
+                        // Enviar transacciones al servidor usando el endpoint bulk
+                        const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/transactions/bulk`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...authHeaders
+                            },
+                            body: JSON.stringify({
+                                transactions: transactionsToSend
+                            })
+                        });
 
-                    // Forzar actualización inmediata de la lista
-                    this.renderTransactions();
-                    this.renderDashboard();
-                    this.updateCharts();
+                        if (response.ok) {
+                            const result = await response.json();
+                            console.log('✅ Transacciones guardadas en servidor:', result);
 
-                    this.showNotification(`${selectedExpenses.length} gastos agregados correctamente`, 'success');
+                            // Agregar transacciones a la lista local con IDs del servidor
+                            if (result.data && result.data.transactions) {
+                                result.data.transactions.forEach(serverTransaction => {
+                                    // Buscar la transacción correspondiente en cleanedExpenses
+                                    const localExpense = cleanedExpenses.find(exp =>
+                                        exp.amount === serverTransaction.amount &&
+                                        exp.description === serverTransaction.description &&
+                                        exp.date.getTime() === new Date(serverTransaction.date).getTime()
+                                    );
+
+                                    if (localExpense) {
+                                        // Actualizar con datos del servidor
+                                        localExpense.id = serverTransaction._id;
+                                        localExpense.createdAt = new Date(serverTransaction.createdAt);
+                                        this.transactions.push(localExpense);
+                                    }
+                                });
+                            } else {
+                                // Fallback: agregar localmente si no hay respuesta del servidor
+                                cleanedExpenses.forEach(expense => {
+                                    expense.id = this.generateId();
+                                    expense.createdAt = new Date();
+                                    this.transactions.push(expense);
+                                });
+                            }
+
+                            this.saveDataToStorage();
+
+                            // Forzar actualización inmediata de la lista
+                            this.renderTransactions();
+                            this.renderDashboard();
+                            this.updateCharts();
+
+                            this.showNotification(`${selectedExpenses.length} gastos agregados correctamente`, 'success');
+                        } else {
+                            // Si falla el servidor, intentar guardar localmente
+                            console.warn('⚠️ Error del servidor, guardando localmente');
+
+                            const errorData = await response.json().catch(() => ({}));
+                            console.error('Error del servidor:', errorData);
+
+                            cleanedExpenses.forEach(expense => {
+                                expense.id = this.generateId();
+                                expense.createdAt = new Date();
+                                this.transactions.push(expense);
+                            });
+
+                            this.saveDataToStorage();
+                            this.renderTransactions();
+                            this.renderDashboard();
+                            this.updateCharts();
+
+                            this.showNotification(`${selectedExpenses.length} gastos guardados localmente (error de sincronización)`, 'warning');
+                        }
+
+                    } catch (error) {
+                        console.error('❌ Error al guardar transacciones:', error);
+
+                        // Fallback completo: guardar localmente
+                        const cleanedExpenses = this.cleanPdfDescriptions(selectedExpenses);
+                        cleanedExpenses.forEach(expense => {
+                            expense.id = this.generateId();
+                            expense.createdAt = new Date();
+                            this.transactions.push(expense);
+                        });
+
+                        this.saveDataToStorage();
+                        this.renderTransactions();
+                        this.renderDashboard();
+                        this.updateCharts();
+
+                        this.showNotification(`${selectedExpenses.length} gastos guardados localmente`, 'info');
+                    }
                 } else {
                     this.showNotification('Selecciona al menos un gasto para agregar', 'error');
                 }

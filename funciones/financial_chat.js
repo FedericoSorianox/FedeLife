@@ -515,9 +515,21 @@ export function isValidChatMessage(message) {
 // Crear instancia global
 const financialChat = new FinancialChat();
 
-// Hacer disponible globalmente
+// Hacer disponible globalmente (compatible con carga como módulo y script regular)
 if (typeof window !== 'undefined') {
     window.financialChat = financialChat;
+
+    // También asignar directamente para compatibilidad
+    if (!window.financialChat) {
+        window.financialChat = financialChat;
+    }
 }
+
+// Log de inicialización
+console.log('🤖 Financial Chat System initialized:', {
+    available: !!window.financialChat,
+    isReady: financialChat.isReady(),
+    timestamp: new Date().toISOString()
+});
 
 export default financialChat;
