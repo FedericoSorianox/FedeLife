@@ -388,8 +388,10 @@ function parseStandardCSV(lines) {
 
 /**
  * Parsear línea CSV considerando comillas
+ * Maneja correctamente campos con comas dentro de comillas
+ * @param {string} line - Línea CSV a parsear
+ * @returns {Array<string>} Array con los valores de la línea
  */
-/*
 function parseCSVLine(line) {
     const result = [];
     let current = '';
@@ -411,7 +413,6 @@ function parseCSVLine(line) {
     result.push(current.trim());
     return result;
 }
-*/
 
 /**
  * Parsear CSV en formato Itaú (el formato original)
