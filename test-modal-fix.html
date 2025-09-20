@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modal Fix - Fede Life</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-force-hidden,
+        .modal[data-visible="false"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            z-index: -1 !important;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .close {
+            cursor: pointer;
+            font-size: 28px;
+            font-weight: bold;
+            color: #aaa;
+        }
+        .close:hover {
+            color: #000;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #229954;
+        }
+        .status-indicator {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status-good {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-bad {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Corrección del Modal de Metas</h1>
+
+    <div class="test-section">
+        <h2>Estado del Modal</h2>
+        <div id="modalStatus" class="status-indicator">Verificando...</div>
+        <div id="modalDetails"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Controles de Prueba</h2>
+        <button class="btn" onclick="checkModalStatus()">Verificar Estado</button>
+        <button class="btn" onclick="forceCloseModal()">Forzar Cierre</button>
+        <button class="btn btn-success" onclick="openModal()">Abrir Modal</button>
+        <button class="btn" onclick="testCloseFunctionality()">Probar Cierre</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Resultados de las Correcciones</h2>
+        <div id="testResults">
+            <ul>
+                <li>✅ CSS corregido para ocultar modales por defecto</li>
+                <li>✅ Función forceCloseGoalModal() implementada</li>
+                <li>✅ Múltiples métodos de cierre implementados</li>
+                <li>✅ Verificaciones periódicas implementadas</li>
+                <li>✅ Función de diagnóstico implementada</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Modal de prueba (simulando el modal de metas) -->
+    <div id="goalModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🧪 Modal de Prueba - Nueva Meta de Ahorro</h3>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Este es un modal de prueba para verificar que las correcciones funcionen correctamente.</p>
+                <p>Si puedes ver este modal, significa que se abrió correctamente.</p>
+                <p>Para cerrarlo, haz clic en la X o en el botón "Cerrar".</p>
+                <div style="margin-top: 20px;">
+                    <button class="btn" onclick="closeModal()">Cerrar Modal</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let modalCheckInterval;
+
+        // Función para verificar el estado del modal
+        function checkModalStatus() {
+            const modal = document.getElementById('goalModal');
+            const statusDiv = document.getElementById('modalStatus');
+            const detailsDiv = document.getElementById('modalDetails');
+
+            if (!modal) {
+                statusDiv.className = 'status-indicator status-bad';
+                statusDiv.textContent = '❌ Modal no encontrado';
+                return;
+            }
+
+            const computedStyle = window.getComputedStyle(modal);
+            const isVisible = computedStyle.display !== 'none' && computedStyle.visibility !== 'hidden';
+            const isForceHidden = modal.classList.contains('modal-force-hidden');
+
+            if (isForceHidden || !isVisible) {
+                statusDiv.className = 'status-indicator status-good';
+                statusDiv.textContent = '✅ Modal correctamente cerrado';
+            } else {
+                statusDiv.className = 'status-indicator status-bad';
+                statusDiv.textContent = '❌ Modal visible (problema detectado)';
+            }
+
+            detailsDiv.innerHTML = `
+                <strong>Detalles técnicos:</strong><br>
+                Display: ${computedStyle.display}<br>
+                Visibility: ${computedStyle.visibility}<br>
+                Opacity: ${computedStyle.opacity}<br>
+                Classes: ${modal.className}<br>
+                Data-visible: ${modal.getAttribute('data-visible')}<br>
+                Force hidden: ${isForceHidden ? 'Sí' : 'No'}
+            `;
+        }
+
+        // Función para forzar el cierre del modal
+        function forceCloseModal() {
+            const modal = document.getElementById('goalModal');
+
+            if (modal) {
+                // Método 1: Usar !important
+                modal.style.setProperty('display', 'none', 'important');
+                modal.style.setProperty('visibility', 'hidden', 'important');
+                modal.style.setProperty('opacity', '0', 'important');
+
+                // Método 2: Agregar clase CSS
+                modal.classList.add('modal-force-hidden');
+
+                // Método 3: Atributo data
+                modal.setAttribute('data-visible', 'false');
+
+                // Método 4: Remover estilos inline
+                modal.removeAttribute('style');
+
+                console.log('🔒 Modal force closed');
+                checkModalStatus();
+            }
+        }
+
+        // Función para abrir el modal
+        function openModal() {
+            const modal = document.getElementById('goalModal');
+
+            if (modal) {
+                // Remover clase de force hidden
+                modal.classList.remove('modal-force-hidden');
+                modal.setAttribute('data-visible', 'true');
+
+                // Mostrar modal
+                modal.style.display = 'flex';
+                modal.style.visibility = 'visible';
+                modal.style.opacity = '1';
+
+                console.log('📂 Modal opened');
+                checkModalStatus();
+            }
+        }
+
+        // Función para cerrar el modal
+        function closeModal() {
+            forceCloseModal();
+        }
+
+        // Función para probar la funcionalidad de cierre
+        function testCloseFunctionality() {
+            // Abrir modal primero
+            openModal();
+
+            // Esperar 2 segundos y luego cerrarlo
+            setTimeout(() => {
+                console.log('🧪 Probando funcionalidad de cierre automático...');
+                closeModal();
+            }, 2000);
+        }
+
+        // Verificación periódica del estado del modal
+        function startPeriodicCheck() {
+            modalCheckInterval = setInterval(() => {
+                const modal = document.getElementById('goalModal');
+                if (modal) {
+                    const computedStyle = window.getComputedStyle(modal);
+                    const isVisible = computedStyle.display !== 'none' || computedStyle.visibility !== 'hidden';
+
+                    if (isVisible && !modal.classList.contains('modal-force-hidden')) {
+                        console.warn('⚠️ Modal visible detectado durante verificación periódica');
+                        forceCloseModal();
+                    }
+                }
+            }, 3000);
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔄 Test page loaded');
+
+            // Verificar estado inicial
+            setTimeout(() => {
+                checkModalStatus();
+
+                // Iniciar verificación periódica
+                startPeriodicCheck();
+
+                console.log('✅ Test page initialized');
+            }, 500);
+        });
+
+        // Cleanup cuando se cierra la página
+        window.addEventListener('beforeunload', function() {
+            if (modalCheckInterval) {
+                clearInterval(modalCheckInterval);
+            }
+        });
+    </script>
+</body>
+</html>

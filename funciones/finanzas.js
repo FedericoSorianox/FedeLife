@@ -352,6 +352,8 @@ class FinanceApp {
      * Configura todos los event listeners de la aplicación
      */
     setupEventListeners() {
+        // PRIMERO: Asegurar que el modal esté cerrado antes de configurar cualquier cosa
+        this.forceCloseGoalModal();
         // Formulario de transacciones
         const transactionForm = document.getElementById('transactionForm');
         if (transactionForm) {
@@ -1973,18 +1975,109 @@ class FinanceApp {
     }
 
     /**
-     * Cierra el modal de crear meta
+     * Fuerza el cierre del modal de metas usando múltiples métodos
      */
-    closeGoalModal() {
+    forceCloseGoalModal() {
+        console.log('🔒 Force closing goal modal...');
+
         const modal = document.getElementById('goalModal');
         if (modal) {
-            // Usar !important para sobreescribir cualquier estilo que pueda estar mostrándolo
+            // Método 1: Usar !important para sobreescribir cualquier CSS
             modal.style.setProperty('display', 'none', 'important');
+            modal.style.setProperty('visibility', 'hidden', 'important');
+            modal.style.setProperty('opacity', '0', 'important');
+
+            // Método 2: Agregar clase CSS para forzar ocultamiento
+            modal.classList.add('modal-force-hidden');
+
+            // Método 3: Manipular el DOM directamente
+            modal.setAttribute('data-visible', 'false');
+
+            // Método 4: Remover cualquier estilo inline que pueda estar mostrando el modal
+            modal.removeAttribute('style');
+
             // Limpiar formulario
             const form = modal.querySelector('#goalForm');
             if (form) {
                 form.reset();
             }
+
+            console.log('✅ Goal modal force closed successfully');
+        } else {
+            console.warn('⚠️ Goal modal not found when force closing');
+        }
+    }
+
+    /**
+     * Diagnóstico del modal de metas para debugging
+     */
+    diagnoseGoalModal() {
+        console.log('🔍 Diagnosing goal modal...');
+
+        const modal = document.getElementById('goalModal');
+        if (!modal) {
+            console.error('❌ Goal modal not found in DOM');
+            return;
+        }
+
+        const computedStyle = window.getComputedStyle(modal);
+        const boundingRect = modal.getBoundingClientRect();
+
+        console.log('📊 Modal diagnosis:', {
+            exists: true,
+            display: computedStyle.display,
+            visibility: computedStyle.visibility,
+            opacity: computedStyle.opacity,
+            zIndex: computedStyle.zIndex,
+            position: computedStyle.position,
+            boundingRect: {
+                width: boundingRect.width,
+                height: boundingRect.height,
+                top: boundingRect.top,
+                left: boundingRect.left
+            },
+            classes: modal.className,
+            attributes: {
+                'data-visible': modal.getAttribute('data-visible'),
+                style: modal.getAttribute('style')
+            },
+            parent: modal.parentElement ? modal.parentElement.tagName : 'none'
+        });
+
+        // Verificar event listeners
+        const closeBtn = modal.querySelector('.close');
+        console.log('🔘 Close button:', closeBtn ? 'found' : 'not found');
+
+        if (closeBtn) {
+            console.log('🔘 Close button details:', {
+                tagName: closeBtn.tagName,
+                textContent: closeBtn.textContent,
+                className: closeBtn.className
+            });
+        }
+    }
+
+    /**
+     * Cierra el modal de crear meta
+     */
+    closeGoalModal() {
+        console.log('🔒 Closing goal modal...');
+        const modal = document.getElementById('goalModal');
+        if (modal) {
+            // Usar múltiples métodos para asegurar que se cierre
+            modal.style.setProperty('display', 'none', 'important');
+            modal.style.visibility = 'hidden';
+            modal.style.opacity = '0';
+
+            // Limpiar formulario
+            const form = modal.querySelector('#goalForm');
+            if (form) {
+                form.reset();
+            }
+
+            console.log('✅ Goal modal closed successfully');
+        } else {
+            console.warn('⚠️ Goal modal not found when trying to close');
         }
     }
 
@@ -7667,17 +7760,101 @@ Responde como un economista profesional especializado en la mejor administració
 // ==================== INICIALIZACIÓN ====================
 
 // Asegurar que el modal de metas esté cerrado antes de cualquier inicialización
-(function ensureModalClosed() {
+// Asegurar que el modal de metas esté cerrado al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔄 DOM Content Loaded - Ensuring goal modal is closed');
+
+    // Pequeño delay para asegurar que todos los estilos se hayan aplicado
+    setTimeout(() => {
+        const goalModal = document.getElementById('goalModal');
+        if (goalModal) {
+            goalModal.style.setProperty('display', 'none', 'important');
+            goalModal.style.visibility = 'hidden';
+            console.log('🔒 Goal modal closed and hidden on page load');
+        } else {
+            console.warn('⚠️ Goal modal not found on page load');
+        }
+    }, 100);
+});
+
+// Backup: también intentar cerrar el modal inmediatamente si el DOM ya está listo
+(function immediateModalClose() {
+    if (document.readyState === 'loading') {
+        // DOM aún no está listo, esperar
+        return;
+    }
+
     const goalModal = document.getElementById('goalModal');
     if (goalModal) {
         goalModal.style.setProperty('display', 'none', 'important');
-        console.log('🔒 Goal modal closed on page load');
+        goalModal.style.visibility = 'hidden';
+        console.log('🔒 Goal modal immediately closed');
     }
+})();
+
+// Backup adicional: verificar cada 2 segundos durante los primeros 10 segundos que el modal esté cerrado
+(function periodicModalCheck() {
+    let checkCount = 0;
+    const maxChecks = 5; // 5 checks = 10 segundos
+
+    const checkInterval = setInterval(() => {
+        checkCount++;
+
+        const goalModal = document.getElementById('goalModal');
+        if (goalModal) {
+            const computedStyle = window.getComputedStyle(goalModal);
+            const isVisible = computedStyle.display !== 'none' || computedStyle.visibility !== 'hidden';
+
+            if (isVisible) {
+                console.warn(`⚠️ Goal modal visible during check ${checkCount}, force closing...`);
+                goalModal.style.setProperty('display', 'none', 'important');
+                goalModal.style.setProperty('visibility', 'hidden', 'important');
+                goalModal.classList.add('modal-force-hidden');
+            }
+        }
+
+        if (checkCount >= maxChecks) {
+            clearInterval(checkInterval);
+            console.log('✅ Periodic modal checks completed');
+        }
+    }, 2000);
 })();
 
 // Crear instancia global
 const financeApp = new FinanceApp();
 console.log('🏗️ FinanceApp instance created:', financeApp);
+
+// Ejecutar diagnóstico del modal después de que la aplicación esté inicializada
+setTimeout(() => {
+    if (financeApp.diagnoseGoalModal) {
+        financeApp.diagnoseGoalModal();
+    }
+
+    // Verificación final: asegurar que el modal esté cerrado
+    if (financeApp.forceCloseGoalModal) {
+        financeApp.forceCloseGoalModal();
+    }
+}, 2000);
+
+// Backup adicional: verificar después de 5 segundos
+setTimeout(() => {
+    console.log('🔄 Final modal check after 5 seconds...');
+    const modal = document.getElementById('goalModal');
+    if (modal) {
+        const computedStyle = window.getComputedStyle(modal);
+        const isVisible = computedStyle.display !== 'none' || computedStyle.visibility !== 'hidden';
+
+        if (isVisible) {
+            console.warn('⚠️ Modal still visible after 5 seconds, force closing...');
+            modal.style.setProperty('display', 'none', 'important');
+            modal.style.setProperty('visibility', 'hidden', 'important');
+            modal.classList.add('modal-force-hidden');
+            modal.setAttribute('data-visible', 'false');
+        } else {
+            console.log('✅ Modal correctly hidden after 5 seconds');
+        }
+    }
+}, 5000);
 
 // Hacer disponible globalmente
 if (typeof window !== 'undefined') {

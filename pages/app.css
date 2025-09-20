@@ -60,6 +60,16 @@ body {
     justify-content: center;
 }
 
+/* Forzar ocultamiento del modal (máxima prioridad) */
+.modal-force-hidden,
+.modal[data-visible="false"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: -1 !important;
+}
+
 section {
     flex: 1;
     background-color: beige;
