@@ -5634,36 +5634,54 @@ class FinanceApp {
             const financialData = this.getCurrentFinancialData();
 
             // Usar el sistema de chat mejorado con acceso completo
-            if (window.financialChat && typeof window.financialChat.processQuery === 'function') {
-                console.log('🤖 Usando sistema avanzado de chat con financialChat');
+            console.log('🤖 Iniciando consulta avanzada con contexto completo...');
+            console.log('📊 Datos financieros para IA:', {
+                transacciones: financialData.allTransactions?.length || 0,
+                metas: financialData.allGoals?.length || 0,
+                categorias: financialData.categories?.length || 0,
+                ingresos: financialData.summary?.totalIncome || 0,
+                gastos: financialData.summary?.totalExpenses || 0
+            });
 
-                try {
-                    const result = await window.financialChat.processQuery(
-                        message,
-                        financialData,
-                        {
-                            authToken: authToken,
-                            useAdvanced: true,
-                            additionalData: {
-                                currentView: this.getCurrentView(),
-                                selectedPeriod: this.currentPeriod,
-                                userPreferences: this.getUserPreferences()
-                            }
+            try {
+                // Usar directamente el endpoint avanzado con autenticación
+                const advancedResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}/ai/advanced-query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        query: message,
+                        additionalData: {
+                            currentView: this.getCurrentView(),
+                            selectedPeriod: this.currentPeriod,
+                            userPreferences: this.getUserPreferences(),
+                            frontendData: financialData // Incluir todos los datos del frontend
                         }
-                    );
+                    })
+                });
+
+                if (advancedResponse.ok) {
+                    const result = await advancedResponse.json();
 
                     if (result && result.success) {
-                        aiResponse = result.message;
-                        console.log('✅ Respuesta obtenida del sistema avanzado');
+                        aiResponse = result.data?.response || result.message;
+                        console.log('✅ Respuesta obtenida del sistema avanzado con contexto completo');
+                        console.log('📈 Datos utilizados en análisis:', result.data?.dataPoints || 'contexto completo');
                     } else {
                         console.warn('⚠️ Sistema avanzado falló, intentando fallback');
                         throw new Error(result?.error || 'Error en la consulta avanzada');
                     }
-                } catch (chatError) {
-                    console.warn('⚠️ Error en sistema avanzado, usando fallback:', chatError.message);
-                    // Continuar con el fallback en lugar de tirar error
-                    aiResponse = null; // Forzar fallback
+                } else {
+                    console.warn('⚠️ Error HTTP en sistema avanzado:', advancedResponse.status);
+                    throw new Error(`Error HTTP: ${advancedResponse.status}`);
                 }
+
+            } catch (chatError) {
+                console.warn('⚠️ Error en sistema avanzado, usando fallback:', chatError.message);
+                // Continuar con el fallback en lugar de tirar error
+                aiResponse = null; // Forzar fallback
             }
 
             // Fallback directo si el sistema avanzado no está disponible o falló
@@ -7784,11 +7802,148 @@ Responde como un economista profesional especializado en la mejor administració
                 currency: 'UYU'
             },
             summary: summary,
-            recentTransactions: this.transactions ? this.transactions.slice(-10) : [],
+            
+            // Transacciones completas (últimas 50 para más contexto)
+            allTransactions: this.transactions || [],
+            recentTransactions: this.transactions ? this.transactions.slice(-50) : [],
+            
+            // Metas completas con detalles
+            allGoals: this.goals || [],
             activeGoals: this.goals ? this.goals.filter(g => !g.completed) : [],
+            completedGoals: this.goals ? this.goals.filter(g => g.completed) : [],
+            
+            // Categorías y estadísticas
             categories: this.categories || [],
-            currentPeriod: this.currentPeriod || { type: 'monthly', year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
+            
+            // Análisis de gastos por categoría
+            expensesByCategory: this.getExpensesByCategory(),
+            
+            // Análisis de ingresos
+            incomeAnalysis: this.getIncomeAnalysis(),
+            
+            // Tendencias mensuales
+            monthlyTrends: this.getMonthlyTrends(),
+            
+            // Período actual
+            currentPeriod: this.currentPeriod || { 
+                type: 'monthly', 
+                year: new Date().getFullYear(), 
+                month: new Date().getMonth() + 1 
+            },
+            
+            // Estadísticas adicionales para contexto de IA
+            statistics: {
+                totalTransactions: this.transactions ? this.transactions.length : 0,
+                totalGoals: this.goals ? this.goals.length : 0,
+                avgMonthlyIncome: summary.totalIncome || 0,
+                avgMonthlyExpenses: summary.totalExpenses || 0,
+                savingsRate: summary.totalIncome > 0 ? ((summary.totalIncome - summary.totalExpenses) / summary.totalIncome * 100) : 0
+            }
         };
+    }
+
+    /**
+     * Obtiene análisis de gastos por categoría para el contexto de IA
+     * @returns {Object} Análisis de gastos por categoría
+     */
+    getExpensesByCategory() {
+        if (!this.transactions || this.transactions.length === 0) return {};
+
+        const expenses = this.transactions.filter(t => t.type === 'expense');
+        const categoryTotals = {};
+
+        expenses.forEach(expense => {
+            const category = expense.category || 'Sin categoría';
+            if (!categoryTotals[category]) {
+                categoryTotals[category] = {
+                    total: 0,
+                    count: 0,
+                    avgAmount: 0
+                };
+            }
+            categoryTotals[category].total += expense.amount;
+            categoryTotals[category].count += 1;
+        });
+
+        // Calcular promedios
+        Object.keys(categoryTotals).forEach(category => {
+            categoryTotals[category].avgAmount = categoryTotals[category].total / categoryTotals[category].count;
+        });
+
+        return categoryTotals;
+    }
+
+    /**
+     * Obtiene análisis de ingresos para el contexto de IA
+     * @returns {Object} Análisis de ingresos
+     */
+    getIncomeAnalysis() {
+        if (!this.transactions || this.transactions.length === 0) return {};
+
+        const incomes = this.transactions.filter(t => t.type === 'income');
+        const sources = {};
+
+        incomes.forEach(income => {
+            const source = income.category || 'Otros ingresos';
+            if (!sources[source]) {
+                sources[source] = {
+                    total: 0,
+                    count: 0,
+                    avgAmount: 0
+                };
+            }
+            sources[source].total += income.amount;
+            sources[source].count += 1;
+        });
+
+        // Calcular promedios
+        Object.keys(sources).forEach(source => {
+            sources[source].avgAmount = sources[source].total / sources[source].count;
+        });
+
+        return {
+            totalIncome: incomes.reduce((sum, t) => sum + t.amount, 0),
+            incomeCount: incomes.length,
+            sources: sources
+        };
+    }
+
+    /**
+     * Obtiene tendencias mensuales para el contexto de IA
+     * @returns {Array} Tendencias mensuales
+     */
+    getMonthlyTrends() {
+        if (!this.transactions || this.transactions.length === 0) return [];
+
+        const monthlyData = {};
+
+        this.transactions.forEach(transaction => {
+            const date = new Date(transaction.date);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = {
+                    month: monthKey,
+                    income: 0,
+                    expenses: 0,
+                    transactions: 0
+                };
+            }
+
+            if (transaction.type === 'income') {
+                monthlyData[monthKey].income += transaction.amount;
+            } else {
+                monthlyData[monthKey].expenses += transaction.amount;
+            }
+            monthlyData[monthKey].transactions += 1;
+        });
+
+        // Convertir a array y calcular balance
+        return Object.values(monthlyData).map(month => ({
+            ...month,
+            balance: month.income - month.expenses,
+            savingsRate: month.income > 0 ? ((month.income - month.expenses) / month.income * 100) : 0
+        })).sort((a, b) => a.month.localeCompare(b.month));
     }
 
     /**

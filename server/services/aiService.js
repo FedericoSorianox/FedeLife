@@ -1262,19 +1262,66 @@ async function generateAIContext(userId, queryType = 'general') {
         context += `- 📈 Metas activas: ${userData.summary.activeGoals}\n`;
         context += `- 📋 Total de transacciones: ${userData.summary.transactionCount}\n\n`;
 
-        // Metas activas
+        // Metas de ahorro (activas y completadas)
         if (userData.goals.length > 0) {
-            context += `🎯 METAS ACTIVAS:\n`;
-            userData.goals.filter(g => !g.completed).forEach((goal, index) => {
-                const progress = goal.amount > 0 ? Math.round((goal.currentSaved / goal.amount) * 100) : 0;
-                context += `${index + 1}. ${goal.name}\n`;
-                context += `   - Ahorrado: $${(goal.currentSaved || 0).toLocaleString('es-UY')} / $${goal.amount.toLocaleString('es-UY')}\n`;
-                context += `   - Progreso: ${progress}%\n`;
-                if (goal.deadline) {
-                    context += `   - Fecha límite: ${new Date(goal.deadline).toLocaleDateString('es-UY')}\n`;
+            const activeGoals = userData.goals.filter(g => !g.completed);
+            const completedGoals = userData.goals.filter(g => g.completed);
+            
+            context += `🎯 METAS DE AHORRO:\n`;
+            context += `Total de metas: ${userData.goals.length} (${activeGoals.length} activas, ${completedGoals.length} completadas)\n\n`;
+            
+            if (activeGoals.length > 0) {
+                context += `📍 METAS ACTIVAS:\n`;
+                activeGoals.forEach((goal, index) => {
+                    const progress = goal.amount > 0 ? Math.round((goal.currentSaved / goal.amount) * 100) : 0;
+                    const remainingAmount = goal.amount - (goal.currentSaved || 0);
+                    const daysToDeadline = goal.deadline ? Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+                    
+                    context += `${index + 1}. 📝 ${goal.name}\n`;
+                    context += `   💰 Meta: $${goal.amount.toLocaleString('es-UY')} ${userData.user.currency}\n`;
+                    context += `   💳 Ahorrado: $${(goal.currentSaved || 0).toLocaleString('es-UY')} ${userData.user.currency}\n`;
+                    context += `   📊 Progreso: ${progress}% (faltan $${remainingAmount.toLocaleString('es-UY')})\n`;
+                    
+                    if (goal.deadline) {
+                        context += `   📅 Fecha límite: ${new Date(goal.deadline).toLocaleDateString('es-UY')}`;
+                        if (daysToDeadline !== null) {
+                            if (daysToDeadline > 0) {
+                                context += ` (en ${daysToDeadline} días)`;
+                            } else if (daysToDeadline === 0) {
+                                context += ` (¡HOY!)`;
+                            } else {
+                                context += ` (⚠️ Vencida hace ${Math.abs(daysToDeadline)} días)`;
+                            }
+                        }
+                        context += '\n';
+                    }
+                    
+                    if (goal.description) {
+                        context += `   📄 Descripción: ${goal.description}\n`;
+                    }
+                    
+                    if (goal.priority) {
+                        context += `   🔥 Prioridad: ${goal.priority}\n`;
+                    }
+                    
+                    context += '\n';
+                });
+            }
+            
+            if (completedGoals.length > 0) {
+                context += `✅ METAS COMPLETADAS:\n`;
+                completedGoals.slice(0, 5).forEach((goal, index) => { // Solo las últimas 5
+                    context += `${index + 1}. ✔️ ${goal.name} - $${goal.amount.toLocaleString('es-UY')} ${userData.user.currency}`;
+                    if (goal.completedDate) {
+                        context += ` (completada el ${new Date(goal.completedDate).toLocaleDateString('es-UY')})`;
+                    }
+                    context += '\n';
+                });
+                if (completedGoals.length > 5) {
+                    context += `   ... y ${completedGoals.length - 5} metas completadas más\n`;
                 }
                 context += '\n';
-            });
+            }
         }
 
         // Transacciones recientes (últimas 20)
@@ -1344,26 +1391,38 @@ async function processAdvancedQuery(query, userId, additionalData = {}) {
         const context = await generateAIContext(userId, 'advanced');
 
         // Crear prompt avanzado para la IA
-        const systemPrompt = `Eres un Asesor Financiero Personal Inteligente especializado en finanzas uruguayas.
+        const systemPrompt = `Eres un Asesor Financiero Personal Inteligente especializado en finanzas uruguayas y planificación de metas de ahorro.
         Tienes acceso a TODA la información financiera del usuario, incluyendo:
 
         - Historial completo de transacciones (últimos 12 meses)
-        - Todas las categorías de gastos e ingresos
-        - Metas de ahorro activas y completadas
-        - Estadísticas mensuales y tendencias
-        - Información personal del usuario
+        - Todas las categorías de gastos e ingresos con análisis detallado
+        - Metas de ahorro activas y completadas con progreso específico
+        - Estadísticas mensuales y tendencias de ahorro
+        - Información personal del usuario y preferencias
+        - Análisis de patrones de gastos e ingresos
+
+        ESPECIALIZACIÓN EN METAS DE AHORRO:
+        - Analiza el progreso de cada meta individual con fechas específicas
+        - Identifica si las metas son realistas basándote en los ingresos y gastos actuales
+        - Sugiere estrategias específicas para acelerar el progreso hacia las metas
+        - Calcula cuánto debería ahorrar mensualmente para cumplir cada meta a tiempo
+        - Identifica gastos que podrían reducirse para aumentar el ahorro
+        - Recomienda priorización de metas basada en urgencia y viabilidad
 
         INSTRUCCIONES ESPECÍFICAS:
         1. Usa TODOS los datos disponibles para dar respuestas precisas y personalizadas
-        2. Incluye números específicos, montos y fechas cuando sea relevante
-        3. Identifica patrones en los gastos y sugiere mejoras concretas
-        4. Compara con tendencias históricas cuando sea posible
-        5. Sé específico con recomendaciones basadas en datos reales
-        6. Mantén un tono profesional pero cercano y motivador
-        7. Si no tienes suficiente información, pide datos específicos
-        8. Incluye consejos prácticos y accionables
+        2. Incluye números específicos, montos, fechas y cálculos concretos
+        3. Para consultas sobre metas, proporciona análisis detallado de cada meta activa
+        4. Calcula automáticamente cuánto falta ahorrar y en cuánto tiempo
+        5. Identifica patrones en gastos que afecten las metas de ahorro
+        6. Sugiere ajustes específicos en el presupuesto para acelerar el ahorro
+        7. Compara el progreso actual con lo necesario para cumplir las fechas límite
+        8. Mantén un tono profesional pero cercano y muy motivador
+        9. Si una meta parece inalcanzable, sugiere alternativas realistas
+        10. Incluye consejos prácticos y accionables basados en datos reales
 
-        IMPORTANTE: Base todas tus respuestas en los datos reales del usuario. No inventes información.`;
+        IMPORTANTE: Base todas tus respuestas en los datos reales del usuario. No inventes información. 
+        Sé especialmente detallado cuando analices metas de ahorro y proporciona cálculos específicos.`;
 
         const userPrompt = `Consulta del usuario: "${query}"
 
