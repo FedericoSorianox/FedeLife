@@ -287,6 +287,7 @@ router.post('/analyze-csv', upload.single('csv'), async (req, res) => {
  * @param {string} csvContent - Contenido del archivo CSV
  * @returns {Array} Array de gastos extraídos
  */
+/*
 function parseCSVExpenses(csvContent) {
     const expenses = [];
     const lines = csvContent.split('\n');
@@ -305,10 +306,12 @@ function parseCSVExpenses(csvContent) {
         return parseItauCSV(lines);
     }
 }
+*/
 
 /**
  * Parsear CSV en formato estándar con headers
  */
+/*
 function parseStandardCSV(lines) {
     const expenses = [];
 
@@ -381,10 +384,12 @@ function parseStandardCSV(lines) {
     console.log(`📄 Total de gastos extraídos del CSV estándar (${isSimpleFormat ? 'formato simple' : 'formato extendido'}): ${expenses.length}`);
     return expenses;
 }
+*/
 
 /**
  * Parsear línea CSV considerando comillas
  */
+/*
 function parseCSVLine(line) {
     const result = [];
     let current = '';
@@ -406,10 +411,12 @@ function parseCSVLine(line) {
     result.push(current.trim());
     return result;
 }
+*/
 
 /**
  * Parsear CSV en formato Itaú (el formato original)
  */
+/*
 function parseItauCSV(lines) {
     const expenses = [];
 
@@ -460,6 +467,7 @@ function parseItauCSV(lines) {
     console.log(`📄 Total de gastos extraídos del CSV Itaú: ${expenses.length}`);
     return expenses;
 }
+*/
 
 /**
  * POST /api/public/ai/analyze-pdf

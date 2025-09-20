@@ -48,6 +48,168 @@ async function waitForRetry(retryAfter) {
     console.log('✅ Reintentando análisis después del rate limit...');
 }
 
+/**
+ * Obtiene las categorías de gastos disponibles desde la base de datos
+ * @param {string} userId - ID del usuario (opcional, para categorías personalizadas)
+ * @returns {Promise<Array>} Array de categorías de gastos
+ */
+async function getExpenseCategories(userId = null) {
+    try {
+        // Categorías por defecto del sistema
+        const defaultCategories = [
+            { name: 'Alimentación', description: 'supermercados, restaurantes, comida, delivery' },
+            { name: 'Transporte', description: 'combustible, taxis, transporte público, Uber, mecánico' },
+            { name: 'Servicios', description: 'internet, teléfono, luz, agua, gas, cable, seguros' },
+            { name: 'Entretenimiento', description: 'cine, juegos, streaming, hobbies, deportes, bares' },
+            { name: 'Salud', description: 'médicos, farmacias, seguros médicos, clínicas, laboratorios' },
+            { name: 'Educación', description: 'cursos, libros, material educativo, universidades' },
+            { name: 'Ropa', description: 'vestimenta, calzado, accesorios, limpieza de ropa' },
+            { name: 'Otros Gastos', description: 'SOLO para gastos que NO encajan en ninguna categoría anterior' }
+        ];
+
+        // Si se proporciona userId, también obtener categorías personalizadas
+        if (userId) {
+            try {
+                const customCategories = await Category.find({
+                    userId: userId,
+                    type: 'expense',
+                    isActive: true
+                }).select('name description').lean();
+
+                // Combinar categorías por defecto con personalizadas
+                const userCategories = [...defaultCategories];
+                
+                customCategories.forEach(customCat => {
+                    // Solo agregar si no existe ya en las por defecto
+                    if (!defaultCategories.some(defCat => defCat.name === customCat.name)) {
+                        userCategories.push({
+                            name: customCat.name,
+                            description: customCat.description || 'Categoría personalizada'
+                        });
+                    }
+                });
+
+                return userCategories;
+            } catch (error) {
+                console.warn('⚠️ Error obteniendo categorías personalizadas, usando solo las por defecto:', error.message);
+                return defaultCategories;
+            }
+        }
+
+        return defaultCategories;
+    } catch (error) {
+        console.error('❌ Error obteniendo categorías de gastos:', error);
+        // Fallback a categorías hardcoded
+        return [
+            { name: 'Alimentación', description: 'supermercados, restaurantes, comida' },
+            { name: 'Transporte', description: 'combustible, taxis, transporte público' },
+            { name: 'Servicios', description: 'internet, teléfono, luz, agua, gas' },
+            { name: 'Entretenimiento', description: 'cine, juegos, streaming' },
+            { name: 'Salud', description: 'médicos, farmacias, seguros médicos' },
+            { name: 'Educación', description: 'cursos, libros, material educativo' },
+            { name: 'Ropa', description: 'vestimenta, calzado' },
+            { name: 'Otros Gastos', description: 'gastos que no encajan en otras categorías' }
+        ];
+    }
+}
+
+/**
+ * Valida y corrige las categorías en el resultado del análisis de IA
+ * @param {Object} aiResult - Resultado del análisis de IA
+ * @param {Array} validCategories - Array de categorías válidas
+ * @returns {Object} Resultado corregido con categorías válidas
+ */
+function validateAndCorrectCategories(aiResult, validCategories) {
+    try {
+        if (!aiResult || !aiResult.expenses || !Array.isArray(aiResult.expenses)) {
+            console.warn('⚠️ Resultado de IA inválido, no se puede validar categorías');
+            return aiResult;
+        }
+
+        const validCategoryNames = validCategories.map(cat => cat.name);
+        let correctedCount = 0;
+
+        // Validar y corregir cada gasto
+        aiResult.expenses.forEach(expense => {
+            if (!expense.category) {
+                expense.category = 'Otros Gastos';
+                correctedCount++;
+                return;
+            }
+
+            // Verificar si la categoría es válida
+            const isValidCategory = validCategoryNames.includes(expense.category);
+            
+            if (!isValidCategory) {
+                console.warn(`⚠️ Categoría inválida encontrada: "${expense.category}" para gasto: ${expense.description}`);
+                
+                // Intentar encontrar categoría similar
+                const lowerCategory = expense.category.toLowerCase();
+                let correctedCategory = 'Otros Gastos';
+                
+                // Mapear categorías comunes mal escritas
+                const categoryMappings = {
+                    'alimentacion': 'Alimentación',
+                    'comida': 'Alimentación',
+                    'supermercado': 'Alimentación',
+                    'restaurant': 'Alimentación',
+                    'restaurante': 'Alimentación',
+                    'transporte': 'Transporte',
+                    'taxi': 'Transporte',
+                    'combustible': 'Transporte',
+                    'servicios': 'Servicios',
+                    'internet': 'Servicios',
+                    'telefono': 'Servicios',
+                    'luz': 'Servicios',
+                    'agua': 'Servicios',
+                    'entretenimiento': 'Entretenimiento',
+                    'cine': 'Entretenimiento',
+                    'streaming': 'Entretenimiento',
+                    'salud': 'Salud',
+                    'medico': 'Salud',
+                    'farmacia': 'Salud',
+                    'educacion': 'Educación',
+                    'educación': 'Educación',
+                    'curso': 'Educación',
+                    'libro': 'Educación',
+                    'ropa': 'Ropa',
+                    'vestimenta': 'Ropa',
+                    'calzado': 'Ropa',
+                    'otros': 'Otros Gastos',
+                    'otros gastos': 'Otros Gastos'
+                };
+
+                // Buscar mapeo directo
+                if (categoryMappings[lowerCategory]) {
+                    correctedCategory = categoryMappings[lowerCategory];
+                } else {
+                    // Buscar coincidencia parcial
+                    for (const [key, value] of Object.entries(categoryMappings)) {
+                        if (lowerCategory.includes(key) || key.includes(lowerCategory)) {
+                            correctedCategory = value;
+                            break;
+                        }
+                    }
+                }
+
+                console.log(`🔧 Corrigiendo categoría "${expense.category}" → "${correctedCategory}"`);
+                expense.category = correctedCategory;
+                correctedCount++;
+            }
+        });
+
+        if (correctedCount > 0) {
+            console.log(`✅ Se corrigieron ${correctedCount} categorías inválidas`);
+        }
+
+        return aiResult;
+
+    } catch (error) {
+        console.error('❌ Error validando categorías:', error);
+        return aiResult; // Devolver resultado original si hay error
+    }
+}
+
 // ==================== FUNCIONES PRINCIPALES ====================
 
 
@@ -77,6 +239,15 @@ async function analyzeTextWithAI(text, userId) {
 
         console.log('🔑 API Key de OpenAI configurada correctamente');
 
+        // Obtener categorías dinámicamente desde la base de datos
+        console.log('📂 Obteniendo categorías desde la base de datos...');
+        const categories = await getExpenseCategories(userId);
+        
+        // Construir la lista de categorías para el prompt
+        const categoryList = categories.map(cat => `   - ${cat.name} (${cat.description})`).join('\n');
+        
+        console.log(`📂 Se encontraron ${categories.length} categorías disponibles para categorización`);
+
         // Preparar prompt para OpenAI
         const systemPrompt = `Eres un analista financiero experto especializado en el análisis de estados de cuenta bancarios uruguayos.
 
@@ -87,15 +258,15 @@ INSTRUCCIONES CRÍTICAS - LEE CON ATENCIÓN:
 2. Extrae TODAS las transacciones de gastos sin excepción - no resumas ni selecciones solo "principales"
 3. Si hay 50 gastos, incluye los 50. Si hay 100, incluye los 100.
 4. Para cada gasto extrae: descripción, monto, fecha
-5. Categoriza cada gasto según estas categorías disponibles:
-   - Alimentación (supermercados, restaurantes, comida)
-   - Transporte (combustible, taxis, transporte público)
-   - Servicios (internet, teléfono, luz, agua, gas)
-   - Entretenimiento (cine, juegos, streaming, hobbies)
-   - Salud (médicos, farmacias, seguros médicos)
-   - Educación (cursos, libros, material educativo)
-   - Ropa (vestimenta, calzado)
-   - Otros Gastos (todo lo demás)
+5. Categoriza cada gasto según EXACTAMENTE estas categorías de la base de datos (USA LOS NOMBRES EXACTOS):
+${categoryList}
+
+REGLA CRÍTICA DE CATEGORIZACIÓN: 
+- NUNCA uses "Otros" como categoría, usa "Otros Gastos"
+- NUNCA inventes categorías nuevas, usa SOLO las categorías listadas arriba
+- Si un gasto puede estar en dos categorías, elige la más específica
+- EVITA poner gastos en "Otros Gastos" a menos que realmente no encajen en ninguna otra
+
 6. DETECCIÓN AUTOMÁTICA DE MONEDA (regla estricta):
    - Si el monto es MENOR a $150, automáticamente es USD (dólares)
    - Si el monto es MAYOR o IGUAL a $150, automáticamente es UYU (pesos uruguayos)
@@ -476,6 +647,15 @@ async function analyzeTextWithUserKey(text, userApiKey, userId) {
         // Nota: El filtro REDIVA fue removido según los requerimientos
         console.log('🔍 Filtro REDIVA omitido (función eliminada)');
 
+        // Obtener categorías dinámicamente desde la base de datos
+        console.log('📂 Obteniendo categorías para análisis CSV...');
+        const categories = await getExpenseCategories(); // Sin userId para CSV público
+        
+        // Construir la lista de categorías para el prompt
+        const categoryList = categories.map(cat => `   - ${cat.name} (${cat.description})`).join('\n');
+        
+        console.log(`📂 Se encontraron ${categories.length} categorías disponibles para CSV`);
+
         // Preparar prompt para OpenAI
         const systemPrompt = `Eres un analista financiero experto especializado en el análisis de estados de cuenta bancarios uruguayos.
 
@@ -484,15 +664,14 @@ Tu tarea es analizar el texto de un estado de cuenta y extraer todos los gastos 
 INSTRUCCIONES IMPORTANTES:
 1. Identifica ÚNICAMENTE transacciones que son GASTOS (no ingresos, depósitos, transferencias entrantes)
 2. Extrae el monto, descripción y fecha de cada gasto
-3. Categoriza cada gasto según estas categorías disponibles:
-   - Alimentación
-   - Transporte
-   - Servicios
-   - Entretenimiento
-   - Salud
-   - Educación
-   - Ropa
-   - Otros Gastos
+3. Categoriza cada gasto según EXACTAMENTE estas categorías de la base de datos (USA LOS NOMBRES EXACTOS):
+${categoryList}
+
+REGLA CRÍTICA DE CATEGORIZACIÓN: 
+- NUNCA uses "Otros" como categoría, usa "Otros Gastos"
+- NUNCA inventes categorías nuevas, usa SOLO las categorías listadas arriba
+- Si un gasto puede estar en dos categorías, elige la más específica
+- EVITA poner gastos en "Otros Gastos" a menos que realmente no encajen en ninguna otra
 4. Si no puedes determinar la categoría, usa "Otros Gastos"
 5. DETECCIÓN AUTOMÁTICA DE MONEDA:
    - Si el monto es MENOR a $150, automáticamente es USD (dólares)
@@ -1379,5 +1558,9 @@ module.exports = {
     getCompleteUserData,
     generateAIContext,
     processAdvancedQuery,
-    performCompleteFinancialDiagnosis
+    performCompleteFinancialDiagnosis,
+
+    // Funciones de utilidad para categorías
+    getExpenseCategories,
+    validateAndCorrectCategories
 };

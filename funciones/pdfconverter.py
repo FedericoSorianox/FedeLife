@@ -144,7 +144,18 @@ def parse_with_llm(text):
     client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
     prompt = """
-    Extrae transacciones de este estado de cuenta Itaú Uruguay. Columnas: Fecha (DD/MM/YY), Código (4 dígitos o vacío), Descripción, Cuotas (dd/dd o vacío), Monto_UYU (float con , para decimal, - para débitos), Monto_USD (float o vacío si no hay).
+    Extrae transacciones de este estado de cuenta Itaú Uruguay. Columnas: Fecha (DD/MM/YY), Código (4 dígitos o vacío), Descripción, Cuotas (dd/dd o vacío), Monto_UYU (float con , para decimal, - para débitos), Monto_USD (float o vacío si no hay), Categoria (usa EXACTAMENTE estas categorías: Alimentación, Transporte, Servicios, Entretenimiento, Salud, Educación, Ropa, Otros Gastos).
+    
+    REGLAS DE CATEGORIZACIÓN:
+    - Alimentación: supermercados, restaurantes, delivery, comida
+    - Transporte: combustible, taxis, Uber, transporte público, mecánico
+    - Servicios: luz, agua, internet, teléfono, seguros, cable, gas
+    - Entretenimiento: cine, streaming, bares, deportes, hobbies
+    - Salud: médicos, farmacias, clínicas, laboratorios, seguros médicos
+    - Educación: cursos, libros, universidades, material educativo
+    - Ropa: vestimenta, calzado, accesorios, limpieza de ropa
+    - Otros Gastos: SOLO para gastos que no encajan en las anteriores
+    
     Solo transacciones, saldos y cargos. Ignora headers/footer/promociones. Output solo CSV, sin extras.
     Texto: """ + text[:10000]
 
