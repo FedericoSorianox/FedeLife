@@ -114,16 +114,30 @@ router.get('/', authenticateToken, async (req, res) => {
         const sort = {};
         sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
         
-        // Calcular paginación
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        // 🎯 MANEJAR SOLICITUDES DE TODAS LAS TRANSACCIONES
+        // Si el límite es muy alto (>= 10000), no aplicar paginación
+        const requestAllTransactions = parseInt(limit) >= 10000;
+        
+        // Calcular paginación solo si no se requieren todas las transacciones
+        let skip = 0;
+        let limitValue = parseInt(limit);
+        
+        if (!requestAllTransactions) {
+            skip = (parseInt(page) - 1) * parseInt(limit);
+        } else {
+            // Para obtener todas las transacciones, no aplicar límite
+            limitValue = 0; // 0 = sin límite en MongoDB
+        }
         
         // Ejecutar consulta
+        let transactionQuery = Transaction.find(filters).sort(sort);
+        
+        if (!requestAllTransactions) {
+            transactionQuery = transactionQuery.skip(skip).limit(limitValue);
+        }
+        
         const [transactions, total] = await Promise.all([
-            Transaction.find(filters)
-                .sort(sort)
-                .skip(skip)
-                .limit(parseInt(limit))
-                .lean(),
+            transactionQuery.lean(),
             Transaction.countDocuments(filters)
         ]);
         
@@ -835,98 +849,8 @@ router.post('/', authenticateToken, validateTransaction, async (req, res) => {
     }
 });
 
-/**
- * GET /api/transactions (PROTEGIDO)
- * Obtiene transacciones del usuario autenticado
- */
-router.get('/', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user._id;
-        const {
-            page = 1,
-            limit = 20,
-            type,
-            category,
-            startDate,
-            endDate,
-            month,
-            year,
-            search,
-            sortBy = 'date',
-            sortOrder = 'desc'
-        } = req.query;
-
-        // Construir filtros
-        const filters = { userId };
-
-        if (type) filters.type = type;
-        if (category) filters.category = category;
-
-        // Filtros de fecha
-        if (startDate || endDate || month || year) {
-            filters.date = {};
-            if (startDate) filters.date.$gte = new Date(startDate);
-            if (endDate) filters.date.$lte = new Date(endDate);
-            if (month) {
-                const [year, monthNum] = month.split('-');
-                filters.date.$gte = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
-                filters.date.$lt = new Date(parseInt(year), parseInt(monthNum), 1);
-            }
-            if (year) {
-                filters.date.$gte = new Date(parseInt(year), 0, 1);
-                filters.date.$lt = new Date(parseInt(year) + 1, 0, 1);
-            }
-        }
-
-        // Filtro de búsqueda
-        if (search) {
-            filters.$or = [
-                { description: { $regex: search, $options: 'i' } },
-                { category: { $regex: search, $options: 'i' } },
-                { notes: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        // Ordenamiento
-        const sortOptions = {};
-        sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-        // Aplicar paginación
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-        const transactions = await Transaction.find(filters)
-            .sort(sortOptions)
-            .skip(skip)
-            .limit(parseInt(limit))
-            .populate('userId', 'username')
-            .lean();
-
-        // Contar total
-        const total = await Transaction.countDocuments(filters);
-
-        res.json({
-            success: true,
-            data: {
-                transactions: transactions.map(t => ({
-                    ...t,
-                    id: t._id.toString() // Convertir _id de MongoDB a id para el frontend
-                })),
-                pagination: {
-                    currentPage: parseInt(page),
-                    totalPages: Math.ceil(total / parseInt(limit)),
-                    totalItems: total,
-                    itemsPerPage: parseInt(limit)
-                }
-            }
-        });
-
-    } catch (error) {
-        console.error('❌ Error obteniendo transacciones:', error);
-        res.status(500).json({
-            error: 'Error interno del servidor',
-            message: 'No se pudieron obtener las transacciones'
-        });
-    }
-});
+// ==================== ENDPOINT DUPLICADO ELIMINADO ====================
+// El endpoint GET '/' ya está implementado arriba con soporte para obtener todas las transacciones
 
 // ==================== EXPORTAR ROUTER ====================
 

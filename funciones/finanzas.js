@@ -149,8 +149,9 @@ class FinanceApp {
      */
     async loadDataFromBackend() {
         try {
-
-            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}`, {
+            // 🎯 SOLICITAR TODAS LAS TRANSACCIONES SIN LIMITACIONES DE PAGINACIÓN
+            // Establecer un límite muy alto para obtener todas las transacciones disponibles
+            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.transactions}?limit=10000&sortBy=date&sortOrder=desc`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -169,6 +170,26 @@ class FinanceApp {
                         updatedAt: transaction.updatedAt ? new Date(transaction.updatedAt) : new Date()
                     }));
 
+                    // 🎯 INFORMACIÓN DETALLADA SOBRE LAS TRANSACCIONES CARGADAS
+                    console.log(`✅ Cargadas ${this.transactions.length} transacciones desde MongoDB`);
+                    
+                    // Mostrar estadísticas por tipo de transacción
+                    const incomeCount = this.transactions.filter(t => t.type === 'income').length;
+                    const expenseCount = this.transactions.filter(t => t.type === 'expense').length;
+                    console.log(`   📈 Ingresos: ${incomeCount} | 📉 Gastos: ${expenseCount}`);
+                    
+                    // Mostrar rango de fechas de las transacciones
+                    if (this.transactions.length > 0) {
+                        const dates = this.transactions.map(t => new Date(t.date)).sort();
+                        const oldestDate = dates[0].toLocaleDateString();
+                        const newestDate = dates[dates.length - 1].toLocaleDateString();
+                        console.log(`   📅 Rango de fechas: ${oldestDate} - ${newestDate}`);
+                    }
+                    
+                    // Información de paginación si está disponible
+                    if (result.data.pagination) {
+                        console.log(`   📄 Paginación: ${result.data.pagination.page}/${result.data.pagination.pages} (Total: ${result.data.pagination.total})`);
+                    }
 
                     // Si hay transacciones, actualizar la interfaz
                     if (this.transactions.length > 0) {
