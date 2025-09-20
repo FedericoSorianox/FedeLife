@@ -19,8 +19,8 @@ const FINANCE_API_CONFIG = {
         : 'https://fedelife-finanzas.onrender.com/api',
     endpoints: {
         transactions: '/public/transactions',
-        categories: '/public/categories',
-        ai: '/public/ai/analyze-csv'
+        categories: '/public/categories/public',
+        ai: '/public/ai/analyze-pdf'
     }
 };
 
@@ -274,48 +274,89 @@ class FinanceApp {
 
     /**
      * Carga categorías del backend (de finanzas-simple)
+     * Primero intenta cargar categorías del usuario autenticado, 
+     * luego categorías públicas, finalmente categorías por defecto
      */
     async loadCategoriesFromBackend() {
         try {
             // Obtener headers de autenticación
             const authHeaders = this.getAuthHeaders();
+            
+            // Verificar si hay token de autenticación
+            const hasAuthToken = authHeaders['Authorization'];
+            
+            if (hasAuthToken) {
+                console.log('🔐 Token detectado, cargando categorías del usuario autenticado...');
+                
+                // Intentar cargar categorías del usuario autenticado
+                const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/categories`, {
+                    method: 'GET',
+                    headers: authHeaders
+                });
 
-            // Usar endpoint con autenticación para obtener categorías del usuario
-            const response = await fetch(`${FINANCE_API_CONFIG.baseUrl}/categories`, {
-                method: 'GET',
-                headers: authHeaders
-            });
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.data && result.data.categories) {
+                        this.categories = result.data.categories;
 
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.data && result.data.categories) {
-                    this.categories = result.data.categories;
+                        // Verificar que las categorías del backend tengan IDs válidos
+                        this.categories.forEach((category, index) => {
+                            if (!category.id || category.id === 'undefined' || category.id === '') {
+                                category.id = this.generateId();
+                            }
+                            if (!category.type) {
+                                category.type = 'expense'; // Valor por defecto
+                            }
+                            if (!category.color) {
+                                category.color = '#95a5a6'; // Color gris por defecto
+                            }
+                            if (!category.name) {
+                                category.name = `Categoría ${index + 1}`;
+                            }
+                        });
 
-                    // Verificar que las categorías del backend tengan IDs válidos
-                    this.categories.forEach((category, index) => {
-                        if (!category.id || category.id === 'undefined' || category.id === '') {
-                            category.id = this.generateId();
-                        }
-                        if (!category.type) {
-                            category.type = 'expense'; // Valor por defecto
-                        }
-                        if (!category.color) {
-                            category.color = '#95a5a6'; // Color gris por defecto
-                        }
-                        if (!category.name) {
-                            category.name = `Categoría ${index + 1}`;
-                        }
-                    });
-
-                    // Guardar en localStorage con IDs corregidos
-                    localStorage.setItem('fede_life_categories', JSON.stringify(this.categories));
-                } else {
-                    this.initializeDefaultCategories();
+                        // Guardar en localStorage con IDs corregidos
+                        localStorage.setItem('fede_life_categories', JSON.stringify(this.categories));
+                        console.log('✅ Categorías del usuario cargadas:', this.categories.length);
+                        return; // Salir exitosamente
+                    }
                 }
+                
+                console.log('⚠️ No se pudieron cargar categorías del usuario, intentando categorías públicas...');
             } else {
-                this.initializeDefaultCategories();
+                console.log('🌐 Sin autenticación, cargando categorías públicas...');
             }
+            
+            // Intentar cargar categorías públicas
+            try {
+                const publicResponse = await fetch(`${FINANCE_API_CONFIG.baseUrl}${FINANCE_API_CONFIG.endpoints.categories}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (publicResponse.ok) {
+                    const publicResult = await publicResponse.json();
+                    if (publicResult.success && publicResult.data && publicResult.data.categories) {
+                        this.categories = publicResult.data.categories;
+                        console.log('✅ Categorías públicas cargadas:', this.categories.length);
+                        
+                        // Guardar en localStorage
+                        localStorage.setItem('fede_life_categories', JSON.stringify(this.categories));
+                        return; // Salir exitosamente
+                    }
+                }
+            } catch (publicError) {
+                console.log('⚠️ Error cargando categorías públicas:', publicError.message);
+            }
+            
+            // Si todo falla, usar categorías por defecto
+            console.log('📋 Usando categorías por defecto...');
+            this.initializeDefaultCategories();
+            
         } catch (error) {
+            console.log('⚠️ Error general cargando categorías:', error.message);
             this.initializeDefaultCategories();
         }
     }
@@ -5094,7 +5135,7 @@ class FinanceApp {
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(selectedExpenses)
+                    body: JSON.stringify({ transactions: selectedExpenses })
                 });
 
                 if (!expenseResponse.ok) {
