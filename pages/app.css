@@ -46,7 +46,7 @@ body {
     flex-direction: column;
 }
 
-/* Ocultar modales por defecto */
+/* Ocultar modales por defecto - MÁXIMA PRIORIDAD */
 .modal {
     display: none !important;
     position: fixed;
@@ -68,6 +68,23 @@ body {
     opacity: 0 !important;
     pointer-events: none !important;
     z-index: -1 !important;
+}
+
+/* Regla específica para el modal de metas - MÁXIMA PRIORIDAD */
+#goalModal {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Cuando el modal debe estar visible */
+.modal.modal-visible {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    z-index: 10000 !important;
 }
 
 section {

@@ -1931,11 +1931,18 @@ class FinanceApp {
      * Abre el modal para crear una nueva meta
      */
     openGoalModal() {
+        console.log('🔓 Opening goal modal...');
         const modal = document.getElementById('goalModal');
         if (modal) {
-            // Usar !important para sobreescribir el CSS que oculta todos los modales
-            modal.style.setProperty('display', 'flex', 'important');
-            modal.style.zIndex = '10000'; // Asegurar que esté por encima de otros elementos
+            // Primero quitar clases de ocultamiento
+            modal.classList.remove('modal-force-hidden');
+            modal.removeAttribute('data-visible');
+            
+            // Agregar clase para hacer visible el modal
+            modal.classList.add('modal-visible');
+            
+            // Asegurar que esté por encima de otros elementos
+            modal.style.zIndex = '10000';
 
             // Resetear campos para nueva meta
             this.resetGoalModal();
@@ -1946,7 +1953,9 @@ class FinanceApp {
                 currentDateInput.valueAsDate = new Date();
             }
 
+            console.log('✅ Goal modal opened successfully');
         } else {
+            console.error('❌ Goal modal not found');
         }
     }
 
@@ -1982,24 +1991,29 @@ class FinanceApp {
 
         const modal = document.getElementById('goalModal');
         if (modal) {
-            // Método 1: Usar !important para sobreescribir cualquier CSS
+            // Método 1: Quitar cualquier clase de visibilidad
+            modal.classList.remove('modal-visible');
+            
+            // Método 2: Agregar clases CSS para forzar ocultamiento
+            modal.classList.add('modal-force-hidden');
+            modal.setAttribute('data-visible', 'false');
+
+            // Método 3: Usar !important para sobreescribir cualquier CSS
             modal.style.setProperty('display', 'none', 'important');
             modal.style.setProperty('visibility', 'hidden', 'important');
             modal.style.setProperty('opacity', '0', 'important');
-
-            // Método 2: Agregar clase CSS para forzar ocultamiento
-            modal.classList.add('modal-force-hidden');
-
-            // Método 3: Manipular el DOM directamente
-            modal.setAttribute('data-visible', 'false');
-
-            // Método 4: Remover cualquier estilo inline que pueda estar mostrando el modal
-            modal.removeAttribute('style');
+            modal.style.setProperty('pointer-events', 'none', 'important');
 
             // Limpiar formulario
             const form = modal.querySelector('#goalForm');
             if (form) {
                 form.reset();
+            }
+            
+            // Limpiar campo de ID de edición
+            const editingGoalId = document.getElementById('editingGoalId');
+            if (editingGoalId) {
+                editingGoalId.value = '';
             }
 
             console.log('✅ Goal modal force closed successfully');
@@ -2064,15 +2078,28 @@ class FinanceApp {
         console.log('🔒 Closing goal modal...');
         const modal = document.getElementById('goalModal');
         if (modal) {
+            // Quitar clase de visibilidad
+            modal.classList.remove('modal-visible');
+            
+            // Agregar clases de ocultamiento
+            modal.classList.add('modal-force-hidden');
+            modal.setAttribute('data-visible', 'false');
+            
             // Usar múltiples métodos para asegurar que se cierre
             modal.style.setProperty('display', 'none', 'important');
-            modal.style.visibility = 'hidden';
-            modal.style.opacity = '0';
+            modal.style.setProperty('visibility', 'hidden', 'important');
+            modal.style.setProperty('opacity', '0', 'important');
 
             // Limpiar formulario
             const form = modal.querySelector('#goalForm');
             if (form) {
                 form.reset();
+            }
+            
+            // Limpiar campo de ID de edición
+            const editingGoalId = document.getElementById('editingGoalId');
+            if (editingGoalId) {
+                editingGoalId.value = '';
             }
 
             console.log('✅ Goal modal closed successfully');
@@ -6082,7 +6109,7 @@ Responde como un economista profesional especializado en la mejor administració
     /**
      * Maneja el evento de agregar gastos seleccionados
      */
-    handleAddSelectedExpenses(checkboxes) {
+    async handleAddSelectedExpenses(checkboxes) {
 
         const selectedExpenses = Array.from(checkboxes)
                     .filter(cb => cb.checked)
@@ -7824,6 +7851,31 @@ document.addEventListener('DOMContentLoaded', function() {
 const financeApp = new FinanceApp();
 console.log('🏗️ FinanceApp instance created:', financeApp);
 
+// INMEDIATAMENTE: Forzar cierre del modal de metas
+setTimeout(() => {
+    console.log('🚀 Forcing goal modal closure immediately after FinanceApp creation...');
+    const goalModal = document.getElementById('goalModal');
+    if (goalModal) {
+        // Aplicar todas las medidas de cierre
+        goalModal.classList.remove('modal-visible');
+        goalModal.classList.add('modal-force-hidden');
+        goalModal.setAttribute('data-visible', 'false');
+        goalModal.style.setProperty('display', 'none', 'important');
+        goalModal.style.setProperty('visibility', 'hidden', 'important');
+        goalModal.style.setProperty('opacity', '0', 'important');
+        goalModal.style.setProperty('pointer-events', 'none', 'important');
+        
+        // Usar el método de la instancia si está disponible
+        if (financeApp && financeApp.forceCloseGoalModal) {
+            financeApp.forceCloseGoalModal();
+        }
+        
+        console.log('✅ Goal modal immediately closed after FinanceApp creation');
+    } else {
+        console.warn('⚠️ Goal modal not found immediately after FinanceApp creation');
+    }
+}, 10); // Ejecutar muy rápido, solo 10ms después
+
 // Ejecutar diagnóstico del modal después de que la aplicación esté inicializada
 setTimeout(() => {
     if (financeApp.diagnoseGoalModal) {
@@ -7904,8 +7956,24 @@ if (typeof window !== 'undefined') {
         const modals = document.querySelectorAll('.modal');
         modals.forEach(modal => {
             modal.style.setProperty('display', 'none', 'important');
+            modal.classList.remove('modal-visible');
+            modal.classList.add('modal-force-hidden');
+            modal.setAttribute('data-visible', 'false');
         });
         console.log(`✅ Closed ${modals.length} modals by default`);
+        
+        // Forzar cierre específico del modal de metas
+        const goalModal = document.getElementById('goalModal');
+        if (goalModal) {
+            goalModal.classList.remove('modal-visible');
+            goalModal.classList.add('modal-force-hidden');
+            goalModal.setAttribute('data-visible', 'false');
+            goalModal.style.setProperty('display', 'none', 'important');
+            goalModal.style.setProperty('visibility', 'hidden', 'important');
+            goalModal.style.setProperty('opacity', '0', 'important');
+            goalModal.style.setProperty('pointer-events', 'none', 'important');
+            console.log('🎯 Goal modal specifically closed and hidden');
+        }
     }, 50);
 
     // Verificar que todos los métodos críticos estén disponibles
