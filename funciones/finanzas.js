@@ -5612,6 +5612,7 @@ class FinanceApp {
         if (!chatInput || !chatInput.value.trim()) return;
 
         const message = chatInput.value.trim();
+        let aiResponse = null; // Declarar la variable al principio
 
         // Agregar mensaje del usuario
         const userMessageDiv = document.createElement('div');

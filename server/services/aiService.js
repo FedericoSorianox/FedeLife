@@ -1386,9 +1386,21 @@ async function generateAIContext(userId, queryType = 'general') {
 async function processAdvancedQuery(query, userId, additionalData = {}) {
     try {
         console.log('🧠 Procesando consulta avanzada con contexto completo...');
+        console.log('👤 UserId:', userId);
+        console.log('📊 Additional data:', additionalData ? Object.keys(additionalData) : 'none');
 
         // Generar contexto completo
+        console.log('🔄 Generando contexto de IA...');
         const context = await generateAIContext(userId, 'advanced');
+        console.log('✅ Contexto generado, longitud:', context ? context.length : 0, 'caracteres');
+        
+        // Verificar si el contexto no es demasiado largo y truncar si es necesario
+        let finalContext = context;
+        if (context && context.length > 50000) {
+            console.warn('⚠️ Contexto muy largo, truncando para evitar errores:', context.length, 'caracteres');
+            finalContext = context.substring(0, 50000) + '\n\n[CONTEXTO TRUNCADO POR LONGITUD]';
+            console.log('✂️ Contexto truncado a:', finalContext.length, 'caracteres');
+        }
 
         // Crear prompt avanzado para la IA
         const systemPrompt = `Eres un Asesor Financiero Personal Inteligente especializado en finanzas uruguayas y planificación de metas de ahorro.
@@ -1427,7 +1439,7 @@ async function processAdvancedQuery(query, userId, additionalData = {}) {
         const userPrompt = `Consulta del usuario: "${query}"
 
         Información financiera completa del usuario:
-        ${context}
+        ${finalContext}
 
         ${additionalData ? `Datos adicionales del contexto actual: ${JSON.stringify(additionalData)}` : ''}
 
@@ -1435,8 +1447,14 @@ async function processAdvancedQuery(query, userId, additionalData = {}) {
 
         // Preparar solicitud a OpenAI
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const timeoutId = setTimeout(() => {
+            console.log('⏰ Timeout alcanzado, abortando consulta avanzada...');
+            controller.abort();
+        }, 45000); // Aumentar timeout a 45 segundos
 
+        console.log('🚀 Enviando solicitud a OpenAI...');
+        console.log('📝 Longitud del prompt del usuario:', userPrompt.length, 'caracteres');
+        
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -1456,35 +1474,58 @@ async function processAdvancedQuery(query, userId, additionalData = {}) {
         });
 
         clearTimeout(timeoutId);
+        console.log('📥 Respuesta recibida de OpenAI, status:', response.status);
 
         if (!response.ok) {
-            throw new Error(`Error en OpenAI API: ${response.status}`);
+            const errorText = await response.text();
+            console.error('❌ Error en OpenAI API:', response.status, errorText);
+            throw new Error(`Error en OpenAI API: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();
+        console.log('📋 Datos de respuesta de OpenAI:', {
+            choices: data.choices?.length || 0,
+            usage: data.usage || 'no usage info'
+        });
+        
         const aiResponse = data.choices[0].message.content;
-
-        console.log('✅ Consulta avanzada procesada exitosamente');
+        console.log('✅ Consulta avanzada procesada exitosamente, longitud respuesta:', aiResponse.length);
 
         return {
             success: true,
             response: aiResponse,
             contextUsed: true,
             dataPoints: {
-                transactionsAnalyzed: context.includes('TRANSACCIONES RECIENTES') ? 'sí' : 'no',
-                goalsIncluded: context.includes('METAS ACTIVAS') ? 'sí' : 'no',
-                categoriesIncluded: context.includes('GASTOS POR CATEGORÍA') ? 'sí' : 'no',
-                trendsIncluded: context.includes('TENDENCIAS MENSUALES') ? 'sí' : 'no'
+                transactionsAnalyzed: finalContext.includes('TRANSACCIONES RECIENTES') ? 'sí' : 'no',
+                goalsIncluded: finalContext.includes('METAS ACTIVAS') ? 'sí' : 'no',
+                categoriesIncluded: finalContext.includes('GASTOS POR CATEGORÍA') ? 'sí' : 'no',
+                trendsIncluded: finalContext.includes('TENDENCIAS MENSUALES') ? 'sí' : 'no',
+                contextTruncated: finalContext !== context ? 'sí' : 'no',
+                contextLength: finalContext.length
             },
             timestamp: new Date().toISOString()
         };
 
     } catch (error) {
         console.error('❌ Error procesando consulta avanzada:', error);
+        
+        // Proporcionar más información específica sobre el error
+        let errorMessage = 'Lo siento, no pude procesar tu consulta avanzada en este momento.';
+        let errorDetails = error.message;
+        
+        if (error.name === 'AbortError') {
+            errorMessage = 'La consulta tardó demasiado en procesarse. Por favor, intenta con una consulta más específica.';
+            errorDetails = 'Timeout de 45 segundos alcanzado';
+        } else if (error.message?.includes('fetch')) {
+            errorMessage = 'Problema de conexión con el servicio de IA. Por favor, intenta nuevamente en unos momentos.';
+        } else if (error.message?.includes('API')) {
+            errorMessage = 'Error en el servicio de IA. Por favor, contacta al administrador si el problema persiste.';
+        }
+        
         return {
             success: false,
-            response: 'Lo siento, no pude procesar tu consulta avanzada en este momento.',
-            error: error.message,
+            response: errorMessage,
+            error: errorDetails,
             timestamp: new Date().toISOString()
         };
     }
