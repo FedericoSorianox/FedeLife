@@ -2802,12 +2802,34 @@ class FinanceApp {
             `;
         }).join('');
 
+        // Crear información del período actual
+        const periodInfo = this.getCurrentPeriodDisplayText();
+        
         container.innerHTML = `
             <h3 class="category-section-title">${title}</h3>
+            <p class="category-period-info">📅 Período: ${periodInfo}</p>
             <div class="categories-list">
                 ${categoriesHTML}
             </div>
         `;
+    }
+
+    /**
+     * Obtiene el texto del período actual para mostrar en la UI
+     * @returns {string} Texto descriptivo del período actual
+     */
+    getCurrentPeriodDisplayText() {
+        const { year, month, type } = this.currentPeriod;
+        
+        if (type === 'yearly') {
+            return `Año ${year}`;
+        } else {
+            const monthNames = [
+                'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+            ];
+            return `${monthNames[month - 1]} ${year}`;
+        }
     }
 
     /**
@@ -2857,21 +2879,23 @@ class FinanceApp {
     }
 
     /**
-     * Obtiene el número de transacciones por categoría
+     * Obtiene el número de transacciones por categoría (filtradas por período)
      * @param {string} categoryName - Nombre de la categoría
      * @returns {number} Número de transacciones
      */
     getTransactionCountByCategory(categoryName) {
-        return this.transactions.filter(t => t.category === categoryName).length;
+        const filteredTransactions = this.getTransactionsForCurrentPeriod();
+        return filteredTransactions.filter(t => t.category === categoryName).length;
     }
 
     /**
-     * Obtiene el monto total de transacciones por categoría
+     * Obtiene el monto total de transacciones por categoría (filtradas por período)
      * @param {string} categoryName - Nombre de la categoría
      * @returns {number} Monto total
      */
     getTotalAmountByCategory(categoryName) {
-        return this.transactions
+        const filteredTransactions = this.getTransactionsForCurrentPeriod();
+        return filteredTransactions
             .filter(t => t.category === categoryName)
             .reduce((total, t) => total + t.amount, 0);
     }
@@ -2907,8 +2931,9 @@ class FinanceApp {
 
         console.log('✅ Category found:', category);
 
-        // Obtener transacciones de esta categoría
-        const categoryTransactions = this.transactions
+        // Obtener transacciones de esta categoría (filtradas por período)
+        const filteredTransactions = this.getTransactionsForCurrentPeriod();
+        const categoryTransactions = filteredTransactions
             .filter(t => t.category === category.name)
             .sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -3025,6 +3050,7 @@ class FinanceApp {
                         <div>
                             <h2>${category.name}</h2>
                             <p class="category-type">${category.type === 'income' ? 'Categoría de Ingresos' : 'Categoría de Gastos'}</p>
+                            <p class="category-period">📅 ${this.getCurrentPeriodDisplayText()}</p>
                         </div>
                     </div>
                     <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
@@ -6043,6 +6069,7 @@ Responde como un economista profesional especializado en la mejor administració
 
         this.renderDashboard();
         this.renderTransactions();
+        this.renderCategories(); // Agregar renderización de categorías para respetar el período
         this.updateCharts();
     }
 
@@ -6057,6 +6084,7 @@ Responde como un economista profesional especializado en la mejor administració
         // Actualizar interfaz
         this.renderDashboard();
         this.renderTransactions();
+        this.renderCategories(); // Agregar renderización de categorías para respetar el período
         this.updateCharts();
     }
 
