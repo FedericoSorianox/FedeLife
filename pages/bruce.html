@@ -1,118 +1,1410 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bruce - Fede Life</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🌱 Bruce - Experto Cannabis Medicinal</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
     <link rel="stylesheet" href="app.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
-       <nav class="navbar">
-        <div class="nav-container">
+    <!-- Navegación moderna y minimalista -->
+    <nav class="modern-navbar">
+        <div class="nav-content">
             <div class="nav-brand">
-                <span class="nav-title">Fede Life</span>
+                <span class="brand-icon">🌱</span>
+                <span class="brand-text">Fede Life</span>
             </div>
-            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            <ul class="nav-menu" id="navMenu">
-                <li><a href="index.html">Inicio</a></li>
-                <li><a href="finanzas.html" >Finanzas</a></li>
-                <li><a href="tareas.html">Tareas</a></li>
-                <li><a href="bruce.html" class="active">Bruce</a></li>
-            </ul>
+            
+            <div class="nav-actions">
+                <!-- Estado de autenticación compacto -->
+                <div id="auth-status" class="auth-status-compact">
+                    <div id="userInfo" class="user-info-compact" style="display: none;">
+                        <div class="user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span id="userName" class="user-name"></span>
+                        <button id="logoutBtn" class="logout-btn-compact">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                    <div id="authButton" class="auth-button-compact" style="display: none;">
+                        <button onclick="window.location.href='login.html'" class="login-btn-compact">
+                            <i class="fas fa-sign-in-alt"></i>
+                            <span>Login</span>
+                        </button>
+                    </div>
+                    <div id="autoAuthButton" class="auto-auth-button-compact" style="display: none;">
+                        <button onclick="tryAutoLogin()" class="auto-login-btn-compact">
+                            <i class="fas fa-magic"></i>
+                            <span>Auto Login</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Menú hamburguesa moderno -->
+                <button class="menu-toggle" id="navToggle" aria-label="Menu">
+                    <div class="hamburger">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Menú lateral moderno -->
+        <div class="side-menu" id="sideMenu">
+            <div class="side-menu-header">
+                <h3>Navegación</h3>
+                <button class="close-menu" id="closeMenu">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <nav class="side-menu-nav">
+                <a href="index.html" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    <span>Inicio</span>
+                </a>
+                <a href="finanzas.html" class="nav-link">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Finanzas</span>
+                </a>
+                <a href="tareas.html" class="nav-link">
+                    <i class="fas fa-tasks"></i>
+                    <span>Tareas</span>
+                </a>
+                <a href="bruce.html" class="nav-link active">
+                    <i class="fas fa-seedling"></i>
+                    <span>Bruce - Cannabis</span>
+                </a>
+            </nav>
         </div>
     </nav>
-    <header>
-        <h1>Preguntale a Bruce</h1>
 
-        <!-- Estado de autenticación -->
-        <div id="auth-status" class="auth-status">
-            <div id="userInfo" class="user-info" style="display: none;">
-                <span>Bienvenido, <span id="userName"></span></span>
-                <button id="logoutBtn" class="logout-btn">Cerrar Sesión</button>
-            </div>
-            <div id="authButton" class="auth-button" style="display: none;">
-                <button onclick="window.location.href='login.html'" class="login-btn">Iniciar Sesión</button>
-            </div>
-            <div id="autoAuthButton" class="auto-auth-button" style="display: none;">
-                <button onclick="tryAutoLogin()" class="auto-login-btn">Login Automático</button>
-            </div>
-        </div>
-    </header>
-    <main>
-        <section class="chat-container">
-            <div class="chat-header">
-                <h1>🌱 Bruce Bugbee - Experto en Cannabis Medicinal</h1>
-                <div class="subtitle">Consultor especializado en cultivo medicinal de alta calidad</div>
-            </div>
-            <div id="chat-history" class="chat-history">
-                <div class="message ai-message">
-                    <div class="message-content">
-                        <strong>Bruce:</strong> ¡Hola! Soy Bruce, tu asistente IA. Puedes enviarme texto o imágenes y te
-                        responderé con información útil. ¿En qué puedo ayudarte hoy?
+    <!-- Overlay para el menú -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+    <!-- Contenido principal -->
+    <main class="main-container">
+        <!-- Header del chat moderno -->
+        <header class="chat-header-modern">
+            <div class="header-content">
+                <div class="expert-info">
+                    <div class="expert-avatar">
+                        <div class="avatar-icon">🧠</div>
+                        <div class="status-indicator active"></div>
+                    </div>
+                    <div class="expert-details">
+                        <h1 class="expert-name">Dr. Bruce Bugbee</h1>
+                        <p class="expert-title">Especialista Cannabis Medicinal</p>
+                        <div class="expert-status">
+                            <i class="fas fa-circle online"></i>
+                            <span>En línea</span>
+                        </div>
                     </div>
                 </div>
+                
+                <!-- Selector de cultivo mejorado -->
+                <div class="cultivo-selector-modern" id="cultivoSelectorContainer">
+                    <!-- Se insertará dinámicamente -->
+                </div>
+            </div>
+        </header>
+
+        <!-- Área del chat rediseñada -->
+        <section class="chat-container-modern">
+            <div class="chat-messages" id="chat-history">
+                <!-- Los mensajes se cargarán aquí -->
             </div>
 
-            <div class="input-container">
-                <div class="input-area">
-                    <textarea id="user-input" placeholder="Escribe tu mensaje aquí..." rows="3"></textarea>
-                    <input type="file" id="image-input" accept="image/*" style="display: none;">
-                    <div class="image-preview" id="image-preview" style="display: none;">
-                        <img id="preview-img" src="" alt="Vista previa">
-                        <button id="remove-image" class="remove-btn">&times;</button>
+            <!-- Input moderno y elegante -->
+            <div class="chat-input-container">
+                <div class="input-wrapper">
+                    <!-- Área de texto principal -->
+                    <div class="text-input-area">
+                        <textarea 
+                            id="user-input" 
+                            placeholder="Pregúntale a Bruce sobre tu cultivo..." 
+                            rows="1"
+                            maxlength="2000"></textarea>
+                        <div class="char-counter">
+                            <span id="charCount">0</span>/2000
+                        </div>
+                    </div>
+
+                    <!-- Vista previa de imagen -->
+                    <div class="image-preview-modern" id="image-preview" style="display: none;">
+                        <div class="preview-container">
+                            <img id="preview-img" src="" alt="Vista previa">
+                            <button id="remove-image" class="remove-image-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Controles del input -->
+                    <div class="input-controls">
+                        <div class="left-controls">
+                            <button id="attach-image" class="control-btn attach-btn" title="Adjuntar imagen">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <input type="file" id="image-input" accept="image/*" style="display: none;">
+                        </div>
+                        
+                        <div class="right-controls">
+                            <button id="send-message" class="send-btn-modern" disabled>
+                                <i class="fas fa-paper-plane"></i>
+                                <span>Enviar</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="controls">
-                    <button id="attach-image" class="attach-btn" title="Adjuntar imagen">📎</button>
-                    <button id="send-message" class="send-btn">Enviar</button>
+
+                <!-- Sugerencias rápidas -->
+                <div class="quick-suggestions" id="quickSuggestions">
+                    <div class="suggestion-item" data-text="¿Cómo está mi cultivo?">
+                        <i class="fas fa-seedling"></i>
+                        <span>Estado del cultivo</span>
+                    </div>
+                    <div class="suggestion-item" data-text="¿Qué nutrientes necesito?">
+                        <i class="fas fa-tint"></i>
+                        <span>Nutrientes</span>
+                    </div>
+                    <div class="suggestion-item" data-text="¿Cuándo cosechar?">
+                        <i class="fas fa-cut"></i>
+                        <span>Cosecha</span>
+                    </div>
+                    <div class="suggestion-item" data-text="Analizar esta imagen">
+                        <i class="fas fa-search"></i>
+                        <span>Analizar imagen</span>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- Botones para abrir modales laterales -->
-    <button id="open-info" class="side-toggle left">ℹ️</button>
-    <button id="open-notes" class="side-toggle right">📝</button>
+    <!-- Botones flotantes modernos -->
+    <div class="floating-actions">
+        <button id="open-info" class="fab fab-info" title="Información del cultivo">
+            <i class="fas fa-info-circle"></i>
+        </button>
+        <button id="open-notes" class="fab fab-notes" title="Notas del cultivo">
+            <i class="fas fa-sticky-note"></i>
+        </button>
+    </div>
 
-    <!-- Modal lateral izquierdo: información del cultivo -->
-    <div id="cultivo-info" class="side-modal left">
-        <div class="side-header">
-            <span>Información del Cultivo</span>
-            <button class="close-btn" data-target="cultivo-info">&times;</button>
+    <!-- Panel lateral izquierdo moderno: información del cultivo -->
+    <div id="cultivo-info" class="side-panel left">
+        <div class="panel-header">
+            <div class="panel-title">
+                <i class="fas fa-info-circle"></i>
+                <h3>Información del Cultivo</h3>
+            </div>
+            <button class="panel-close" data-target="cultivo-info">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-        <div id="cultivo-info-content" class="side-content">
-            <p>Selecciona un cultivo para ver la información.</p>
+        <div class="panel-body" id="cultivo-info-content">
+            <div class="empty-state">
+                <i class="fas fa-seedling"></i>
+                <h4>Sin cultivo seleccionado</h4>
+                <p>Selecciona o crea un cultivo para ver la información detallada</p>
+            </div>
         </div>
     </div>
 
-    <!-- Modal lateral derecho: notas del cultivo -->
-    <div id="cultivo-notes" class="side-modal right">
-        <div class="side-header">
-            <span>Notas del Cultivo</span>
-            <button class="close-btn" data-target="cultivo-notes">&times;</button>
+    <!-- Panel lateral derecho moderno: notas del cultivo -->
+    <div id="cultivo-notes" class="side-panel right">
+        <div class="panel-header">
+            <div class="panel-title">
+                <i class="fas fa-sticky-note"></i>
+                <h3>Notas del Cultivo</h3>
+            </div>
+            <button class="panel-close" data-target="cultivo-notes">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-        <div class="side-content">
-            <textarea id="notes-area" placeholder="Escribe tus notas aquí..."></textarea>
-            <button id="save-notes" class="save-notes-btn">Guardar</button>
+        <div class="panel-body">
+            <div class="notes-container">
+                <div class="notes-input-area">
+                    <textarea 
+                        id="notes-area" 
+                        placeholder="Escribe tus observaciones del cultivo..."
+                        rows="4"></textarea>
+                    <div class="notes-actions">
+                        <button id="save-notes" class="save-notes-btn">
+                            <i class="fas fa-save"></i>
+                            <span>Guardar Nota</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="notes-history" id="notesHistory">
+                    <!-- Las notas se cargarán aquí -->
+                </div>
+            </div>
         </div>
     </div>
 
-    <footer>
-        <p>&copy; Desde 1992 Fede Life. Todos los derechos reservados, decía</p>
+    <!-- Overlay para paneles -->
+    <div class="panels-overlay" id="panelsOverlay"></div>
+
+    <!-- Footer minimalista -->
+    <footer class="modern-footer">
+        <div class="footer-content">
+            <span>© 2024 Fede Life - Cultivo Cannabis Medicinal</span>
+        </div>
     </footer>
+
+    <!-- Estilos CSS modernos y responsivos -->
+    <style>
+        /* Reset y fuentes */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Colores principales */
+            --primary-green: #2E7D32;
+            --secondary-green: #4CAF50;
+            --light-green: #81C784;
+            --dark-green: #1B5E20;
+            --accent-green: #66BB6A;
+            
+            /* Colores de fondo */
+            --bg-primary: #FAFAFA;
+            --bg-secondary: #FFFFFF;
+            --bg-tertiary: #F5F5F5;
+            --bg-dark: #263238;
+            
+            /* Colores de texto */
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --text-white: #FFFFFF;
+            --text-muted: #9E9E9E;
+            
+            /* Sombras */
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.2);
+            
+            /* Bordes redondeados */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            
+            /* Espaciado */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #F1F8E9 0%, #E8F5E8 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Navegación moderna */
+        .modern-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            padding: 0 var(--spacing-md);
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            height: 64px;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-weight: 600;
+            color: var(--primary-green);
+        }
+
+        .brand-icon {
+            font-size: 24px;
+        }
+
+        .brand-text {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        /* Menú hamburguesa moderno */
+        .menu-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle:hover {
+            background: rgba(46, 125, 50, 0.1);
+        }
+
+        .hamburger {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .hamburger span {
+            width: 20px;
+            height: 2px;
+            background: var(--primary-green);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle.active .hamburger span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .menu-toggle.active .hamburger span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-toggle.active .hamburger span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -6px);
+        }
+
+        /* Menú lateral */
+        .side-menu {
+            position: fixed;
+            top: 0;
+            right: -320px;
+            width: 320px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            box-shadow: var(--shadow-lg);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1100;
+            overflow-y: auto;
+        }
+
+        .side-menu.active {
+            transform: translateX(-320px);
+        }
+
+        .side-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            background: var(--primary-green);
+            color: var(--text-white);
+        }
+
+        .side-menu-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-menu {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: var(--text-white);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .close-menu:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .side-menu-nav {
+            padding: var(--spacing-lg);
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .nav-link:hover {
+            background: rgba(46, 125, 50, 0.1);
+            color: var(--primary-green);
+        }
+
+        .nav-link.active {
+            background: var(--primary-green);
+            color: var(--text-white);
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Overlay del menú */
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1050;
+        }
+
+        .menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Autenticación compacta */
+        .auth-status-compact {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .user-info-compact {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: rgba(46, 125, 50, 0.1);
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(46, 125, 50, 0.2);
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            background: var(--primary-green);
+            color: var(--text-white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--primary-green);
+        }
+
+        .logout-btn-compact, .login-btn-compact, .auto-login-btn-compact {
+            background: var(--primary-green);
+            color: var(--text-white);
+            border: none;
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn-compact:hover, .login-btn-compact:hover, .auto-login-btn-compact:hover {
+            background: var(--dark-green);
+            transform: translateY(-1px);
+        }
+
+        /* Contenedor principal */
+        .main-container {
+            margin-top: 64px;
+            min-height: calc(100vh - 64px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header del chat moderno */
+        .chat-header-modern {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+
+        .expert-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .expert-avatar {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary-green), var(--secondary-green));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-md);
+        }
+
+        .avatar-icon {
+            font-size: 24px;
+            color: var(--text-white);
+        }
+
+        .status-indicator {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            width: 12px;
+            height: 12px;
+            background: #4CAF50;
+            border: 2px solid var(--bg-secondary);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .expert-details h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .expert-title {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .expert-status {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-size: 12px;
+            color: var(--secondary-green);
+        }
+
+        .expert-status .online {
+            font-size: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        /* Selector de cultivo moderno */
+        .cultivo-selector-modern {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            background: var(--bg-tertiary);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        /* Contenedor del chat */
+        .chat-container-modern {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 0 var(--spacing-md);
+        }
+
+        /* Mensajes del chat */
+        .chat-messages {
+            flex: 1;
+            padding: var(--spacing-lg) 0;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        /* Input del chat moderno */
+        .chat-input-container {
+            background: var(--bg-secondary);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            padding: var(--spacing-lg);
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-wrapper {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-xl);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.1);
+        }
+
+        .text-input-area {
+            position: relative;
+            padding: var(--spacing-md);
+        }
+
+        #user-input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            resize: none;
+            font-family: inherit;
+            font-size: 16px;
+            line-height: 1.5;
+            color: var(--text-primary);
+            outline: none;
+            min-height: 24px;
+            max-height: 120px;
+        }
+
+        #user-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .char-counter {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            font-size: 11px;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Vista previa de imagen moderna */
+        .image-preview-modern {
+            padding: var(--spacing-md);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .preview-container {
+            position: relative;
+            display: inline-block;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .preview-container img {
+            max-width: 200px;
+            max-height: 150px;
+            display: block;
+        }
+
+        .remove-image-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            background: rgba(0, 0, 0, 0.7);
+            color: var(--text-white);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .remove-image-btn:hover {
+            background: #f44336;
+        }
+
+        /* Controles del input */
+        .input-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .left-controls, .right-controls {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .control-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(46, 125, 50, 0.1);
+            color: var(--primary-green);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: var(--primary-green);
+            color: var(--text-white);
+            transform: scale(1.05);
+        }
+
+        .send-btn-modern {
+            background: var(--primary-green);
+            color: var(--text-white);
+            border: none;
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .send-btn-modern:hover:not(:disabled) {
+            background: var(--dark-green);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .send-btn-modern:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Sugerencias rápidas */
+        .quick-suggestions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .suggestion-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--bg-secondary);
+            border: 1px solid rgba(46, 125, 50, 0.2);
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--primary-green);
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-item:hover {
+            background: var(--primary-green);
+            color: var(--text-white);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .suggestion-item i {
+            font-size: 12px;
+        }
+
+        /* Botones flotantes */
+        .floating-actions {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+            z-index: 100;
+        }
+
+        .fab {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .fab-info {
+            background: var(--primary-green);
+            color: var(--text-white);
+        }
+
+        .fab-notes {
+            background: #FF9800;
+            color: var(--text-white);
+        }
+
+        .fab:hover {
+            transform: scale(1.1) translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Paneles laterales modernos */
+        .side-panel {
+            position: fixed;
+            top: 64px;
+            width: 400px;
+            height: calc(100vh - 64px);
+            background: var(--bg-secondary);
+            box-shadow: var(--shadow-lg);
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .side-panel.right {
+            right: 0;
+            transform: translateX(100%);
+        }
+
+        .side-panel.active {
+            transform: translateX(0);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            background: var(--bg-tertiary);
+        }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .panel-title h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .panel-title i {
+            color: var(--primary-green);
+        }
+
+        .panel-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .panel-close:hover {
+            background: #f44336;
+            color: var(--text-white);
+        }
+
+        .panel-body {
+            flex: 1;
+            padding: var(--spacing-lg);
+            overflow-y: auto;
+        }
+
+        /* Estado vacío */
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-xl) var(--spacing-lg);
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            color: var(--text-muted);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .empty-state h4 {
+            font-size: 16px;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        /* Área de notas */
+        .notes-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .notes-input-area {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .notes-input-area textarea {
+            width: 100%;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .notes-input-area textarea:focus {
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+        }
+
+        .notes-actions {
+            margin-top: var(--spacing-md);
+        }
+
+        .save-notes-btn {
+            background: var(--primary-green);
+            color: var(--text-white);
+            border: none;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .save-notes-btn:hover {
+            background: var(--dark-green);
+            transform: translateY(-1px);
+        }
+
+        /* Overlay para paneles */
+        .panels-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 150;
+        }
+
+        .panels-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Footer moderno */
+        .modern-footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            padding: var(--spacing-md);
+            text-align: center;
+        }
+
+        .footer-content {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Estilos para mensajes del chat */
+        .message {
+            margin-bottom: var(--spacing-lg);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            max-width: 80%;
+            animation: fadeInUp 0.4s ease-out;
+            box-shadow: var(--shadow-sm);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            background: linear-gradient(135deg, var(--primary-green), var(--secondary-green));
+            color: var(--text-white);
+            margin-left: auto;
+            border-bottom-right-radius: var(--radius-sm);
+        }
+
+        .ai-message {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            margin-right: auto;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-bottom-left-radius: var(--radius-sm);
+        }
+
+        .message-content {
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .message-content strong {
+            display: block;
+            margin-bottom: var(--spacing-sm);
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .user-message .message-content strong {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .ai-message .message-content strong {
+            color: var(--primary-green);
+        }
+
+        /* Indicador de escritura */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-lg);
+            margin: var(--spacing-md) 0;
+            max-width: 200px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: var(--primary-green);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(1) { animation-delay: 0s; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.6;
+            }
+            30% {
+                transform: translateY(-8px);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive Design para iPhone 16 y móviles */
+        @media (max-width: 768px) {
+            .nav-content {
+                padding: 0 var(--spacing-md);
+            }
+
+            .brand-text {
+                display: none;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: var(--spacing-md);
+                align-items: flex-start;
+            }
+
+            .expert-info {
+                align-self: stretch;
+            }
+
+            .cultivo-selector-modern {
+                align-self: stretch;
+            }
+
+            .chat-container-modern {
+                padding: 0 var(--spacing-sm);
+            }
+
+            .chat-messages {
+                padding: var(--spacing-md) 0;
+            }
+
+            .message {
+                max-width: 90%;
+                padding: var(--spacing-md);
+            }
+
+            .quick-suggestions {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: var(--spacing-sm);
+            }
+
+            .suggestion-item {
+                flex-shrink: 0;
+            }
+
+            .side-panel {
+                width: 100vw;
+                max-width: 400px;
+            }
+
+            .floating-actions {
+                bottom: 16px;
+                right: 16px;
+            }
+
+            .fab {
+                width: 48px;
+                height: 48px;
+                font-size: 18px;
+            }
+
+            /* Ajustes específicos para iPhone */
+            .chat-input-container {
+                padding-bottom: env(safe-area-inset-bottom, var(--spacing-lg));
+            }
+
+            .main-container {
+                padding-bottom: env(safe-area-inset-bottom, 0);
+            }
+        }
+
+        /* Estilos para iPhone 16 específicamente */
+        @media (max-width: 430px) and (min-height: 800px) {
+            .modern-navbar {
+                padding-left: env(safe-area-inset-left, var(--spacing-md));
+                padding-right: env(safe-area-inset-right, var(--spacing-md));
+            }
+
+            .expert-avatar {
+                width: 50px;
+                height: 50px;
+            }
+
+            .avatar-icon {
+                font-size: 20px;
+            }
+
+            .expert-details h1 {
+                font-size: 18px;
+            }
+
+            .expert-title {
+                font-size: 13px;
+            }
+
+            #user-input {
+                font-size: 16px; /* Previene zoom en iOS */
+            }
+
+            .chat-input-container {
+                padding-left: env(safe-area-inset-left, var(--spacing-lg));
+                padding-right: env(safe-area-inset-right, var(--spacing-lg));
+            }
+        }
+
+        /* Dark mode ready */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #121212;
+                --bg-secondary: #1E1E1E;
+                --bg-tertiary: #2D2D2D;
+                --text-primary: #FFFFFF;
+                --text-secondary: #B3B3B3;
+                --text-muted: #666666;
+            }
+        }
+
+        /* Animaciones mejoradas */
+        @keyframes slideInFromRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInFromLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .user-message {
+            animation: slideInFromRight 0.4s ease-out;
+        }
+
+        .ai-message {
+            animation: slideInFromLeft 0.4s ease-out;
+        }
+
+        /* Mejoras de accesibilidad */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Scrollbar personalizado */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-green);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--dark-green);
+        }
+
+        /* Estados de focus mejorados */
+        button:focus-visible, 
+        input:focus-visible, 
+        textarea:focus-visible {
+            outline: 2px solid var(--primary-green);
+            outline-offset: 2px;
+        }
+
+        /* Mejoras de performance */
+        .chat-messages {
+            contain: layout style paint;
+        }
+
+        .message {
+            contain: layout style;
+        }
+
+        /* Efectos especiales para interacciones */
+        .send-btn-modern:active {
+            transform: scale(0.95);
+        }
+
+        .fab:active {
+            transform: scale(0.9);
+        }
+
+        .suggestion-item:active {
+            transform: scale(0.95);
+        }
+    </style>
 
     <script src="auth.js"></script>
     <script src="../funciones/cannabis_chat.js"></script>
     <script>
         class BruceAI {
             constructor() {
+                // Referencias de elementos del chat
                 this.chatHistory = document.getElementById('chat-history');
                 this.userInput = document.getElementById('user-input');
                 this.imageInput = document.getElementById('image-input');
@@ -122,6 +1414,13 @@
                 this.attachButton = document.getElementById('attach-image');
                 this.removeImageButton = document.getElementById('remove-image');
 
+                // Referencias de navegación moderna
+                this.navToggle = document.getElementById('navToggle');
+                this.sideMenu = document.getElementById('sideMenu');
+                this.menuOverlay = document.getElementById('menuOverlay');
+                this.closeMenu = document.getElementById('closeMenu');
+
+                // Referencias de paneles laterales modernos
                 this.infoPanel = document.getElementById('cultivo-info');
                 this.notesPanel = document.getElementById('cultivo-notes');
                 this.openInfoBtn = document.getElementById('open-info');
@@ -129,6 +1428,12 @@
                 this.notesArea = document.getElementById('notes-area');
                 this.saveNotesBtn = document.getElementById('save-notes');
                 this.infoContent = document.getElementById('cultivo-info-content');
+                this.panelsOverlay = document.getElementById('panelsOverlay');
+
+                // Referencias adicionales para UI moderna
+                this.charCount = document.getElementById('charCount');
+                this.quickSuggestions = document.getElementById('quickSuggestions');
+                this.cultivoSelectorContainer = document.getElementById('cultivoSelectorContainer');
 
                 this.currentImage = null;
                 this.currentCultivo = null;
@@ -156,7 +1461,16 @@
 
 
             initializeEventListeners() {
+                // Eventos del chat
                 this.sendButton.addEventListener('click', () => this.sendMessage());
+                
+                // Input con auto-resize y contador de caracteres
+                this.userInput.addEventListener('input', (e) => {
+                    this.updateCharCounter();
+                    this.autoResizeInput();
+                    this.updateSendButtonState();
+                });
+
                 this.userInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -164,6 +1478,7 @@
                     }
                 });
 
+                // Botones de adjuntar y remover imagen
                 this.attachButton.addEventListener('click', () => {
                     this.imageInput.click();
                 });
@@ -176,15 +1491,223 @@
                     this.removeImage();
                 });
 
-                this.openInfoBtn.addEventListener('click', () => this.togglePanel(this.infoPanel, true));
-                this.openNotesBtn.addEventListener('click', () => this.togglePanel(this.notesPanel, true));
-                this.infoPanel
-                    .querySelector('.close-btn')
-                    .addEventListener('click', () => this.togglePanel(this.infoPanel, false));
-                this.notesPanel
-                    .querySelector('.close-btn')
-                    .addEventListener('click', () => this.togglePanel(this.notesPanel, false));
+                // Navegación moderna
+                this.setupModernNavigation();
+
+                // Paneles laterales modernos
+                this.setupModernPanels();
+
+                // Sugerencias rápidas
+                this.setupQuickSuggestions();
+
+                // Eventos adicionales
                 this.saveNotesBtn.addEventListener('click', () => this.saveNotes());
+
+                // Gestos táctiles para móvil
+                this.setupTouchGestures();
+            }
+
+            setupModernNavigation() {
+                // Toggle del menú principal
+                this.navToggle.addEventListener('click', () => {
+                    this.toggleSideMenu();
+                });
+
+                // Cerrar menú
+                this.closeMenu.addEventListener('click', () => {
+                    this.closeSideMenu();
+                });
+
+                // Overlay para cerrar menú
+                this.menuOverlay.addEventListener('click', () => {
+                    this.closeSideMenu();
+                });
+
+                // Cerrar menú al hacer clic en un enlace
+                const navLinks = this.sideMenu.querySelectorAll('.nav-link');
+                navLinks.forEach(link => {
+                    link.addEventListener('click', () => {
+                        this.closeSideMenu();
+                    });
+                });
+            }
+
+            setupModernPanels() {
+                // Botones FAB para abrir paneles
+                this.openInfoBtn.addEventListener('click', () => this.togglePanel('info', true));
+                this.openNotesBtn.addEventListener('click', () => this.togglePanel('notes', true));
+
+                // Botones de cerrar paneles
+                const infoPanelClose = this.infoPanel.querySelector('.panel-close');
+                const notesPanelClose = this.notesPanel.querySelector('.panel-close');
+
+                if (infoPanelClose) {
+                    infoPanelClose.addEventListener('click', () => this.togglePanel('info', false));
+                }
+
+                if (notesPanelClose) {
+                    notesPanelClose.addEventListener('click', () => this.togglePanel('notes', false));
+                }
+
+                // Overlay para cerrar paneles
+                this.panelsOverlay.addEventListener('click', () => {
+                    this.closeAllPanels();
+                });
+            }
+
+            setupQuickSuggestions() {
+                const suggestions = this.quickSuggestions.querySelectorAll('.suggestion-item');
+                suggestions.forEach(suggestion => {
+                    suggestion.addEventListener('click', () => {
+                        const text = suggestion.dataset.text;
+                        this.userInput.value = text;
+                        this.updateCharCounter();
+                        this.updateSendButtonState();
+                        this.userInput.focus();
+                        
+                        // Auto-enviar para ciertas sugerencias
+                        if (text === "Analizar esta imagen" && this.currentImage) {
+                            this.sendMessage();
+                        }
+                    });
+                });
+            }
+
+            setupTouchGestures() {
+                // Swipe para abrir/cerrar paneles en móvil
+                let startX = 0;
+                let currentX = 0;
+                let isDragging = false;
+
+                const handleTouchStart = (e) => {
+                    startX = e.touches[0].clientX;
+                    isDragging = true;
+                };
+
+                const handleTouchMove = (e) => {
+                    if (!isDragging) return;
+                    currentX = e.touches[0].clientX;
+                };
+
+                const handleTouchEnd = () => {
+                    if (!isDragging) return;
+                    isDragging = false;
+
+                    const deltaX = currentX - startX;
+                    const threshold = 50;
+
+                    // Swipe desde el borde izquierdo para abrir info
+                    if (startX < 20 && deltaX > threshold) {
+                        this.togglePanel('info', true);
+                    }
+                    // Swipe desde el borde derecho para abrir notas
+                    else if (startX > window.innerWidth - 20 && deltaX < -threshold) {
+                        this.togglePanel('notes', true);
+                    }
+                };
+
+                document.addEventListener('touchstart', handleTouchStart);
+                document.addEventListener('touchmove', handleTouchMove);
+                document.addEventListener('touchend', handleTouchEnd);
+            }
+
+            // Métodos auxiliares para la UI moderna
+            updateCharCounter() {
+                const currentLength = this.userInput.value.length;
+                const maxLength = 2000;
+                this.charCount.textContent = currentLength;
+                
+                // Cambiar color si se acerca al límite
+                if (currentLength > maxLength * 0.9) {
+                    this.charCount.style.color = '#f44336';
+                } else if (currentLength > maxLength * 0.7) {
+                    this.charCount.style.color = '#ff9800';
+                } else {
+                    this.charCount.style.color = 'var(--text-muted)';
+                }
+            }
+
+            autoResizeInput() {
+                this.userInput.style.height = 'auto';
+                this.userInput.style.height = Math.min(this.userInput.scrollHeight, 120) + 'px';
+            }
+
+            updateSendButtonState() {
+                const hasText = this.userInput.value.trim().length > 0;
+                const hasImage = this.currentImage !== null;
+                this.sendButton.disabled = !hasText && !hasImage;
+            }
+
+            toggleSideMenu() {
+                this.sideMenu.classList.toggle('active');
+                this.menuOverlay.classList.toggle('active');
+                this.navToggle.classList.toggle('active');
+                
+                // Prevenir scroll del body cuando el menú está abierto
+                document.body.style.overflow = this.sideMenu.classList.contains('active') ? 'hidden' : '';
+            }
+
+            closeSideMenu() {
+                this.sideMenu.classList.remove('active');
+                this.menuOverlay.classList.remove('active');
+                this.navToggle.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            togglePanel(panelType, open) {
+                const panel = panelType === 'info' ? this.infoPanel : this.notesPanel;
+                const isOpen = panel.classList.contains('active');
+                
+                if (open === undefined) {
+                    open = !isOpen;
+                }
+
+                if (open) {
+                    // Cerrar otros paneles primero
+                    this.closeAllPanels();
+                    
+                    panel.classList.add('active');
+                    this.panelsOverlay.classList.add('active');
+                    
+                    // Cargar datos específicos del panel
+                    if (panelType === 'notes' && this.currentCultivo) {
+                        this.loadNotasFromAPI();
+                    }
+                } else {
+                    panel.classList.remove('active');
+                    this.checkPanelsOverlay();
+                }
+            }
+
+            closeAllPanels() {
+                this.infoPanel.classList.remove('active');
+                this.notesPanel.classList.remove('active');
+                this.panelsOverlay.classList.remove('active');
+            }
+
+            checkPanelsOverlay() {
+                const anyPanelOpen = this.infoPanel.classList.contains('active') || 
+                                   this.notesPanel.classList.contains('active');
+                
+                if (!anyPanelOpen) {
+                    this.panelsOverlay.classList.remove('active');
+                }
+            }
+
+            showTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'typing-indicator';
+                typingDiv.id = 'typing-indicator';
+                typingDiv.innerHTML = `
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <span>Bruce está escribiendo...</span>
+                `;
+                this.chatHistory.appendChild(typingDiv);
+                this.scrollToBottom();
             }
 
             // Gestión de cultivos con API
@@ -277,20 +1800,142 @@
             }
 
             initializeCultivoSelector() {
-                const selectorContainer = document.createElement('div');
-                selectorContainer.className = 'cultivo-selector';
-                selectorContainer.innerHTML = `
-                    <div class="cultivo-controls">
-                        <select id="cultivo-select" class="cultivo-dropdown">
-                            <option value="">Seleccionar cultivo...</option>
-                        </select>
-                        <button id="new-cultivo-btn" class="new-cultivo-btn">+ Nuevo Cultivo</button>
-                        <button id="edit-cultivo-btn" class="edit-cultivo-btn" style="display: none;">✏️ Editar</button>
-                        <button id="delete-cultivo-btn" class="delete-cultivo-btn" style="display: none;">🗑️</button>
+                // Insertar en el contenedor moderno del header
+                this.cultivoSelectorContainer.innerHTML = `
+                    <div class="cultivo-controls-modern">
+                        <div class="cultivo-select-wrapper">
+                            <i class="fas fa-seedling"></i>
+                            <select id="cultivo-select" class="cultivo-dropdown-modern">
+                                <option value="">Seleccionar cultivo...</option>
+                            </select>
+                        </div>
+                        <div class="cultivo-actions">
+                            <button id="new-cultivo-btn" class="cultivo-btn new-btn" title="Nuevo cultivo">
+                                <i class="fas fa-plus"></i>
+                                <span>Nuevo</span>
+                            </button>
+                            <button id="edit-cultivo-btn" class="cultivo-btn edit-btn" style="display: none;" title="Editar cultivo">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button id="delete-cultivo-btn" class="cultivo-btn delete-btn" style="display: none;" title="Eliminar cultivo">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
+                    
+                    <style>
+                        .cultivo-controls-modern {
+                            display: flex;
+                            gap: var(--spacing-md);
+                            align-items: center;
+                            flex-wrap: wrap;
+                        }
+                        
+                        .cultivo-select-wrapper {
+                            display: flex;
+                            align-items: center;
+                            gap: var(--spacing-sm);
+                            background: var(--bg-secondary);
+                            border: 1px solid rgba(0, 0, 0, 0.2);
+                            border-radius: var(--radius-md);
+                            padding: var(--spacing-sm) var(--spacing-md);
+                            min-width: 200px;
+                        }
+                        
+                        .cultivo-select-wrapper i {
+                            color: var(--primary-green);
+                            font-size: 14px;
+                        }
+                        
+                        .cultivo-dropdown-modern {
+                            border: none;
+                            background: transparent;
+                            outline: none;
+                            font-family: inherit;
+                            font-size: 14px;
+                            color: var(--text-primary);
+                            flex: 1;
+                            cursor: pointer;
+                        }
+                        
+                        .cultivo-actions {
+                            display: flex;
+                            gap: var(--spacing-sm);
+                            align-items: center;
+                        }
+                        
+                        .cultivo-btn {
+                            display: flex;
+                            align-items: center;
+                            gap: var(--spacing-xs);
+                            padding: var(--spacing-sm) var(--spacing-md);
+                            border: none;
+                            border-radius: var(--radius-md);
+                            cursor: pointer;
+                            font-size: 13px;
+                            font-weight: 500;
+                            transition: all 0.3s ease;
+                        }
+                        
+                        .new-btn {
+                            background: var(--primary-green);
+                            color: var(--text-white);
+                        }
+                        
+                        .new-btn:hover {
+                            background: var(--dark-green);
+                            transform: translateY(-1px);
+                        }
+                        
+                        .edit-btn {
+                            background: #2196F3;
+                            color: var(--text-white);
+                            width: 36px;
+                            height: 36px;
+                            padding: 0;
+                            justify-content: center;
+                        }
+                        
+                        .edit-btn:hover {
+                            background: #1976D2;
+                            transform: translateY(-1px);
+                        }
+                        
+                        .delete-btn {
+                            background: #f44336;
+                            color: var(--text-white);
+                            width: 36px;
+                            height: 36px;
+                            padding: 0;
+                            justify-content: center;
+                        }
+                        
+                        .delete-btn:hover {
+                            background: #d32f2f;
+                            transform: translateY(-1px);
+                        }
+                        
+                        @media (max-width: 768px) {
+                            .cultivo-controls-modern {
+                                flex-direction: column;
+                                align-items: stretch;
+                                gap: var(--spacing-sm);
+                            }
+                            
+                            .cultivo-select-wrapper {
+                                min-width: auto;
+                            }
+                            
+                            .cultivo-actions {
+                                justify-content: center;
+                            }
+                            
+                            .cultivo-btn span {
+                                display: none;
+                            }
+                        }
+                    </style>
                 `;
-
-                this.chatHistory.parentNode.insertBefore(selectorContainer, this.chatHistory);
 
                 this.cultivoSelect = document.getElementById('cultivo-select');
                 this.newCultivoBtn = document.getElementById('new-cultivo-btn');
@@ -997,35 +2642,267 @@ Basándome en la imagen y tu descripción, puedo darte un diagnóstico más prec
 
             showWelcomeMessage() {
                 this.chatHistory.innerHTML = `
-                    <div class="message ai-message">
+                    <div class="message ai-message welcome-message">
                         <div class="message-content">
-                            <h1>👨‍🏫 ¡Hola! Soy Bruce Bugbee</h1>
+                            <div class="welcome-header">
+                                <div class="welcome-avatar">🧠</div>
+                                <div class="welcome-intro">
+                                    <h2>¡Hola! Soy Dr. Bruce Bugbee</h2>
+                                    <p>Tu experto en cannabis medicinal con más de 25 años de experiencia</p>
+                                </div>
+                            </div>
 
-                            <p>Especialista en cannabis medicinal con más de 25 años de experiencia en investigación y cultivo terapéutico.</p>
+                            <div class="welcome-features">
+                                <h3>🌱 ¿En qué puedo ayudarte?</h3>
+                                <div class="features-grid">
+                                    <div class="feature-item">
+                                        <i class="fas fa-seedling"></i>
+                                        <h4>Técnicas de Cultivo</h4>
+                                        <p>Métodos avanzados para cannabis medicinal de alta calidad</p>
+                                    </div>
+                                    <div class="feature-item">
+                                        <i class="fas fa-chart-line"></i>
+                                        <h4>Optimización</h4>
+                                        <p>Maximiza perfiles de cannabinoides (THC/CBD)</p>
+                                    </div>
+                                    <div class="feature-item">
+                                        <i class="fas fa-search"></i>
+                                        <h4>Diagnóstico</h4>
+                                        <p>Identifica y soluciona problemas en tus plantas</p>
+                                    </div>
+                                    <div class="feature-item">
+                                        <i class="fas fa-cut"></i>
+                                        <h4>Cosecha & Curado</h4>
+                                        <p>Protocolos para máxima potencia terapéutica</p>
+                                    </div>
+                                </div>
+                            </div>
 
-                            <h2>🌱 ¿En qué puedo ayudarte hoy?</h2>
+                            <div class="getting-started">
+                                <h3>🚀 Para comenzar:</h3>
+                                <div class="steps">
+                                    <div class="step">
+                                        <span class="step-number">1</span>
+                                        <div class="step-content">
+                                            <h4>Crea tu cultivo</h4>
+                                            <p>Configura los parámetros específicos de tu setup</p>
+                                        </div>
+                                    </div>
+                                    <div class="step">
+                                        <span class="step-number">2</span>
+                                        <div class="step-content">
+                                            <h4>Selecciona el cultivo</h4>
+                                            <p>Todas mis respuestas serán personalizadas</p>
+                                        </div>
+                                    </div>
+                                    <div class="step">
+                                        <span class="step-number">3</span>
+                                        <div class="step-content">
+                                            <h4>¡Pregunta lo que necesites!</h4>
+                                            <p>Envía texto o fotos para análisis detallado</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-                            <ul>
-                                <li><strong>Técnicas de cultivo</strong> medicinal de alta calidad</li>
-                                <li><strong>Optimización</strong> de perfiles cannabinoides (THC/CBD)</li>
-                                <li><strong>Diagnóstico</strong> de problemas en plantas</li>
-                                <li><strong>Protocolos</strong> de cosecha y curado terapéutico</li>
-                                <li><strong>Recomendaciones</strong> basadas en evidencia científica</li>
-                            </ul>
-
-                            <h3>🚀 Para comenzar:</h3>
-
-                            <ol>
-                                <li><strong>Crea un cultivo</strong> con tus parámetros específicos</li>
-                                <li><strong>Selecciona el cultivo</strong> para consultas personalizadas</li>
-                                <li><strong>Pregúntame</strong> cualquier duda sobre tu cultivo medicinal</li>
-                            </ol>
-
-                            <div style="background: rgba(255, 193, 7, 0.1); padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
-                                <p><em>💡 Recuerda configurar tu API key de OpenAI para activar todas las funcionalidades.</em></p>
+                            <div class="tip-box">
+                                <i class="fas fa-lightbulb"></i>
+                                <p><strong>Tip:</strong> Puedes usar las sugerencias rápidas de abajo o enviar fotos de tus plantas para análisis visual.</p>
                             </div>
                         </div>
                     </div>
+                    
+                    <style>
+                        .welcome-message {
+                            max-width: 100% !important;
+                            background: linear-gradient(135deg, rgba(46, 125, 50, 0.05), rgba(76, 175, 80, 0.05));
+                            border: 2px solid rgba(46, 125, 50, 0.2);
+                        }
+                        
+                        .welcome-header {
+                            display: flex;
+                            align-items: center;
+                            gap: var(--spacing-lg);
+                            margin-bottom: var(--spacing-xl);
+                            padding-bottom: var(--spacing-lg);
+                            border-bottom: 1px solid rgba(46, 125, 50, 0.2);
+                        }
+                        
+                        .welcome-avatar {
+                            width: 80px;
+                            height: 80px;
+                            background: linear-gradient(135deg, var(--primary-green), var(--secondary-green));
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 36px;
+                            box-shadow: var(--shadow-lg);
+                            flex-shrink: 0;
+                        }
+                        
+                        .welcome-intro h2 {
+                            margin: 0 0 var(--spacing-sm) 0;
+                            color: var(--primary-green);
+                            font-size: 24px;
+                            font-weight: 700;
+                        }
+                        
+                        .welcome-intro p {
+                            margin: 0;
+                            color: var(--text-secondary);
+                            font-size: 16px;
+                        }
+                        
+                        .welcome-features {
+                            margin-bottom: var(--spacing-xl);
+                        }
+                        
+                        .welcome-features h3 {
+                            color: var(--primary-green);
+                            margin-bottom: var(--spacing-lg);
+                            font-size: 20px;
+                        }
+                        
+                        .features-grid {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                            gap: var(--spacing-lg);
+                            margin-bottom: var(--spacing-lg);
+                        }
+                        
+                        .feature-item {
+                            padding: var(--spacing-lg);
+                            background: rgba(255, 255, 255, 0.7);
+                            border-radius: var(--radius-lg);
+                            text-align: center;
+                            border: 1px solid rgba(46, 125, 50, 0.1);
+                            transition: all 0.3s ease;
+                        }
+                        
+                        .feature-item:hover {
+                            transform: translateY(-2px);
+                            box-shadow: var(--shadow-md);
+                            border-color: rgba(46, 125, 50, 0.3);
+                        }
+                        
+                        .feature-item i {
+                            font-size: 24px;
+                            color: var(--secondary-green);
+                            margin-bottom: var(--spacing-sm);
+                        }
+                        
+                        .feature-item h4 {
+                            margin: 0 0 var(--spacing-sm) 0;
+                            color: var(--text-primary);
+                            font-size: 16px;
+                            font-weight: 600;
+                        }
+                        
+                        .feature-item p {
+                            margin: 0;
+                            color: var(--text-secondary);
+                            font-size: 14px;
+                            line-height: 1.5;
+                        }
+                        
+                        .getting-started h3 {
+                            color: var(--primary-green);
+                            margin-bottom: var(--spacing-lg);
+                            font-size: 20px;
+                        }
+                        
+                        .steps {
+                            display: flex;
+                            flex-direction: column;
+                            gap: var(--spacing-lg);
+                            margin-bottom: var(--spacing-xl);
+                        }
+                        
+                        .step {
+                            display: flex;
+                            align-items: flex-start;
+                            gap: var(--spacing-md);
+                        }
+                        
+                        .step-number {
+                            width: 32px;
+                            height: 32px;
+                            background: var(--primary-green);
+                            color: var(--text-white);
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-weight: 600;
+                            font-size: 14px;
+                            flex-shrink: 0;
+                        }
+                        
+                        .step-content h4 {
+                            margin: 0 0 var(--spacing-xs) 0;
+                            color: var(--text-primary);
+                            font-size: 16px;
+                            font-weight: 600;
+                        }
+                        
+                        .step-content p {
+                            margin: 0;
+                            color: var(--text-secondary);
+                            font-size: 14px;
+                        }
+                        
+                        .tip-box {
+                            display: flex;
+                            align-items: flex-start;
+                            gap: var(--spacing-md);
+                            padding: var(--spacing-lg);
+                            background: rgba(255, 193, 7, 0.1);
+                            border-radius: var(--radius-md);
+                            border-left: 4px solid #ffc107;
+                        }
+                        
+                        .tip-box i {
+                            color: #ffc107;
+                            font-size: 18px;
+                            margin-top: 2px;
+                            flex-shrink: 0;
+                        }
+                        
+                        .tip-box p {
+                            margin: 0;
+                            color: var(--text-primary);
+                            font-size: 14px;
+                            line-height: 1.5;
+                        }
+                        
+                        @media (max-width: 768px) {
+                            .welcome-header {
+                                flex-direction: column;
+                                text-align: center;
+                                gap: var(--spacing-md);
+                            }
+                            
+                            .welcome-avatar {
+                                width: 60px;
+                                height: 60px;
+                                font-size: 28px;
+                            }
+                            
+                            .welcome-intro h2 {
+                                font-size: 20px;
+                            }
+                            
+                            .features-grid {
+                                grid-template-columns: 1fr;
+                                gap: var(--spacing-md);
+                            }
+                            
+                            .feature-item {
+                                padding: var(--spacing-md);
+                            }
+                        }
+                    </style>
                 `;
             }
 
