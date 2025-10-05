@@ -3,7 +3,7 @@ services:
     name: fedelife-finanzas
     env: node
     plan: free
-    buildCommand: npm install --production && npm run build
+    buildCommand: ./render-build.sh
     startCommand: NODE_ENV=production npm start
     envVars:
       - key: NODE_ENV
