@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import CategoryModel from '@/server/models/Category';
+import CategoryModel from '@/lib/models/Category';
 import connectToDatabase from '@/lib/mongodb';
 
 // Función para obtener userId del token

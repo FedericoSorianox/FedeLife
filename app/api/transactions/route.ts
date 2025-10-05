@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import TransactionModel from '@/server/models/Transaction';
+import TransactionModel from '@/lib/models/Transaction';
+import connectToDatabase from '@/lib/mongodb';
 import jwt from 'jsonwebtoken';
 
 // Función para obtener userId del token

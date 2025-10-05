@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import TransactionModel from '@/server/models/Transaction';
+import TransactionModel from '@/lib/models/Transaction';
+import connectToDatabase from '@/lib/mongodb';
 
 export async function GET(request: NextRequest) {
   try {
