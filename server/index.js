@@ -20,24 +20,25 @@ require('dotenv').config();
 // Importar modelos (necesario para que Mongoose los registre)
 require('./models/Category');
 require('./models/Transaction');
-require('./models/Task');
 require('./models/User');
 
 // Importar modelos para uso directo
 const Transaction = require('./models/Transaction');
-const Task = require('./models/Task');
+const Goal = require('./models/Goal');
 
 // Importar rutas
 const authRoutes = require('./routes/auth');
 const transactionRoutes = require('./routes/transactions');
-const taskRoutes = require('./routes/tasks');
 const categoryRoutes = require('./routes/categories');
 const budgetRoutes = require('./routes/budgets');
 const goalRoutes = require('./routes/goals');
 const reportRoutes = require('./routes/reports');
 const aiRoutes = require('./routes/ai');
+const pdfAnalyzeRoutes = require('./routes/pdf-analyze');
 const exchangeRateRoutes = require('./routes/exchangeRates');
-const cultivoRoutes = require('./routes/cultivos');
+
+// Importar servicios
+const { exchangeRateService } = require('./services/exchangeRate');
 
 // Importar middleware de autenticación
 const { authenticateToken } = require('./middleware/auth');
@@ -45,7 +46,7 @@ const { authenticateToken } = require('./middleware/auth');
 // ==================== CONFIGURACIÓN ====================
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3003; // Puerto fijo para evitar conflictos con Next.js
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/fede-life-finanzas';
 
 // Debug: Mostrar variables de entorno (sin mostrar valores sensibles)
@@ -167,10 +168,12 @@ function setupSecurityMiddleware() {
     
     // Rate limiting para prevenir ataques
     const limiter = rateLimit({
-        windowMs: 15 * 60 * 1000, // 15 minutos
-        max: 100, // máximo 100 requests por ventana
+        windowMs: process.env.NODE_ENV === 'production' ? 15 * 60 * 1000 : 60 * 60 * 1000, // 15 min producción, 60 min desarrollo
+        max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 100 producción, 1000 desarrollo
         message: {
-            error: 'Demasiadas requests desde esta IP, intenta de nuevo en 15 minutos'
+            error: process.env.NODE_ENV === 'production'
+                ? 'Demasiadas requests desde esta IP, intenta de nuevo en 15 minutos'
+                : 'Demasiadas requests en desarrollo, intenta de nuevo en 1 hora'
         },
         standardHeaders: true,
         legacyHeaders: false
@@ -178,14 +181,43 @@ function setupSecurityMiddleware() {
     
     app.use('/api/', limiter);
     
-    // CORS configurado para producción
-    app.use(cors({
-        origin: true, // Permitir todos los orígenes en desarrollo
+    // CORS configurado para desarrollo y producción
+    const corsOptions = {
+        origin: function (origin, callback) {
+            // Permitir requests sin origin (como mobile apps o curl requests)
+            if (!origin) return callback(null, true);
+
+            // Lista de orígenes permitidos
+            const allowedOrigins = [
+                'http://localhost:3000',
+                'http://localhost:3001',
+                'http://localhost:3002',
+                'http://localhost:3003',
+                'http://127.0.0.1:3000',
+                'http://127.0.0.1:3001',
+                'http://127.0.0.1:3002',
+                'http://127.0.0.1:3003',
+                // Agregar dominios de producción aquí
+                process.env.FRONTEND_URL
+            ].filter(Boolean); // Filtrar valores undefined
+
+            if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+                callback(null, true);
+            } else {
+                console.log(`🚫 Origen no permitido: ${origin}`);
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization']
-    }));
-    
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+    };
+
+    app.use(cors(corsOptions));
+
+    // Manejar preflight requests OPTIONS
+    app.options('*', cors(corsOptions));
+
     console.log('🔒 Middleware de seguridad configurado');
 }
 
@@ -270,303 +302,14 @@ function setupRoutes() {
 
     // Rutas protegidas (requieren autenticación)
     app.use('/api/transactions', authenticateToken, transactionRoutes);
-    app.use('/api/tasks', authenticateToken, taskRoutes);
     app.use('/api/categories', authenticateToken, categoryRoutes);
     app.use('/api/budgets', authenticateToken, budgetRoutes);
     app.use('/api/goals', authenticateToken, goalRoutes);
     app.use('/api/reports', authenticateToken, reportRoutes);
     app.use('/api/ai', authenticateToken, aiRoutes);
-    app.use('/api/exchange-rates', authenticateToken, exchangeRateRoutes);
-    // Rutas de cultivos con middleware temporal para desarrollo
-    app.use('/api/cultivos', (req, res, next) => {
-        // Simular usuario autenticado para desarrollo
-        if (!req.user) {
-            req.user = {
-                _id: '68cd9a61236205ef44117b1b',
-                username: 'dev',
-                email: 'dev@example.com',
-                firstName: 'Dev',
-                lastName: 'User'
-            };
-        }
-        next();
-    }, cultivoRoutes);
-    
+    app.use('/api/pdf-analyze', authenticateToken, pdfAnalyzeRoutes);
+
     // Rutas públicas (sin autenticación) - para modo demo
-    // Rutas públicas de tareas (sin middleware de autenticación)
-    app.get('/api/public/tasks', async (req, res) => {
-        try {
-            const {
-                page = 1,
-                limit = 50,
-                status,
-                sortBy = 'order',
-                sortOrder = 'asc'
-            } = req.query;
-
-            // Construir filtros para tareas públicas
-            const filters = { userId: null };
-
-            if (status) filters.status = status;
-
-            // Construir opciones de ordenamiento
-            const sortOptions = {};
-            sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-            // Aplicar paginación
-            const skip = (parseInt(page) - 1) * parseInt(limit);
-
-            const tasks = await Task.find(filters)
-                .sort(sortOptions)
-                .skip(skip)
-                .limit(parseInt(limit))
-                .lean();
-
-            const total = await Task.countDocuments(filters);
-
-            res.json({
-                success: true,
-                data: {
-                    tasks: tasks.map(task => ({
-                        ...task,
-                        id: task._id,
-                        _id: undefined
-                    })),
-                    pagination: {
-                        page: parseInt(page),
-                        limit: parseInt(limit),
-                        total,
-                        pages: Math.ceil(total / parseInt(limit))
-                    }
-                }
-            });
-
-        } catch (error) {
-            console.error('❌ Error obteniendo tareas públicas:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Error interno del servidor',
-                message: 'No se pudieron obtener las tareas públicas'
-            });
-        }
-    });
-
-    app.post('/api/public/tasks', async (req, res) => {
-        try {
-            const {
-                title,
-                description,
-                status = 'todo',
-                priority = 'medium',
-                dueDate,
-                tags = [],
-                notes,
-                order = 0
-            } = req.body;
-
-            // Obtener el orden máximo para el estado especificado
-            if (order === 0) {
-                const maxOrderTask = await Task.findOne({ userId: null, status })
-                    .sort({ order: -1 })
-                    .select('order')
-                    .lean();
-
-                const maxOrder = maxOrderTask ? maxOrderTask.order : 0;
-                req.body.order = maxOrder + 1;
-            }
-
-            const task = new Task({
-                userId: null, // Tarea pública
-                title: title.trim(),
-                description: description?.trim(),
-                status,
-                priority,
-                dueDate: dueDate ? new Date(dueDate) : null,
-                tags: tags.filter(tag => tag.trim()),
-                notes: notes?.trim(),
-                order: req.body.order
-            });
-
-            await task.save();
-
-            res.status(201).json({
-                success: true,
-                message: 'Tarea pública creada exitosamente',
-                data: {
-                    task: task.getSummary()
-                }
-            });
-
-        } catch (error) {
-            console.error('❌ Error creando tarea pública:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Error interno del servidor',
-                message: 'No se pudo crear la tarea pública'
-            });
-        }
-    });
-
-    app.put('/api/public/tasks/:id/move', async (req, res) => {
-        try {
-            const { id } = req.params;
-            const { status, order } = req.body;
-
-            if (!status || !['todo', 'doing', 'done'].includes(status)) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Estado inválido',
-                    message: 'El estado debe ser "todo", "doing" o "done"'
-                });
-            }
-
-            // Validar que el orden sea un número válido
-            if (order !== undefined && (typeof order !== 'number' || isNaN(order) || order < 0)) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Orden inválido',
-                    message: 'El orden debe ser un número positivo'
-                });
-            }
-
-            const task = await Task.findOne({ _id: id, userId: null });
-
-            if (!task) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Tarea no encontrada',
-                    message: 'La tarea pública especificada no existe'
-                });
-            }
-
-            const oldStatus = task.status;
-            const oldOrder = task.order;
-
-            // Actualizar órdenes si es necesario
-            if (order !== undefined) {
-                if (oldStatus === status) {
-                    if (order > oldOrder) {
-                        await Task.updateMany(
-                            { userId: null, status, order: { $gt: oldOrder, $lte: order } },
-                            { $inc: { order: -1 } }
-                        );
-                    } else if (order < oldOrder) {
-                        await Task.updateMany(
-                            { userId: null, status, order: { $gte: order, $lt: oldOrder } },
-                            { $inc: { order: 1 } }
-                        );
-                    }
-                } else {
-                    await Task.updateMany(
-                        { userId: null, status: oldStatus, order: { $gt: oldOrder } },
-                        { $inc: { order: -1 } }
-                    );
-                    await Task.updateMany(
-                        { userId: null, status, order: { $gte: order } },
-                        { $inc: { order: 1 } }
-                    );
-                }
-            }
-
-            task.status = status;
-            if (order !== undefined) task.order = order;
-
-            await task.save();
-
-            res.json({
-                success: true,
-                message: 'Tarea pública movida exitosamente',
-                data: {
-                    task: task.getSummary()
-                }
-            });
-
-        } catch (error) {
-            console.error('❌ Error moviendo tarea pública:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Error interno del servidor',
-                message: 'No se pudo mover la tarea pública'
-            });
-        }
-    });
-
-    app.put('/api/public/tasks/:id', async (req, res) => {
-        try {
-            const { id } = req.params;
-            const { title, description, priority, dueDate, tags } = req.body;
-
-            const task = await Task.findOne({ _id: id, userId: null });
-
-            if (!task) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Tarea no encontrada',
-                    message: 'La tarea pública especificada no existe'
-                });
-            }
-
-            // Actualizar campos
-            if (title !== undefined) task.title = title.trim();
-            if (description !== undefined) task.description = description?.trim();
-            if (priority !== undefined) task.priority = priority;
-            if (dueDate !== undefined) task.dueDate = dueDate ? new Date(dueDate) : null;
-            if (tags !== undefined) task.tags = tags.filter(tag => tag.trim());
-
-            await task.save();
-
-            res.json({
-                success: true,
-                message: 'Tarea pública actualizada exitosamente',
-                data: {
-                    task: task.getSummary()
-                }
-            });
-
-        } catch (error) {
-            console.error('❌ Error actualizando tarea pública:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Error interno del servidor',
-                message: 'No se pudo actualizar la tarea pública'
-            });
-        }
-    });
-
-    app.delete('/api/public/tasks/:id', async (req, res) => {
-        try {
-            const { id } = req.params;
-
-            const task = await Task.findOneAndDelete({ _id: id, userId: null });
-
-            if (!task) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Tarea no encontrada',
-                    message: 'La tarea pública especificada no existe'
-                });
-            }
-
-            await Task.updateMany(
-                { userId: null, status: task.status, order: { $gt: task.order } },
-                { $inc: { order: -1 } }
-            );
-
-            res.json({
-                success: true,
-                message: 'Tarea pública eliminada exitosamente'
-            });
-
-        } catch (error) {
-            console.error('❌ Error eliminando tarea pública:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Error interno del servidor',
-                message: 'No se pudo eliminar la tarea pública'
-            });
-        }
-    });
-
     // Handlers específicos para rutas públicas sin reutilizar routers con auth
     app.get('/api/public/transactions', async (req, res) => {
         try {
@@ -1028,6 +771,120 @@ function setupRoutes() {
         }
     });
 
+    // Ruta pública para obtener tasa de cambio
+    app.get('/api/exchange-rates', async (req, res) => {
+        try {
+            const { from, to } = req.query;
+
+            if (!from || !to) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Parámetros requeridos: from, to'
+                });
+            }
+
+            const fromCurr = from.toUpperCase();
+            const toCurr = to.toUpperCase();
+
+            if (!['UYU', 'USD'].includes(fromCurr) || !['UYU', 'USD'].includes(toCurr)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Monedas no soportadas'
+                });
+            }
+
+            const rate = await exchangeRateService.getExchangeRate(fromCurr, toCurr);
+
+            res.json({
+                success: true,
+                data: {
+                    from: fromCurr,
+                    to: toCurr,
+                    rate: rate,
+                    timestamp: new Date()
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error obteniendo tasa de cambio pública:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Error interno del servidor',
+                message: 'No se pudo obtener la tasa de cambio'
+            });
+        }
+    });
+
+    // Rutas públicas para metas
+    app.get('/api/public/goals', async (req, res) => {
+        try {
+            // Obtener metas demo públicas (sin userId)
+            const goals = await Goal.find({ userId: null }).limit(20);
+
+            res.json({
+                success: true,
+                data: {
+                    goals: goals,
+                    message: 'Metas públicas obtenidas correctamente'
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error obteniendo metas públicas:', error);
+            res.status(500).json({
+                error: 'Error interno del servidor',
+                message: 'No se pudieron obtener las metas públicas'
+            });
+        }
+    });
+
+    app.post('/api/public/goals', async (req, res) => {
+        try {
+            const { name, description, currency, targetAmount, category, priority } = req.body;
+
+            if (!name || !targetAmount || !currency) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Nombre, monto objetivo y moneda son requeridos'
+                });
+            }
+
+            // Crear meta demo sin userId
+            const newGoal = new Goal({
+                userId: null, // Meta demo
+                name: name,
+                description: description || '',
+                currency: currency,
+                currentAmount: 0,
+                targetAmount: parseFloat(targetAmount),
+                category: category || '',
+                priority: priority || 'medium',
+                status: 'active'
+            });
+
+            const savedGoal = await newGoal.save();
+
+            res.status(201).json({
+                success: true,
+                data: {
+                    goal: savedGoal,
+                    message: 'Meta creada correctamente'
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error creando meta pública:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Error interno del servidor',
+                message: 'No se pudo crear la meta'
+            });
+        }
+    });
+
+    // Rutas protegidas de exchange-rates (después de las públicas para que no interfieran)
+    app.use('/api/exchange-rates', authenticateToken, exchangeRateRoutes);
+
     // Middleware para rutas públicas de AI
     app.use('/api/public/ai', (req, res, next) => {
         delete req.headers.authorization;
@@ -1095,21 +952,6 @@ function setupPageRoutes() {
     });
 
     // Rutas para otras páginas
-    app.get('/tareas', (req, res) => {
-        res.sendFile(path.join(process.cwd(), 'dist/pages/tareas.html'));
-    });
-
-    app.get('/tareas.html', (req, res) => {
-        res.sendFile(path.join(process.cwd(), 'dist/pages/tareas.html'));
-    });
-
-    app.get('/bruce', (req, res) => {
-        res.sendFile(path.join(process.cwd(), 'dist/pages/bruce.html'));
-    });
-
-    app.get('/bruce.html', (req, res) => {
-        res.sendFile(path.join(process.cwd(), 'dist/pages/bruce.html'));
-    });
 
     // Para cualquier otra ruta que no sea API, redirigir a index
     app.get('*', (req, res) => {

@@ -334,6 +334,6 @@ userSchema.path('email').validate(async function(value) {
 
 // ==================== EXPORTAR MODELO ====================
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 module.exports = User;

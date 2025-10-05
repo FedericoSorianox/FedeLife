@@ -1,0 +1,212 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==================== ESTILOS PWA ==================== */
+
+/* Modo PWA - Ajustes para cuando la app está instalada */
+.pwa-mode {
+  /* Ajustes para modo standalone */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Scroll suave */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Ajustes para touch devices */
+@media (hover: none) and (pointer: coarse) {
+  /* Aumentar áreas táctiles en móviles */
+  button, .cursor-pointer {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Mejorar legibilidad en móviles */
+  body {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+}
+
+/* Splash screen personalizado */
+#splash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #2563eb 0%, #764ba2 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeOut 2s ease-in-out 1s forwards;
+}
+
+#splash-screen .logo {
+  width: 120px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  backdrop-filter: blur(10px);
+}
+
+#splash-screen .logo svg {
+  width: 60px;
+  height: 60px;
+  color: white;
+}
+
+#splash-screen .text {
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+}
+
+@keyframes fadeOut {
+  0% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+/* Notificaciones toast para PWA */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #2563eb;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+}
+
+.toast.error {
+  background: #dc2626;
+}
+
+.toast.success {
+  background: #16a34a;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Ajustes para diferentes tamaños de pantalla */
+@media (max-width: 640px) {
+  /* Móviles pequeños */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Aumentar tamaño de botones en móviles */
+  .btn-primary {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* Tablets */
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  /* Desktop */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}
+
+/* Ajustes de accesibilidad para PWA */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Tema oscuro para PWA */
+@media (prefers-color-scheme: dark) {
+  .pwa-mode {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+
+  .pwa-mode .bg-gray-50 {
+    background: #111827;
+  }
+
+  .pwa-mode .text-gray-900 {
+    color: #f9fafb;
+  }
+
+  .pwa-mode .bg-white {
+    background: #1f2937;
+  }
+}
+
+/* Indicador de conexión offline */
+#offline-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #dc2626;
+  color: white;
+  text-align: center;
+  padding: 8px;
+  font-size: 14px;
+  z-index: 1001;
+  display: none;
+}
+
+#offline-indicator.online {
+  background: #16a34a;
+}
+
+/* Animaciones de carga para PWA */
+.pwa-loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

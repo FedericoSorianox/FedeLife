@@ -331,12 +331,12 @@ transactionSchema.methods.isCurrentMonth = function() {
  */
 transactionSchema.statics.getStats = async function(userId, filters = {}) {
     const matchStage = { userId, ...filters };
-    
+
     const pipeline = [
         { $match: matchStage },
         {
             $group: {
-                _id: null,
+                _id: '$currency', // Agrupar por moneda para cuentas separadas
                 totalIncome: {
                     $sum: {
                         $cond: [{ $eq: ['$type', 'income'] }, '$amount', 0]
@@ -360,9 +360,11 @@ transactionSchema.statics.getStats = async function(userId, filters = {}) {
             }
         }
     ];
-    
-    const result = await this.aggregate(pipeline);
-    const stats = result[0] || {
+
+    const results = await this.aggregate(pipeline);
+
+    // Inicializar estadísticas por defecto
+    const stats = {
         totalIncome: 0,
         totalExpenses: 0,
         totalTransactions: 0,
@@ -370,12 +372,52 @@ transactionSchema.statics.getStats = async function(userId, filters = {}) {
         expenseCount: 0,
         averageAmount: 0,
         minAmount: 0,
-        maxAmount: 0
+        maxAmount: 0,
+        balance: 0,
+        // Estadísticas separadas por moneda
+        UYU: {
+            totalIncome: 0,
+            totalExpenses: 0,
+            totalTransactions: 0,
+            incomeCount: 0,
+            expenseCount: 0,
+            balance: 0
+        },
+        USD: {
+            totalIncome: 0,
+            totalExpenses: 0,
+            totalTransactions: 0,
+            incomeCount: 0,
+            expenseCount: 0,
+            balance: 0
+        }
     };
-    
+
+    // Procesar resultados agrupados por moneda
+    results.forEach(result => {
+        const currency = result._id || 'UYU'; // Default a UYU si no hay moneda
+        const currencyKey = currency === 'USD' ? 'USD' : 'UYU';
+
+        // Actualizar estadísticas por moneda
+        stats[currencyKey].totalIncome = result.totalIncome || 0;
+        stats[currencyKey].totalExpenses = result.totalExpenses || 0;
+        stats[currencyKey].totalTransactions = result.totalTransactions || 0;
+        stats[currencyKey].incomeCount = result.incomeCount || 0;
+        stats[currencyKey].expenseCount = result.expenseCount || 0;
+        stats[currencyKey].balance = (result.totalIncome || 0) - (result.totalExpenses || 0);
+
+        // Actualizar estadísticas totales (para compatibilidad)
+        stats.totalIncome += result.totalIncome || 0;
+        stats.totalExpenses += result.totalExpenses || 0;
+        stats.totalTransactions += result.totalTransactions || 0;
+        stats.incomeCount += result.incomeCount || 0;
+        stats.expenseCount += result.expenseCount || 0;
+    });
+
+    // Calcular balance total y estadísticas generales
     stats.balance = stats.totalIncome - stats.totalExpenses;
-    stats.averageAmount = Math.round(stats.averageAmount * 100) / 100;
-    
+    stats.averageAmount = Math.round((stats.totalTransactions > 0 ? stats.totalIncome / stats.totalTransactions : 0) * 100) / 100;
+
     return stats;
 };
 
@@ -644,6 +686,6 @@ transactionSchema.statics.getStatsWithConversion = async function(userId, startD
 
 // ==================== EXPORTAR MODELO ====================
 
-const Transaction = mongoose.model('Transaction', transactionSchema);
+const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);
 
 module.exports = Transaction;

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Background -->
+  <rect width="512" height="512" rx="128" fill="#2563eb"/>
+
+  <!-- Money symbol -->
+  <g transform="translate(256, 256)">
+    <!-- Outer circle -->
+    <circle cx="0" cy="0" r="200" fill="#ffffff" opacity="0.1"/>
+
+    <!-- Dollar sign -->
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="280" font-weight="bold" fill="#ffffff" text-anchor="middle" dominant-baseline="central">$</text>
+
+    <!-- Inner accent -->
+    <circle cx="0" cy="0" r="120" fill="none" stroke="#ffffff" stroke-width="8" opacity="0.3"/>
+  </g>
+
+  <!-- Corner decorations -->
+  <g opacity="0.2">
+    <!-- Top-left -->
+    <rect x="40" y="40" width="60" height="8" rx="4" fill="#ffffff"/>
+    <rect x="40" y="56" width="40" height="8" rx="4" fill="#ffffff"/>
+    <rect x="40" y="72" width="50" height="8" rx="4" fill="#ffffff"/>
+
+    <!-- Top-right -->
+    <rect x="412" y="40" width="60" height="8" rx="4" fill="#ffffff"/>
+    <rect x="432" y="56" width="40" height="8" rx="4" fill="#ffffff"/>
+    <rect x="422" y="72" width="50" height="8" rx="4" fill="#ffffff"/>
+
+    <!-- Bottom-left -->
+    <rect x="40" y="400" width="60" height="8" rx="4" fill="#ffffff"/>
+    <rect x="40" y="416" width="40" height="8" rx="4" fill="#ffffff"/>
+    <rect x="40" y="432" width="50" height="8" rx="4" fill="#ffffff"/>
+
+    <!-- Bottom-right -->
+    <rect x="412" y="400" width="60" height="8" rx="4" fill="#ffffff"/>
+    <rect x="432" y="416" width="40" height="8" rx="4" fill="#ffffff"/>
+    <rect x="422" y="432" width="50" height="8" rx="4" fill="#ffffff"/>
+  </g>
+</svg>

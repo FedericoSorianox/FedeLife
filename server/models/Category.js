@@ -432,6 +432,6 @@ categorySchema.post('save', function(doc) {
 
 // ==================== EXPORTAR MODELO ====================
 
-const Category = mongoose.model('Category', categorySchema);
+const Category = mongoose.models.Category || mongoose.model('Category', categorySchema);
 
 module.exports = Category;

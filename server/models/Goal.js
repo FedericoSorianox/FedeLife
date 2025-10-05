@@ -572,6 +572,6 @@ goalSchema.post('save', function(doc) {
 
 // ==================== EXPORTAR MODELO ====================
 
-const Goal = mongoose.model('Goal', goalSchema);
+const Goal = mongoose.models.LegacyGoal || mongoose.model('LegacyGoal', goalSchema);
 
 module.exports = Goal;

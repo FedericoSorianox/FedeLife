@@ -619,6 +619,227 @@ Devuelve la respuesta en este formato JSON exacto:
 
 
 /**
+ * Analiza texto con OpenAI usando API Key del entorno (.env)
+ * @param {string} text - Texto a analizar
+ * @param {string} userId - ID del usuario (para contexto)
+ * @returns {Promise<Object>} Análisis de gastos
+ */
+async function analyzeTextWithEnvKey(text, userId) {
+    try {
+        console.log('🤖 Analizando texto con OpenAI (API Key del entorno)...');
+
+        // Verificar que tenemos la API key del entorno
+        if (!OPENAI_API_KEY) {
+            throw new Error('OPENAI_API_KEY no está configurada en las variables de entorno');
+        }
+
+        console.log('🔑 API Key del entorno validada correctamente');
+
+        // Nota: El filtro REDIVA fue removido según los requerimientos
+        console.log('🔍 Filtro REDIVA omitido (función eliminada)');
+
+        // Obtener categorías dinámicamente desde la base de datos
+        console.log('📂 Obteniendo categorías para análisis CSV...');
+        const categories = await getExpenseCategories(userId); // Usar userId para categorías personalizadas
+
+        // Construir la lista de categorías para el prompt
+        const categoryList = categories.map(cat => `   - ${cat.name} (${cat.description})`).join('\n');
+
+        console.log(`📂 Se encontraron ${categories.length} categorías disponibles para el usuario`);
+
+        // Preparar prompt para OpenAI
+        const systemPrompt = `Eres un analista financiero experto especializado en el análisis de estados de cuenta bancarios uruguayos.
+
+Tu tarea es analizar el texto de un estado de cuenta y extraer todos los gastos identificados.
+
+INSTRUCCIONES IMPORTANTES:
+1. Identifica ÚNICAMENTE transacciones que son GASTOS (no ingresos, depósitos, transferencias entrantes)
+2. Extrae el monto, descripción y fecha de cada gasto
+3. Categoriza cada gasto según EXACTAMENTE estas categorías de la base de datos (USA LOS NOMBRES EXACTOS):
+${categoryList}
+
+REGLA CRÍTICA DE CATEGORIZACIÓN:
+- NUNCA uses "Otros" como categoría, usa "Otros Gastos"
+- NUNCA inventes categorías nuevas, usa SOLO las categorías listadas arriba
+- Si un gasto puede estar en dos categorías, elige la más específica
+- EVITA poner gastos en "Otros Gastos" a menos que realmente no encajen en ninguna otra
+4. Si no puedes determinar la categoría, usa "Otros Gastos"
+5. DETECCIÓN AUTOMÁTICA DE MONEDA:
+   - Si el monto es MENOR a $150, automáticamente es USD (dólares)
+   - Si el monto es MAYOR a $150, automáticamente es UYU (pesos uruguayos)
+   - Si el texto menciona "dólares", "USD", "$" o "U$S", es USD
+   - Si menciona "pesos", "UYU" o "$UY", es UYU
+   - Si no hay indicadores claros, asume UYU para montos altos y USD para montos bajos
+
+FORMATO DE SALIDA REQUERIDO:
+Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta:
+{
+  "expenses": [
+    {
+      "description": "descripción exacta del gasto",
+      "amount": 123.45,
+      "currency": "UYU" o "USD",
+      "category": "una de las categorías listadas arriba",
+      "date": "YYYY-MM-DD"
+    }
+  ],
+  "confidence": 0.85
+}
+
+IMPORTANTE:
+- La fecha debe estar en formato YYYY-MM-DD
+- El monto debe ser un número (sin símbolos de moneda)
+- Usa exactamente los nombres de categorías proporcionados
+- Si no hay gastos identificados, devuelve un array vacío
+- El confidence debe ser un número entre 0 y 1`;
+
+        const userPrompt = `Analiza el siguiente texto de estado de cuenta bancario y extrae todos los gastos identificados:
+
+${text}
+
+INSTRUCCIONES ESPECÍFICAS:
+- Busca patrones como "COMPRA", "PAGO", "GASTO", "EXTRACCIÓN", etc.
+- Ignora completamente depósitos, ingresos, transferencias entrantes
+- Si encuentras montos con comas o puntos, conviértelos correctamente
+- Si hay fechas en formatos uruguayos (DD/MM/YYYY), conviértelas a YYYY-MM-DD
+- Sé muy específico en las descripciones, incluyendo nombres de comercios cuando estén disponibles`;
+
+        console.log('🚀 Enviando solicitud a OpenAI...');
+
+        const response = await fetch(OPENAI_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                max_tokens: 4000,
+                temperature: 0.1
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Error en OpenAI API:', response.status, errorText);
+            throw new Error(`Error en OpenAI API: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log('📥 Respuesta recibida de OpenAI');
+
+        let result;
+        try {
+            // Extraer JSON de la respuesta
+            const content = data.choices[0].message.content.trim();
+
+            // Buscar JSON en la respuesta (puede tener texto adicional)
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                throw new Error('No se encontró JSON válido en la respuesta');
+            }
+
+            result = JSON.parse(jsonMatch[0]);
+            console.log('✅ JSON parseado correctamente');
+
+        } catch (parseError) {
+            console.error('❌ Error parseando respuesta JSON:', parseError);
+            console.log('📄 Contenido de la respuesta:', data.choices[0].message.content);
+            throw new Error('La respuesta de OpenAI no tiene el formato JSON esperado');
+        }
+
+        // Validar estructura del resultado
+        if (!result.expenses || !Array.isArray(result.expenses)) {
+            console.warn('⚠️ La respuesta no tiene el formato esperado, intentando reparar...');
+            result = { expenses: [], confidence: 0.0 };
+        }
+
+        // Asegurar que todos los gastos tengan los campos requeridos
+        result.expenses = result.expenses.map(expense => ({
+            description: expense.description || 'Gasto sin descripción',
+            amount: parseFloat(expense.amount) || 0,
+            currency: expense.currency || 'UYU',
+            category: expense.category || 'Otros Gastos',
+            date: expense.date || new Date().toISOString().split('T')[0],
+            confidence: expense.confidence || result.confidence || 0.8
+        }));
+
+        console.log(`✅ Análisis completado: ${result.expenses.length} gastos identificados`);
+        return result;
+
+    } catch (error) {
+        console.error('❌ Error en análisis con OpenAI:', error);
+
+        // Estrategia de respaldo: análisis básico sin IA
+        console.log('🔄 Usando estrategia de respaldo (análisis básico)...');
+
+        const basicAnalysis = await performBasicExpenseAnalysis(text);
+        return {
+            expenses: basicAnalysis.expenses,
+            confidence: 0.3, // Baja confianza para análisis básico
+            analysisType: 'basic_fallback'
+        };
+    }
+}
+
+/**
+ * Analiza texto largo dividiéndolo en chunks y procesando cada uno
+ * @param {string} text - Texto largo a analizar
+ * @param {string} userId - ID del usuario
+ * @returns {Promise<Object>} Análisis combinado de todos los chunks
+ */
+async function analyzeLargeTextInChunks(text, userId) {
+    try {
+        console.log('📄 Procesando texto largo en chunks...');
+
+        const MAX_CHUNK_SIZE = 40000; // Un poco más pequeño para dejar margen
+        const chunks = [];
+
+        // Dividir el texto en chunks
+        for (let i = 0; i < text.length; i += MAX_CHUNK_SIZE) {
+            chunks.push(text.substring(i, i + MAX_CHUNK_SIZE));
+        }
+
+        console.log(`📄 Texto dividido en ${chunks.length} chunks`);
+
+        const allExpenses = [];
+        let totalConfidence = 0;
+
+        // Procesar cada chunk
+        for (let i = 0; i < chunks.length; i++) {
+            console.log(`🔍 Procesando chunk ${i + 1}/${chunks.length}...`);
+
+            const chunkResult = await analyzeTextWithEnvKey(chunks[i], userId);
+
+            if (chunkResult.expenses && Array.isArray(chunkResult.expenses)) {
+                allExpenses.push(...chunkResult.expenses);
+            }
+
+            totalConfidence += chunkResult.confidence || 0;
+        }
+
+        // Calcular confianza promedio
+        const averageConfidence = totalConfidence / chunks.length;
+
+        console.log(`✅ Procesamiento de chunks completado: ${allExpenses.length} gastos totales`);
+
+        return {
+            expenses: allExpenses,
+            confidence: averageConfidence,
+            chunksProcessed: chunks.length
+        };
+
+    } catch (error) {
+        console.error('❌ Error procesando texto en chunks:', error);
+        throw error;
+    }
+}
+
+/**
  * Analiza texto con OpenAI usando API Key proporcionada por el usuario
  * @param {string} text - Texto a analizar
  * @param {string} userApiKey - API Key proporcionada por el usuario
@@ -650,10 +871,10 @@ async function analyzeTextWithUserKey(text, userApiKey, userId) {
         // Obtener categorías dinámicamente desde la base de datos
         console.log('📂 Obteniendo categorías para análisis CSV...');
         const categories = await getExpenseCategories(); // Sin userId para CSV público
-        
+
         // Construir la lista de categorías para el prompt
         const categoryList = categories.map(cat => `   - ${cat.name} (${cat.description})`).join('\n');
-        
+
         console.log(`📂 Se encontraron ${categories.length} categorías disponibles para CSV`);
 
         // Preparar prompt para OpenAI
@@ -667,7 +888,7 @@ INSTRUCCIONES IMPORTANTES:
 3. Categoriza cada gasto según EXACTAMENTE estas categorías de la base de datos (USA LOS NOMBRES EXACTOS):
 ${categoryList}
 
-REGLA CRÍTICA DE CATEGORIZACIÓN: 
+REGLA CRÍTICA DE CATEGORIZACIÓN:
 - NUNCA uses "Otros" como categoría, usa "Otros Gastos"
 - NUNCA inventes categorías nuevas, usa SOLO las categorías listadas arriba
 - Si un gasto puede estar en dos categorías, elige la más específica
@@ -707,11 +928,11 @@ Devuelve la respuesta en este formato JSON exacto:
     }
 }`;
 
-        // Configurar AbortController para timeout
+        // Configurar AbortController para timeout (aumentado para PDFs)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
             controller.abort();
-        }, 30000); // 30 segundos timeout
+        }, 60000); // 60 segundos timeout para PDFs
 
         console.log('🚀 Enviando solicitud a OpenAI API con API Key del usuario...');
 
@@ -1062,11 +1283,11 @@ Devuelve la respuesta en este formato JSON exacto:
     } catch (error) {
         // Manejar diferentes tipos de errores
         if (error.name === 'AbortError') {
-            console.error('⏰ Timeout: La solicitud a OpenAI tomó demasiado tiempo (30 segundos)');
-            throw new Error('La solicitud tomó demasiado tiempo. Verifica tu conexión a internet e intenta nuevamente.');
+            console.error('⏰ Timeout: La solicitud a OpenAI tomó demasiado tiempo (60 segundos)');
+            throw new Error('El análisis del PDF tomó demasiado tiempo (60 segundos). Esto puede deberse a que el PDF es muy grande o a problemas de conectividad. Intenta con un PDF más pequeño o verifica tu conexión a internet.');
         } else if (error.message && error.message.includes('fetch')) {
             console.error('🌐 Error de conexión:', error.message);
-            throw new Error('Error de conexión. Verifica tu conexión a internet e intenta nuevamente.');
+            throw new Error('Error de conexión con OpenAI. Verifica tu conexión a internet y que tu API Key sea válida.');
         } else if (error.message && error.message.includes('API Key')) {
             console.error('🔑 Error de API Key:', error.message);
             throw error; // Re-throw con el mensaje específico
@@ -1652,6 +1873,8 @@ module.exports = {
     // Funciones originales
     analyzeTextWithAI,
     analyzeTextWithUserKey,
+    analyzeTextWithEnvKey,
+    analyzeLargeTextInChunks,
     checkOpenAIHealth,
 
     // Nuevas funciones con acceso completo a datos

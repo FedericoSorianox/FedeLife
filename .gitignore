@@ -26,6 +26,7 @@ config-local.js
 # Archivos de build
 dist/
 build/
+.next/
 
 # Logs
 logs

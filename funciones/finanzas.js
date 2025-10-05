@@ -5543,12 +5543,17 @@ class FinanceApp {
     async diagnoseOpenAIConnection() {
         try {
 
-            // Verificar API Key local
+            // Verificar API Key desde variables de entorno
             let apiKey = null;
             let apiKeySource = '';
 
             try {
-                if (window.LOCAL_CONFIG && window.LOCAL_CONFIG.OPENAI_API_KEY) {
+                // Primero intentar obtener desde variables de entorno (Next.js)
+                if (process.env.NEXT_PUBLIC_OPENAI_API_KEY && process.env.NEXT_PUBLIC_OPENAI_API_KEY !== 'sk-proj-your-openai-api-key-here') {
+                    apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+                    apiKeySource = 'variables de entorno';
+                } else if (window.LOCAL_CONFIG && window.LOCAL_CONFIG.OPENAI_API_KEY) {
+                    // Fallback a configuración local (por compatibilidad)
                     apiKey = window.LOCAL_CONFIG.OPENAI_API_KEY;
                     apiKeySource = 'config-local.js';
                 } else if (window.getLocalApiKey) {
@@ -5558,6 +5563,7 @@ class FinanceApp {
                     throw new Error('Configuración local no disponible');
                 }
             } catch (error) {
+                // Último fallback a localStorage (por compatibilidad)
                 apiKey = localStorage.getItem('openai_api_key');
                 if (apiKey && apiKey !== 'sk-proj-your-openai-api-key-here') {
                     apiKeySource = 'localStorage';
@@ -5797,12 +5803,17 @@ class FinanceApp {
      * Obtiene respuesta de OpenAI usando la misma configuración de la aplicación
      */
     async getOpenAIResponse(userMessage) {
-        // Obtener API Key usando la misma lógica que la aplicación
+        // Obtener API Key usando variables de entorno primero
         let apiKey = null;
         let apiKeySource = '';
 
         try {
-            if (window.LOCAL_CONFIG && window.LOCAL_CONFIG.OPENAI_API_KEY) {
+            // Primero intentar obtener desde variables de entorno (Next.js)
+            if (process.env.NEXT_PUBLIC_OPENAI_API_KEY && process.env.NEXT_PUBLIC_OPENAI_API_KEY !== 'sk-proj-your-openai-api-key-here') {
+                apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+                apiKeySource = 'variables de entorno';
+            } else if (window.LOCAL_CONFIG && window.LOCAL_CONFIG.OPENAI_API_KEY) {
+                // Fallback a configuración local (por compatibilidad)
                 apiKey = window.LOCAL_CONFIG.OPENAI_API_KEY;
                 apiKeySource = 'config-local.js';
             } else if (window.getLocalApiKey) {
@@ -5812,6 +5823,7 @@ class FinanceApp {
                 throw new Error('Configuración local no disponible');
             }
         } catch (error) {
+            // Último fallback a localStorage (por compatibilidad)
             apiKey = localStorage.getItem('openai_api_key');
             if (apiKey && apiKey !== 'sk-proj-your-openai-api-key-here') {
                 apiKeySource = 'localStorage';

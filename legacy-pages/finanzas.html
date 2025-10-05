@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="format-detection" content="telephone=no">
+    <title>Fede Life - Finanzas Personales</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+    <link rel="stylesheet" href="app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- PDF.js Library para procesamiento de PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Chart.js Library para gráficos interactivos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="body">
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="nav-title">Fede Life</span>
+            </div>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="finanzas.html" class="active">Finanzas</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header style="background-color: #87ccd8;">
+        <div class="header-content">
+            <div class="header-text">
+                <h1><i class="fas fa-chart-line"></i> Finanzas Personales</h1>
+                <p class="textcenter">Controla y optimiza tu economía personal</p>
+            </div>
+        
+        </div>
+    </header>
+
+    <section class="section">
+        <!-- Selector Global de Períodos -->
+        <div class="global-period-selector">
+            <div class="period-selector-header">
+                <h2><i class="fas fa-calendar-alt"></i> Período de Análisis</h2>
+                <div class="period-controls">
+                    <button type="button" id="prevPeriodBtn" class="period-nav-btn" title="Período anterior">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="period-display">
+                        <span id="currentPeriodDisplay">Diciembre 2024</span>
+                    </div>
+                    <button type="button" id="nextPeriodBtn" class="period-nav-btn" title="Siguiente período">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="period-options">
+                <div class="period-type-selector">
+                    <label class="period-option">
+                        <input type="radio" name="periodType" value="monthly" checked>
+                        <span class="period-option-custom"></span>
+                        <span class="period-option-label">Mensual</span>
+                    </label>
+                    <label class="period-option">
+                        <input type="radio" name="periodType" value="yearly">
+                        <span class="period-option-custom"></span>
+                        <span class="period-option-label">Anual</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard de Resumen -->
+        <div class="finance-dashboard">
+            <h2 class="dashboard-title">Resumen Financiero</h2>
+
+            <!-- Cuenta en Pesos (UYU) -->
+            <div class="account-section">
+                <h3 class="account-title">
+                    <i class="fas fa-coins"></i> Cuenta en Pesos (UYU)
+                </h3>
+                <div class="summary-cards">
+                    <div class="summary-card income" id="incomeUYUCard" role="button" tabindex="0" title="Hacer clic para agregar un ingreso en pesos">
+                        <div class="card-icon">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Ingresos</h3>
+                            <p class="amount" id="totalIncomeUYU">$U0.00</p>
+                            <span class="period">Este mes</span>
+                        </div>
+                        <div class="card-action-indicator">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                    </div>
+
+                    <div class="summary-card expense" id="expenseUYUCard" role="button" tabindex="0" title="Hacer clic para agregar un gasto en pesos">
+                        <div class="card-icon">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Gastos</h3>
+                            <p class="amount" id="totalExpensesUYU">$U0.00</p>
+                            <span class="period">Este mes</span>
+                        </div>
+                        <div class="card-action-indicator">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                    </div>
+
+                    <div class="summary-card balance">
+                        <div class="card-icon">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Balance</h3>
+                            <p class="amount" id="totalBalanceUYU">$U0.00</p>
+                            <span class="period">Este mes</span>
+                        </div>
+                    </div>
+
+                    <div class="summary-card transfer" id="transferToUSDCard" role="button" tabindex="0" title="Transferir pesos a dólares">
+                        <div class="card-icon">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Transferir a USD</h3>
+                            <p class="amount" id="transferToUSD">$U0.00</p>
+                            <span class="period">Tasa: 1 USD = 40 UYU</span>
+                        </div>
+                        <div class="card-action-indicator">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cuenta en Dólares (USD) -->
+            <div class="account-section">
+                <h3 class="account-title">
+                    <i class="fas fa-dollar-sign"></i> Cuenta en Dólares (USD)
+                </h3>
+                <div class="summary-cards">
+                    <div class="summary-card income" id="incomeUSDCard" role="button" tabindex="0" title="Hacer clic para agregar un ingreso en dólares">
+                        <div class="card-icon">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Ingresos</h3>
+                            <p class="amount" id="totalIncomeUSD">$0.00</p>
+                            <span class="period">Este mes</span>
+                        </div>
+                        <div class="card-action-indicator">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                    </div>
+
+                    <div class="summary-card expense" id="expenseUSDCard" role="button" tabindex="0" title="Hacer clic para agregar un gasto en dólares">
+                        <div class="card-icon">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Gastos</h3>
+                            <p class="amount" id="totalExpensesUSD">$0.00</p>
+                            <span class="period">Este mes</span>
+                        </div>
+                        <div class="card-action-indicator">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                    </div>
+
+                    <div class="summary-card balance">
+                        <div class="card-icon">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Balance</h3>
+                            <p class="amount" id="totalBalanceUSD">$0.00</p>
+                            <span class="period">Este mes</span>
+                        </div>
+                    </div>
+
+                    <div class="summary-card transfer" id="transferToUYUCard" role="button" tabindex="0" title="Transferir dólares a pesos">
+                        <div class="card-icon">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Transferir a UYU</h3>
+                            <p class="amount" id="transferToUYU">$0.00</p>
+                            <span class="period">Tasa: 1 USD = 40 UYU</span>
+                        </div>
+                        <div class="card-action-indicator">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos Interactivos -->
+        <div class="charts-section">
+            <h2 class="charts-title">Análisis Visual de Finanzas</h2>
+            
+            <!-- Selector de Vista de Gráficos -->
+            <div class="view-selector">
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="chartView" value="expenses" checked>
+                        <span class="radio-custom"></span>
+                        <span class="radio-label">Gastos</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="chartView" value="income">
+                        <span class="radio-custom"></span>
+                        <span class="radio-label">Ingresos</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="chartView" value="comparative">
+                        <span class="radio-custom"></span>
+                        <span class="radio-label">Comparativa</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="charts-container">
+                <!-- Gráfico 1 (UYU) -->
+                <div class="chart-card" id="chartCard1">
+                    <h3 id="chartTitle1"><i class="fas fa-chart-pie"></i> Gastos por Categoría (UYU)</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart1" width="400" height="400"></canvas>
+                    </div>
+                    <div class="chart-legend" id="chartLegend1">
+                        <!-- La leyenda se generará dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Gráfico 2 (USD) -->
+                <div class="chart-card" id="chartCard2">
+                    <h3 id="chartTitle2"><i class="fas fa-chart-pie"></i> Gastos por Categoría (USD)</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart2" width="400" height="400"></canvas>
+                    </div>
+                    <div class="chart-legend" id="chartLegend2">
+                        <!-- La leyenda se generará dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navegación por pestañas -->
+        <div class="finance-tabs">
+            <button class="tab-btn active" data-tab="transactions">
+                <i class="fas fa-exchange-alt"></i> Transacciones
+            </button>
+
+            <button class="tab-btn" data-tab="goals">
+                <i class="fas fa-target"></i> Metas
+            </button>
+            <button class="tab-btn" data-tab="categories">
+                <i class="fas fa-tags"></i> Categorías
+            </button>
+            <button class="tab-btn" data-tab="reports">
+                <i class="fas fa-chart-bar"></i> Reportes
+            </button>
+        </div>
+
+        <!-- Pestaña de Transacciones -->
+        <div id="transactions" class="tab-content active">
+            <div class="transactions-section">
+                <div class="add-transaction-form">
+                    <h3><i class="fas fa-plus-circle"></i> Agregar Transacción</h3>
+                    <form id="transactionForm" class="transaction-form">
+                        <div class="form-row">
+                            <select id="transactionType" required>
+                                <option value="">Tipo de transacción</option>
+                                <option value="income">Ingreso</option>
+                                <option value="expense">Gasto</option>
+                            </select>
+                            <input type="number" id="transactionAmount" placeholder="Monto" step="0.01" required>
+                        </div>
+                        <div class="form-row">
+                            <input type="text" id="transactionDescription" placeholder="Descripción" required>
+                            <select id="transactionCategory" required>
+                                <option value="">Categoría</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <input type="date" id="transactionDate" required>
+                            <select id="transactionCurrency" required>
+                                <option value="">Moneda</option>
+                                <option value="UYU">Pesos (UYU)</option>
+                                <option value="USD">Dólares (USD)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="add-btn">
+                            <i class="fas fa-plus"></i> Agregar Transacción
+                        </button>
+                    </form>
+
+                    <!-- CSV Uploader Section -->
+                    <div class="csv-uploader-section">
+                        <h4><i class="fas fa-file-pdf"></i> Subir PDF de Gastos</h4>
+                        <p class="uploader-description">Sube un PDF (estado de cuenta bancario) y el sistema extraerá automáticamente los gastos usando IA</p>
+
+                        <div class="csv-uploader">
+                            <input type="file" id="csvFile" accept=".pdf,application/pdf" class="csv-input">
+                            <label for="csvFile" class="csv-label">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span>Seleccionar archivo PDF</span>
+                            </label>
+
+                          
+
+                            <button type="button" id="processCsvBtn" class="process-btn" disabled>
+                                <i class="fas fa-magic"></i> Analizar con IA
+                            </button>
+                        </div>
+
+                        <div id="csvProcessingStatus" class="processing-status" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>Procesando CSV y analizando gastos...</span>
+                        </div>
+
+                        <!-- Resultados del análisis -->
+                        <div id="extractedExpenses" class="extracted-expenses" style="display: none;">
+                            <h5><i class="fas fa-list-alt"></i> Gastos Encontrados</h5>
+
+                            <!-- Selector de fecha para transacciones del CSV -->
+                            <div class="csv-date-selector">
+                                <h6><i class="fas fa-calendar-alt"></i> Fecha de los Gastos</h6>
+                                <p class="date-selector-description">Si el CSV no tiene fechas específicas, selecciona la fecha que corresponde a estos gastos:</p>
+                                <input type="date" id="csvTransactionDate" class="csv-date-input">
+                                <small class="date-hint">💡 Si el CSV contiene fechas específicas, se usarán esas. De lo contrario, se usará esta fecha.</small>
+                            </div>
+
+                            <div class="expenses-actions">
+                                <button type="button" id="selectAllExpenses" class="action-btn">
+                                    <i class="fas fa-check-square"></i> Seleccionar Todos
+                                </button>
+                                <button type="button" id="addSelectedExpenses" class="add-btn" disabled>
+                                    <i class="fas fa-plus-circle"></i> Agregar Seleccionados
+                                </button>
+                            </div>
+                            <div id="expensesList" class="expenses-list">
+                                <!-- Los gastos extraídos se mostrarán aquí -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="transactions-list">
+                    <div class="transactions-header">
+                        <h3><i class="fas fa-list"></i> Historial de Transacciones</h3>
+                        <div class="filter-controls">
+                            <select id="simpleFilter">
+                                <option value="all" selected>Todas</option>
+                                <option value="income">Solo Ingresos</option>
+                                <option value="expense">Solo Gastos</option>
+                                <option value="recent">Últimas 10</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="transactionsList" class="transactions-container">
+                        <!-- Las transacciones se cargarán aquí -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña de Presupuesto -->
+        <div id="budget" class="tab-content">
+            <div class="budget-section">
+                <div class="budget-header">
+                    <h3><i class="fas fa-chart-pie"></i> Presupuesto Mensual</h3>
+                </div>
+                <div id="budgetList" class="budget-list">
+                    <!-- Las categorías de presupuesto se cargarán aquí -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña de Metas -->
+        <div id="goals" class="tab-content">
+            <div class="goals-section">
+                <!-- Chat con IA para consultas financieras -->
+                <div class="ai-chat-section">
+                    <h3><i class="fas fa-robot"></i> Asistente IA - Consultas Financieras</h3>
+                    <p class="chat-description">Haz preguntas sobre tus finanzas y recibe consejos personalizados basados en tus datos reales</p>
+                    
+                    <div class="chat-container">
+                        <div id="chatMessages" class="chat-messages">
+                            <!-- Los mensajes del chat se mostrarán aquí -->
+                            <div class="chat-message ai-message">
+                                <div class="message-avatar">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="message-content">
+                                    <p>¡Hola! Soy tu asistente financiero con IA. Puedo ayudarte a analizar tus gastos, crear metas de ahorro, y darte consejos personalizados basados en tus datos. ¿En qué puedo ayudarte hoy?</p>
+                                    <p><small>✅ <strong>Chat con IA activo:</strong> Puedes hacer preguntas sobre tus finanzas.</small></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chat-actions">
+                            <button type="button" id="diagnoseBtn" class="diagnose-btn">
+                                <i class="fas fa-stethoscope"></i> Diagnosticar con IA
+                            </button>
+                        </div>
+
+                        <div class="chat-input-container">
+                            <div class="chat-input-wrapper">
+                                <input type="text" id="chatInput" placeholder="Escribe tu pregunta sobre finanzas..." class="chat-input">
+                                <button type="button" id="sendChatBtn" class="send-btn" disabled>
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div class="chat-suggestions">
+                                <button type="button" class="suggestion-btn" data-suggestion="¿Cuáles son mis mayores gastos este mes?">
+                                    <i class="fas fa-chart-pie"></i> Gastos del mes
+                                </button>
+                                <button type="button" class="suggestion-btn" data-suggestion="¿Cómo puedo ahorrar más dinero?">
+                                    <i class="fas fa-piggy-bank"></i> Consejos de ahorro
+                                </button>
+                                <button type="button" class="suggestion-btn" data-suggestion="¿Cuál es mi balance actual?">
+                                    <i class="fas fa-wallet"></i> Balance actual
+                                </button>
+                                <button type="button" class="suggestion-btn" data-suggestion="¿Qué meta de ahorro me recomiendas?">
+                                    <i class="fas fa-target"></i> Meta recomendada
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botón para crear nueva meta -->
+                <div class="create-goal-section">
+                    <button type="button" id="createGoalBtn" class="create-goal-btn">
+                        <i class="fas fa-plus"></i>
+                        <span>Crear Nueva Meta</span>
+                    </button>
+                </div>
+                <div id="goalsList" class="goals-list">
+                    <!-- Las metas se cargarán aquí -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña de Categorías -->
+        <div id="categories" class="tab-content">
+            <div class="categories-section">
+                <div class="categories-header">
+                    <h3><i class="fas fa-tags"></i> Gestión de Categorías</h3>
+                    <button id="addCategoryBtn" class="add-btn">
+                        <i class="fas fa-plus"></i> Agregar Categoría
+                    </button>
+                </div>
+                
+                <!-- Formulario para agregar nueva categoría -->
+                <div class="add-category-form">
+                    <h4><i class="fas fa-plus-circle"></i> Agregar Nueva Categoría</h4>
+                    <form id="categoryForm" class="category-form">
+                        <div class="form-row">
+                            <select id="categoryType" required>
+                                <option value="">Tipo</option>
+                                <option value="income">Ingreso</option>
+                                <option value="expense">Gasto</option>
+                            </select>
+                            <input type="text" id="categoryName" placeholder="Nombre de la categoría" required>
+                        </div>
+                        <div class="form-row">
+                            <input type="color" id="categoryColor" value="#3498db" title="Color de la categoría">
+                            <input type="text" id="categoryDescription" placeholder="Descripción (opcional)">
+                        </div>
+                        <button type="submit" class="add-btn">
+                            <i class="fas fa-plus"></i> Agregar Categoría
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="categories-content">
+                    <!-- Barra de herramientas de categorías -->
+                    <div class="categories-toolbar">
+                        <button id="cleanDescriptionsBtn" class="btn btn-warning" title="Limpiar prefijos 'Compra' de las descripciones">
+                            <i class="fas fa-broom"></i> Limpiar Descripciones
+                        </button>
+                        <div class="toolbar-info">
+                            <small>Haz clic en cualquier categoría para ver el desglose detallado</small>
+                        </div>
+                    </div>
+
+                    <!-- Categorías de Ingresos -->
+                    <div id="incomeCategories" class="category-section">
+                        <!-- Las categorías de ingresos se renderizarán aquí -->
+                    </div>
+
+                    <!-- Categorías de Gastos -->
+                    <div id="expenseCategories" class="category-section">
+                        <!-- Las categorías de gastos se renderizarán aquí -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña de Reportes -->
+        <div id="reports" class="tab-content">
+            <div class="reports-section">
+                <h3><i class="fas fa-chart-bar"></i> Reportes y Análisis</h3>
+                <div class="report-controls">
+                    <select id="reportPeriod">
+                        <option value="current-month">Mes actual</option>
+                        <option value="last-6-months">Últimos 6 meses</option>
+                        <option value="current-year">Año actual</option>
+                    </select>
+                    <button id="generateReport" class="add-btn">
+                        <i class="fas fa-chart-line"></i> Generar Reporte
+                    </button>
+                </div>
+                <div id="reportResults" class="report-results">
+                    <!-- Los reportes se mostrarán aquí -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para crear nueva meta -->
+        <div id="goalModal" class="modal">
+            <div class="modal-content goal-modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-target"></i> Nueva Meta de Ahorro</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="goalForm" class="goal-form">
+                        <!-- Campo oculto para ID de meta en edición -->
+                        <input type="hidden" id="editingGoalId" value="">
+                        <!-- Información básica -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-info-circle"></i> Información Básica</h4>
+                            <div class="form-row">
+                                <input type="text" id="goalName" placeholder="Nombre de la meta" required>
+                                <select id="goalCurrency">
+                                    <option value="UYU">Pesos (UYU)</option>
+                                    <option value="USD">Dólares (USD)</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <input type="text" id="goalCategory" placeholder="Categoría (opcional)">
+                                <select id="goalPriority">
+                                    <option value="low">Prioridad Baja</option>
+                                    <option value="medium" selected>Prioridad Media</option>
+                                    <option value="high">Prioridad Alta</option>
+                                    <option value="urgent">Urgente</option>
+                                </select>
+                            </div>
+                            <textarea id="goalDescription" placeholder="Descripción (opcional)"></textarea>
+                        </div>
+
+                        <!-- Fechas opcionales -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-calendar-alt"></i> Fechas (Opcionales)</h4>
+                            <div class="form-row">
+                                <div class="date-input-group">
+                                    <label for="currentDate">Fecha Actual:</label>
+                                    <input type="date" id="currentDate" title="Fecha actual de la meta">
+                                </div>
+                                <div class="date-input-group">
+                                    <label for="goalDeadline">Fecha Objetivo:</label>
+                                    <input type="date" id="goalDeadline" placeholder="Fecha límite (opcional)" title="Fecha objetivo para completar la meta">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Montos opcionales -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-dollar-sign"></i> Montos (Opcionales)</h4>
+                            <div class="form-row">
+                                <div class="amount-input-group">
+                                    <label for="currentSaved">Monto Actual:</label>
+                                    <input type="number" id="currentSaved" placeholder="Ya ahorrado" step="0.01" value="0" title="Monto que ya tienes ahorrado">
+                                </div>
+                                <div class="amount-input-group">
+                                    <label for="goalAmount">Monto Objetivo:</label>
+                                    <input type="number" id="goalAmount" placeholder="Monto objetivo" step="0.01" title="Monto total que quieres alcanzar">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="amount-input-group full-width">
+                                    <label for="expectedAmount">Monto Esperado:</label>
+                                    <input type="number" id="expectedAmount" placeholder="Monto esperado (opcional)" step="0.01" title="Monto proyectado que esperas alcanzar">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Etiquetas y notas opcionales -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-tags"></i> Etiquetas y Notas (Opcionales)</h4>
+                            <div class="form-row">
+                                <input type="text" id="goalTags" placeholder="Etiquetas (separadas por comas)">
+                                <input type="text" id="goalNotes" placeholder="Notas adicionales">
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="cancelGoalBtn">Cancelar</button>
+                            <button type="submit" class="add-btn">
+                                <i class="fas fa-plus"></i> Crear Meta
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <footer class="footer">
+        <p>&copy; Desde 1992 Fede Life. Todos los derechos reservados.</p>
+    </footer>    
+    <!-- config-local.js no se carga desde el cliente por seguridad -->
+    <script src="/funciones/config-production-fixed.js"></script>
+    <script type="module" src="/funciones/financial_chat.js"></script>
+    <script src="/funciones/finanzas.js"></script>
+    <script src="/pages/auth.js"></script>
+
+    <!-- Inicialización del sistema de chat -->
+    <script>
+        // Esperar a que se cargue el módulo de chat antes de inicializar la aplicación
+        window.addEventListener('load', function() {
+            // Verificar que el chat esté disponible después de un breve delay
+            setTimeout(() => {
+                if (window.financialChat) {
+                    console.log('✅ Sistema de chat de IA inicializado correctamente');
+                } else {
+                    console.warn('⚠️ Sistema de chat de IA no disponible, usando fallback');
+                }
+            }, 1000);
+        });
+    </script>
+
+    <script>
+        // Configurar menú hamburguesa para móviles
+        document.addEventListener('DOMContentLoaded', function() {
+            const navToggle = document.getElementById('navToggle');
+            const navMenu = document.getElementById('navMenu');
+
+            if (navToggle && navMenu) {
+                navToggle.addEventListener('click', function() {
+                    navToggle.classList.toggle('active');
+                    navMenu.classList.toggle('active');
+                });
+
+                // Cerrar menú cuando se hace click en un enlace
+                navMenu.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', function() {
+                        navToggle.classList.remove('active');
+                        navMenu.classList.remove('active');
+                    });
+                });
+
+                // Cerrar menú cuando se hace click fuera de él
+                document.addEventListener('click', function(e) {
+                    if (!navToggle.contains(e.target) && !navMenu.contains(e.target)) {
+                        navToggle.classList.remove('active');
+                        navMenu.classList.remove('active');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>
