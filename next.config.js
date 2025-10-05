@@ -109,9 +109,16 @@ const nextConfig = {
 
   // Webpack configuration con optimizaciones PWA
   webpack: (config, { dev, isServer }) => {
-    // Resolver problemas con PDF.js worker imports
+    // Configurar path aliases explícitamente
     config.resolve.alias = {
       ...config.resolve.alias,
+      '@': require('path').resolve(__dirname),
+      '@/components': require('path').resolve(__dirname, 'components'),
+      '@/lib': require('path').resolve(__dirname, 'lib'),
+      '@/hooks': require('path').resolve(__dirname, 'hooks'),
+      '@/context': require('path').resolve(__dirname, 'context'),
+      '@/types': require('path').resolve(__dirname, 'types'),
+      // Resolver problemas con PDF.js worker imports
       'pdfjs-dist/legacy/build/pdf.worker.mjs': false,
       'pdfjs-dist/build/pdf.worker.mjs': false,
       'pdfjs-dist/legacy/build/pdf.worker.js': false,

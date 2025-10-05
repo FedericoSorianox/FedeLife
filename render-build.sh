@@ -20,11 +20,16 @@ npm ci --verbose --production=false
 
 # Asegurar que las dependencias críticas estén instaladas
 echo "🔧 Asegurando dependencias críticas..."
-echo "📋 Instalando dependencias de build necesarias..."
-npm install --save-dev critters autoprefixer postcss tailwindcss typescript --force || {
+
+# Instalar autoprefixer específicamente primero
+echo "📋 Instalando autoprefixer..."
+npm install autoprefixer@^10.4.21 --save-dev --force
+
+echo "📋 Instalando otras dependencias de build..."
+npm install --save-dev critters@^0.0.23 postcss@^8.5.6 tailwindcss@^3.4.18 typescript@^5.9.3 --force || {
     echo "⚠️  Primera instalación falló, intentando con cache limpio..."
     npm cache clean --force
-    npm install --save-dev critters autoprefixer postcss tailwindcss typescript
+    npm install --save-dev critters@^0.0.23 postcss@^8.5.6 tailwindcss@^3.4.18 typescript@^5.9.3
 }
 
 # Verificar instalación básica
