@@ -18,48 +18,34 @@ npm cache clean --force 2>/dev/null || true
 echo "📦 Instalando dependencias completas..."
 npm ci --verbose --production=false
 
-# Asegurar que las dependencias críticas estén instaladas
-echo "🔧 Asegurando dependencias críticas..."
-
-# Verificar que autoprefixer esté disponible (ya debería estar en devDependencies)
-echo "📋 Verificando autoprefixer..."
-if ! npm list autoprefixer --depth=0 >/dev/null 2>&1; then
-    echo "📦 Instalando autoprefixer..."
-    npm install autoprefixer@^10.4.21 --save-dev
-else
-    echo "✅ autoprefixer ya está instalado"
-fi
-
-# Verificar otras dependencias críticas
-echo "📋 Verificando dependencias de build..."
-for dep in postcss tailwindcss typescript; do
-    if ! npm list $dep --depth=0 >/dev/null 2>&1; then
-        echo "📦 Instalando $dep..."
-        npm install $dep --save-dev
-    else
-        echo "✅ $dep ya está instalado"
-    fi
-done
-
-# Verificar instalación básica
-echo "📋 Verificando instalación básica..."
-npm list --depth=0 | grep -E "(autoprefixer|postcss|tailwindcss|typescript)" || echo "⚠️  Algunas dependencias pueden no estar listadas, pero continuando..."
+# Verificar que las dependencias críticas estén instaladas
+echo "🔧 Verificando dependencias críticas..."
 
 # Verificación específica de autoprefixer
 echo "🔍 Verificando que autoprefixer se pueda resolver..."
 if ! node -e "require('autoprefixer')" 2>/dev/null; then
     echo "❌ Error: No se puede resolver autoprefixer"
-    npm list autoprefixer --depth=0
-    echo "📦 Reintentando instalación de autoprefixer..."
-    npm cache clean --force
-    npm install autoprefixer@^10.4.21 --save-dev
+    echo "📦 Intentando reinstalar autoprefixer..."
+    npm install autoprefixer@^10.4.21
     if ! node -e "require('autoprefixer')" 2>/dev/null; then
         echo "❌ Error crítico: autoprefixer sigue sin poder resolverse"
+        npm list autoprefixer --depth=0 || echo "autoprefixer no encontrado en npm list"
         exit 1
     fi
 else
     echo "✅ autoprefixer se resuelve correctamente"
 fi
+
+# Verificar otras dependencias críticas
+echo "📋 Verificando otras dependencias críticas..."
+for dep in postcss tailwindcss; do
+    if ! node -e "require('$dep')" 2>/dev/null; then
+        echo "⚠️ $dep no se puede resolver, intentando instalar..."
+        npm install $dep
+    else
+        echo "✅ $dep se resuelve correctamente"
+    fi
+done
 
 # Verificar que el package.json existe y es válido
 if [ ! -f "package.json" ]; then
