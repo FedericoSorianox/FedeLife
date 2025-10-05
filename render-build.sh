@@ -3,13 +3,26 @@
 # Script de build personalizado para Render
 echo "🚀 Iniciando build personalizado para Render..."
 
-# Instalar dependencias
-echo "📦 Instalando dependencias..."
-npm ci --production
+# Instalar dependencias (incluyendo devDependencies necesarias para build)
+echo "📦 Instalando dependencias completas..."
+npm ci
 
-# Verificar que critters esté instalado (necesario para Next.js)
+# Verificar dependencias críticas necesarias para el build
 echo "🔧 Verificando dependencias críticas..."
+echo "📋 Verificando critters..."
 npm list critters || npm install critters --save-dev
+
+echo "📋 Verificando autoprefixer..."
+npm list autoprefixer || npm install autoprefixer --save-dev
+
+echo "📋 Verificando postcss..."
+npm list postcss || npm install postcss --save-dev
+
+echo "📋 Verificando tailwindcss..."
+npm list tailwindcss || npm install tailwindcss --save-dev
+
+echo "📋 Verificando typescript..."
+npm list typescript || npm install typescript --save-dev
 
 # Hacer build de Next.js
 echo "🏗️ Construyendo aplicación Next.js..."
