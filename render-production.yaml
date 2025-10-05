@@ -4,15 +4,7 @@ services:
     env: node
     runtime: node20
     plan: free
-    buildCommand: |
-      echo "🚀 Iniciando build personalizado..." &&
-      npm cache clean --force &&
-      npm ci --verbose --production=false &&
-      echo "📋 Verificando dependencias críticas..." &&
-      npm install critters autoprefixer postcss tailwindcss typescript --save-dev --force &&
-      echo "🏗️ Construyendo aplicación Next.js..." &&
-      npm run build &&
-      echo "✅ Build completado exitosamente"
+    buildCommand: chmod +x render-build.sh && ./render-build.sh
     startCommand: NODE_ENV=production npm start
     envVars:
       - key: NODE_ENV
