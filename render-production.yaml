@@ -4,7 +4,15 @@ services:
     env: node
     runtime: node20
     plan: free
-    buildCommand: ./render-build.sh
+    buildCommand: |
+      echo "🚀 Iniciando build personalizado..." &&
+      npm cache clean --force &&
+      npm ci --verbose --production=false &&
+      echo "📋 Verificando dependencias críticas..." &&
+      npm install critters autoprefixer postcss tailwindcss typescript --save-dev --force &&
+      echo "🏗️ Construyendo aplicación Next.js..." &&
+      npm run build &&
+      echo "✅ Build completado exitosamente"
     startCommand: NODE_ENV=production npm start
     envVars:
       - key: NODE_ENV
@@ -15,7 +23,21 @@ services:
         value: --max-old-space-size=512
       - key: MONGODB_URI
         fromSecret: mongodb_uri
+      - key: JWT_SECRET
+        fromSecret: jwt_secret
+      - key: JWT_EXPIRES_IN
+        value: 365d
       - key: JWT_NO_EXPIRE
         value: false
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 50
+      - key: LOG_LEVEL
+        value: error
+      - key: FRONTEND_URL
+        value: https://fedelife-finanzas.onrender.com
+      - key: OPENAI_API_KEY
+        fromSecret: openai_api_key
     healthCheckPath: /api/health
     autoDeploy: true

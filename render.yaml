@@ -8,7 +8,15 @@ services:
     env: node
     runtime: node20
     plan: free
-    buildCommand: ./render-build.sh
+    buildCommand: |
+      echo "🚀 Iniciando build personalizado..." &&
+      npm cache clean --force &&
+      npm ci --verbose --production=false &&
+      echo "📋 Verificando dependencias críticas..." &&
+      npm install critters autoprefixer postcss tailwindcss typescript --save-dev --force &&
+      echo "🏗️ Construyendo aplicación Next.js..." &&
+      npm run build &&
+      echo "✅ Build completado exitosamente"
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -33,6 +41,8 @@ services:
         value: error
       - key: FRONTEND_URL
         value: https://fedelife-finanzas.onrender.com
+      - key: OPENAI_API_KEY
+        fromSecret: openai_api_key
 
 # Nota: Usando MongoDB Atlas en lugar de base de datos de Render
 # databases:
