@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
-import GoalModel from '../../../server/models/Goal';
+import GoalModel from '@/lib/models/Goal';
 
 // Función para obtener userId del token
 function getUserIdFromToken(request: NextRequest): string | null {

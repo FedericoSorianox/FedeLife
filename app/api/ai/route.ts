@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
-import { processAdvancedQuery } from '@/server/services/aiService';
+import { processAdvancedQuery } from '@/lib/services/aiService';
 import jwt from 'jsonwebtoken';
 
 // Función para obtener userId del token

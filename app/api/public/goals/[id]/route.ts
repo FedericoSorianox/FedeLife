@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
-import GoalModel from '../../../../../server/models/Goal';
+import GoalModel from '@/lib/models/Goal';
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {

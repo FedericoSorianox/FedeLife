@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import pdfParse from 'pdf-parse-fixed';
-import { analyzeTextWithEnvKey, analyzeLargeTextInChunks } from '@/server/services/aiService';
+import { analyzeTextWithEnvKey, analyzeLargeTextInChunks } from '@/lib/services/aiService';
 import connectToDatabase from '@/lib/mongodb';
 
 // Función para obtener userId del token (igual que otras rutas)

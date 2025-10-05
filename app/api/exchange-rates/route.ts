@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
-import { exchangeRateService } from '@/server/services/exchangeRate';
+import { exchangeRateService } from '@/lib/services/exchangeRate';
 
 export async function GET(request: NextRequest) {
   try {
