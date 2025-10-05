@@ -21,20 +21,45 @@ npm ci --verbose --production=false
 # Asegurar que las dependencias críticas estén instaladas
 echo "🔧 Asegurando dependencias críticas..."
 
-# Instalar autoprefixer específicamente primero
-echo "📋 Instalando autoprefixer..."
-npm install autoprefixer@^10.4.21 --save-dev --force
+# Verificar que autoprefixer esté disponible (ya debería estar en devDependencies)
+echo "📋 Verificando autoprefixer..."
+if ! npm list autoprefixer --depth=0 >/dev/null 2>&1; then
+    echo "📦 Instalando autoprefixer..."
+    npm install autoprefixer@^10.4.21 --save-dev
+else
+    echo "✅ autoprefixer ya está instalado"
+fi
 
-echo "📋 Instalando otras dependencias de build..."
-npm install --save-dev critters@^0.0.23 postcss@^8.5.6 tailwindcss@^3.4.18 typescript@^5.9.3 --force || {
-    echo "⚠️  Primera instalación falló, intentando con cache limpio..."
-    npm cache clean --force
-    npm install --save-dev critters@^0.0.23 postcss@^8.5.6 tailwindcss@^3.4.18 typescript@^5.9.3
-}
+# Verificar otras dependencias críticas
+echo "📋 Verificando dependencias de build..."
+for dep in postcss tailwindcss typescript; do
+    if ! npm list $dep --depth=0 >/dev/null 2>&1; then
+        echo "📦 Instalando $dep..."
+        npm install $dep --save-dev
+    else
+        echo "✅ $dep ya está instalado"
+    fi
+done
 
 # Verificar instalación básica
 echo "📋 Verificando instalación básica..."
-npm list --depth=0 | grep -E "(critters|autoprefixer|postcss|tailwindcss|typescript)" || echo "⚠️  Algunas dependencias pueden no estar listadas, pero continuando..."
+npm list --depth=0 | grep -E "(autoprefixer|postcss|tailwindcss|typescript)" || echo "⚠️  Algunas dependencias pueden no estar listadas, pero continuando..."
+
+# Verificación específica de autoprefixer
+echo "🔍 Verificando que autoprefixer se pueda resolver..."
+if ! node -e "require('autoprefixer')" 2>/dev/null; then
+    echo "❌ Error: No se puede resolver autoprefixer"
+    npm list autoprefixer --depth=0
+    echo "📦 Reintentando instalación de autoprefixer..."
+    npm cache clean --force
+    npm install autoprefixer@^10.4.21 --save-dev
+    if ! node -e "require('autoprefixer')" 2>/dev/null; then
+        echo "❌ Error crítico: autoprefixer sigue sin poder resolverse"
+        exit 1
+    fi
+else
+    echo "✅ autoprefixer se resuelve correctamente"
+fi
 
 # Verificar que el package.json existe y es válido
 if [ ! -f "package.json" ]; then
