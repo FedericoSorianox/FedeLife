@@ -2,10 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import CategoryModel from '@/lib/models/Category';
 import connectToDatabase from '@/lib/mongodb';
 
-// Función para obtener userId del token
+// Función para obtener userId del token (soporta cookies y headers Authorization)
 function getUserIdFromToken(request: NextRequest): string | null {
   try {
-    const token = request.cookies.get('auth-token')?.value;
+    // Primero intentar obtener token de cookies (sistema Next.js)
+    let token = request.cookies.get('auth-token')?.value;
+
+    // Si no hay token en cookies, intentar obtenerlo del header Authorization (sistema legacy)
+    if (!token) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7); // Remover 'Bearer ' del inicio
+      }
+    }
+
     if (!token) return null;
 
     const jwt = require('jsonwebtoken');
@@ -16,6 +26,7 @@ function getUserIdFromToken(request: NextRequest): string | null {
 
     return decoded.userId;
   } catch (error) {
+    console.error('Error decodificando token:', error);
     return null;
   }
 }

@@ -9,6 +9,58 @@ const JWT_NO_EXPIRE = process.env.JWT_NO_EXPIRE === 'true';
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar si ya hay un token válido en los headers (para compatibilidad con sistema legacy)
+    const authHeader = request.headers.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(
+          token,
+          process.env.JWT_SECRET || 'fallback-secret-key'
+        ) as { userId: string; email: string; username: string };
+
+        // Si el token es válido, conectar a DB y obtener usuario
+        await connectToDatabase();
+        const user = await UserModel.findById(decoded.userId);
+
+        if (user) {
+          // Token válido, devolver respuesta de login exitoso
+          const response = NextResponse.json({
+            success: true,
+            message: 'Login exitoso (token existente)',
+            data: {
+              user: {
+                id: (user as any)._id,
+                username: (user as any).username,
+                email: (user as any).email,
+                firstName: (user as any).firstName,
+                lastName: (user as any).lastName,
+                baseCurrency: (user as any).baseCurrency || 'UYU',
+                createdAt: (user as any).createdAt
+              },
+              token: token
+            }
+          });
+
+          // Configurar cookie con el token existente
+          response.cookies.set('auth-token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 24 * 60 * 60 * 1000, // 24 horas
+            path: '/'
+          });
+
+          return response;
+        }
+      } catch (error) {
+        // Token inválido, continuar con login normal
+        console.log('Token existente inválido, procediendo con login normal');
+      }
+    }
+
     const { identifier, password } = await request.json();
 
     // Validaciones

@@ -3,7 +3,41 @@ export const apiFetch = (endpoint: string, options?: RequestInit) => {
   const baseUrl = process.env.NODE_ENV === 'production'
     ? '' // En producción usar rutas relativas
     : 'http://localhost:3003'; // Puerto del servidor backend
-  return fetch(`${baseUrl}${endpoint}`, options);
+
+  // Preparar headers con token de autenticación si está disponible
+  const headers = new Headers(options?.headers);
+
+  // Agregar token JWT del localStorage si existe (soporte para sistema legacy)
+  if (typeof window !== 'undefined') {
+    const authData = localStorage.getItem('auth_data');
+    const devToken = localStorage.getItem('dev_auth_token');
+
+    let token = null;
+    if (devToken) {
+      token = devToken;
+    } else if (authData) {
+      try {
+        const parsed = JSON.parse(authData);
+        token = parsed.token;
+      } catch (error) {
+        console.error('Error parseando auth_data:', error);
+      }
+    }
+
+    if (token && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+  }
+
+  // Si no se especificó Content-Type y es un objeto RequestInit con body, agregarlo
+  if (!headers.has('Content-Type') && options?.body && typeof options.body === 'string') {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  return fetch(`${baseUrl}${endpoint}`, {
+    ...options,
+    headers
+  });
 };
 
 // Función para formatear monedas

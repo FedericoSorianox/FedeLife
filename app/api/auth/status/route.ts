@@ -5,7 +5,16 @@ import UserModel from '@/lib/models/User';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('auth-token')?.value;
+    // Primero intentar obtener token de cookies (sistema Next.js)
+    let token = request.cookies.get('auth-token')?.value;
+
+    // Si no hay token en cookies, intentar obtenerlo del header Authorization (sistema legacy)
+    if (!token) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7); // Remover 'Bearer ' del inicio
+      }
+    }
 
     if (!token) {
       return NextResponse.json({

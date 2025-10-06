@@ -384,11 +384,32 @@ export default function FinanzasPage() {
   };
 
   useEffect(() => {
+    checkAuthStatus();
     loadData();
     loadCategories();
     loadExchangeRate();
   }, []);
 
+
+  const checkAuthStatus = async () => {
+    try {
+      const response = await apiFetch('/api/auth/status');
+      const data = await response.json();
+
+      if (!data.authenticated) {
+        console.warn('Usuario no autenticado, redirigiendo al login...');
+        window.location.href = '/login.html';
+        return false;
+      }
+
+      console.log('✅ Usuario autenticado:', data.user.username);
+      return true;
+    } catch (error) {
+      console.error('Error verificando autenticación:', error);
+      window.location.href = '/login.html';
+      return false;
+    }
+  };
 
   const loadExchangeRate = async () => {
     try {
@@ -623,11 +644,16 @@ export default function FinanzasPage() {
       const response = await apiFetch('/api/categories');
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
         setCategories(data.data.categories);
+      } else if (response.status === 401) {
+        console.warn('No autorizado para cargar categorías, redirigiendo al login...');
+        window.location.href = '/login.html';
+      } else {
+        console.error('Error cargando categorías:', data.message || 'Error desconocido');
       }
     } catch (error) {
-      console.error('Error cargando categorías:', error);
+      console.error('Error de red cargando categorías:', error);
     }
   };
 
@@ -641,8 +667,15 @@ export default function FinanzasPage() {
         body: JSON.stringify(data),
       });
 
+      if (response.status === 401) {
+        console.warn('Sesión expirada, redirigiendo al login...');
+        window.location.href = '/login.html';
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error('Error al crear la categoría');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al crear la categoría');
       }
 
       await loadCategories();
@@ -663,8 +696,15 @@ export default function FinanzasPage() {
         body: JSON.stringify(data),
       });
 
+      if (response.status === 401) {
+        console.warn('Sesión expirada, redirigiendo al login...');
+        window.location.href = '/login.html';
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error('Error al actualizar la categoría');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al actualizar la categoría');
       }
 
       await loadCategories();
@@ -681,8 +721,15 @@ export default function FinanzasPage() {
         method: 'DELETE',
       });
 
+      if (response.status === 401) {
+        console.warn('Sesión expirada, redirigiendo al login...');
+        window.location.href = '/login.html';
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error('Error al eliminar la categoría');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al eliminar la categoría');
       }
 
       await loadCategories();

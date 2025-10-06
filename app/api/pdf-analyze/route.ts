@@ -11,10 +11,20 @@ import pdfParse from 'pdf-parse-fixed';
 import { analyzeTextWithEnvKey, analyzeLargeTextInChunks } from '@/lib/services/aiService';
 import connectToDatabase from '@/lib/mongodb';
 
-// Función para obtener userId del token (igual que otras rutas)
+// Función para obtener userId del token (soporta cookies y headers Authorization)
 function getUserIdFromToken(request: NextRequest): string | null {
   try {
-    const token = request.cookies.get('auth-token')?.value;
+    // Primero intentar obtener token de cookies (sistema Next.js)
+    let token = request.cookies.get('auth-token')?.value;
+
+    // Si no hay token en cookies, intentar obtenerlo del header Authorization (sistema legacy)
+    if (!token) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7); // Remover 'Bearer ' del inicio
+      }
+    }
+
     if (!token) return null;
 
     const decoded = jwt.verify(
@@ -24,6 +34,7 @@ function getUserIdFromToken(request: NextRequest): string | null {
 
     return decoded.userId;
   } catch (error) {
+    console.error('Error decodificando token:', error);
     return null;
   }
 }
