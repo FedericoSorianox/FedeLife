@@ -398,7 +398,7 @@ export default function FinanzasPage() {
 
       if (!data.authenticated) {
         console.warn('Usuario no autenticado, redirigiendo al login...');
-        window.location.href = '/login.html';
+        window.location.href = '/login';
         return false;
       }
 
@@ -648,7 +648,7 @@ export default function FinanzasPage() {
         setCategories(data.data.categories);
       } else if (response.status === 401) {
         console.warn('No autorizado para cargar categorías, redirigiendo al login...');
-        window.location.href = '/login.html';
+        window.location.href = '/login';
       } else {
         console.error('Error cargando categorías:', data.message || 'Error desconocido');
       }
@@ -669,7 +669,7 @@ export default function FinanzasPage() {
 
       if (response.status === 401) {
         console.warn('Sesión expirada, redirigiendo al login...');
-        window.location.href = '/login.html';
+        window.location.href = '/login';
         return;
       }
 
@@ -698,7 +698,7 @@ export default function FinanzasPage() {
 
       if (response.status === 401) {
         console.warn('Sesión expirada, redirigiendo al login...');
-        window.location.href = '/login.html';
+        window.location.href = '/login';
         return;
       }
 
@@ -723,7 +723,7 @@ export default function FinanzasPage() {
 
       if (response.status === 401) {
         console.warn('Sesión expirada, redirigiendo al login...');
-        window.location.href = '/login.html';
+        window.location.href = '/login';
         return;
       }
 

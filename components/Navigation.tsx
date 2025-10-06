@@ -1,16 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { apiFetch } from '@/lib/utils';
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
 
-  const navigation = [
-    { name: 'Finanzas', href: '/finanzas' },
-  ];
+  // Verificar autenticación al cargar
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await apiFetch('/api/auth/status');
+        const data = await response.json();
+
+        if (data.authenticated) {
+          setIsAuthenticated(true);
+          setUser(data.user);
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+      } catch (error) {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
+    };
+
+    checkAuth();
+  }, [pathname]); // Re-verificar cuando cambia la ruta
+
+  const handleLogout = () => {
+    // Limpiar datos locales
+    localStorage.removeItem('auth_data');
+    localStorage.removeItem('dev_auth_token');
+
+    // Redirigir al logout
+    window.location.href = '/logout';
+  };
+
+  // No mostrar navegación en páginas de auth
+  const isAuthPage = ['/login', '/register', '/logout'].includes(pathname);
+
+  const navigation = isAuthenticated
+    ? [
+        { name: 'Finanzas', href: '/finanzas' },
+      ]
+    : [
+        { name: 'Inicio', href: '/' },
+        { name: 'Registro', href: '/register' },
+      ];
 
   // Secciones disponibles solo en la página de finanzas
   const sections = [
@@ -36,6 +79,11 @@ export default function Navigation() {
     if (href.startsWith('#')) return false; // Las anclas no tienen estado activo
     return pathname.startsWith(href);
   };
+
+  // No mostrar navegación en páginas de autenticación
+  if (isAuthPage) {
+    return null;
+  }
 
   return (
     <nav className="bg-primary shadow-lg sticky top-0 z-50">
@@ -79,6 +127,63 @@ export default function Navigation() {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Authentication section */}
+          <div className="hidden md:block">
+            <div className="ml-4 flex items-center md:ml-6">
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <span className="text-white text-sm font-medium">
+                      {user?.firstName || user?.username || 'Usuario'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-blue-600 transition-colors"
+                  >
+                    Cerrar Sesión
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-4">
+                  <Link
+                    href="/login"
+                    className="px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-blue-600 transition-colors"
+                  >
+                    Iniciar Sesión
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="px-3 py-2 rounded-md text-sm font-medium bg-white text-blue-600 hover:bg-blue-50 transition-colors"
+                  >
+                    Registrarse
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile auth menu */}
+          <div className="md:hidden flex items-center">
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-2 mr-2">
+                <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <span className="text-white text-xs font-medium">
+                  {user?.firstName || user?.username || 'Usuario'}
+                </span>
+              </div>
+            ) : null}
           </div>
 
           {/* Mobile menu button */}
@@ -133,6 +238,40 @@ export default function Navigation() {
               {item.name}
             </Link>
           ))}
+
+          {/* Authentication options */}
+          <div className="border-t border-blue-600 my-2"></div>
+          {isAuthenticated ? (
+            <div className="space-y-1">
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsOpen(false);
+                }}
+                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium transition-colors text-blue-100 hover:bg-blue-600 hover:text-white"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <Link
+                href="/login"
+                className="block px-3 py-2 rounded-md text-base font-medium transition-colors text-blue-100 hover:bg-blue-600 hover:text-white"
+                onClick={() => setIsOpen(false)}
+              >
+                Iniciar Sesión
+              </Link>
+              <Link
+                href="/register"
+                className="block px-3 py-2 rounded-md text-base font-medium transition-colors text-blue-100 hover:bg-blue-600 hover:text-white"
+                onClick={() => setIsOpen(false)}
+              >
+                Registrarse
+              </Link>
+            </div>
+          )}
+
           {/* Mostrar secciones solo en la página de finanzas */}
           {pathname === '/finanzas' && (
             <>
