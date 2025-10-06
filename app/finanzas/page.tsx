@@ -620,7 +620,7 @@ export default function FinanzasPage() {
 
   const loadCategories = async () => {
     try {
-      const response = await apiFetch('/api/public/categories');
+      const response = await apiFetch('/api/categories');
       const data = await response.json();
 
       if (data.success) {
