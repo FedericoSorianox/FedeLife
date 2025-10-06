@@ -1515,19 +1515,20 @@ export default function FinanzasPage() {
         )}
 
         {/* Modal de Detalles de Categoría */}
-        {categoryDetailsModal && selectedCategory && (
+        {categoryDetailsModal && (selectedCategory || selectedCategoryData) && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold text-gray-900">
                     <i className="fas fa-chart-pie mr-2 text-blue-600"></i>
-                    Detalles de Gastos - {selectedCategory}
+                    Detalles de {selectedCategoryData ? (selectedCategoryData.type === 'income' ? 'Ingresos' : 'Gastos') : 'Gastos'} - {selectedCategory || selectedCategoryData?.name}
                   </h3>
                   <button
                     onClick={() => {
                       setCategoryDetailsModal(false);
                       setSelectedCategory(null);
+                      setSelectedCategoryData(null);
                     }}
                     className="text-gray-400 hover:text-gray-600"
                   >
@@ -1543,7 +1544,7 @@ export default function FinanzasPage() {
                       setSelectedCategoryData(null);
                     }}
                   />
-                ) : (
+                ) : selectedCategory ? (
                   <CategoryDetailsModal
                     category={selectedCategory}
                     transactions={allTransactions}
@@ -1552,7 +1553,7 @@ export default function FinanzasPage() {
                       setSelectedCategory(null);
                     }}
                   />
-                )}
+                ) : null}
               </div>
             </div>
           </div>
