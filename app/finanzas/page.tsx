@@ -364,7 +364,7 @@ export default function FinanzasPage() {
   // Estado para secciones colapsables
   const [expandedSections, setExpandedSections] = useState({
     resumen: true, // Solo el resumen financiero está expandido por defecto
-    graficos: false,
+    graficos: true, // Análisis gráfico expandido por defecto
     transacciones: false,
     metas: false,
     categorias: false,
