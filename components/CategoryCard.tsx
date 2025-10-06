@@ -5,9 +5,10 @@ interface CategoryCardProps {
   category: Category & { transactionCount?: number; totalAmount?: number };
   onEdit?: (category: Category) => void;
   onDelete?: (categoryId: string) => void;
+  onClick?: (category: Category) => void;
 }
 
-export default function CategoryCard({ category, onEdit, onDelete }: CategoryCardProps) {
+export default function CategoryCard({ category, onEdit, onDelete, onClick }: CategoryCardProps) {
   const handleEdit = () => {
     onEdit?.(category);
   };
@@ -18,8 +19,17 @@ export default function CategoryCard({ category, onEdit, onDelete }: CategoryCar
     }
   };
 
+  const handleClick = () => {
+    onClick?.(category);
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+    <div
+      className={`bg-white rounded-lg shadow-md border border-gray-200 p-6 hover:shadow-lg transition-all cursor-pointer ${
+        onClick ? 'hover:border-blue-300 hover:bg-blue-50/30' : ''
+      }`}
+      onClick={handleClick}
+    >
       <div className="flex items-start justify-between">
         <div className="flex items-center space-x-3">
           <div
@@ -37,7 +47,10 @@ export default function CategoryCard({ category, onEdit, onDelete }: CategoryCar
         <div className="flex items-center space-x-2">
           {onEdit && (
             <button
-              onClick={handleEdit}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit();
+              }}
               className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
               title="Editar categoría"
             >
@@ -48,7 +61,10 @@ export default function CategoryCard({ category, onEdit, onDelete }: CategoryCar
           )}
           {onDelete && !category.isDefault && category._id && (
             <button
-              onClick={handleDelete}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete();
+              }}
               className="p-2 text-gray-400 hover:text-red-600 transition-colors"
               title="Eliminar categoría"
             >
@@ -87,6 +103,16 @@ export default function CategoryCard({ category, onEdit, onDelete }: CategoryCar
       {/* Descripción */}
       {category.description && (
         <p className="mt-3 text-sm text-gray-600">{category.description}</p>
+      )}
+
+      {/* Indicador de clickeable */}
+      {onClick && (
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-xs text-blue-600 flex items-center">
+            <i className="fas fa-mouse-pointer mr-1"></i>
+            Click para ver detalles
+          </span>
+        </div>
       )}
 
       {/* Badge para categoría por defecto */}

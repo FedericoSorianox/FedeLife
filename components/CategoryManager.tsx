@@ -10,6 +10,7 @@ interface CategoryManagerProps {
   onCreate: (data: any) => Promise<void>;
   onUpdate: (id: string, data: any) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onCategoryClick?: (category: Category) => void;
   loading?: boolean;
 }
 
@@ -18,6 +19,7 @@ export default function CategoryManager({
   onCreate,
   onUpdate,
   onDelete,
+  onCategoryClick,
   loading = false
 }: CategoryManagerProps) {
   const [showForm, setShowForm] = useState(false);
@@ -146,6 +148,7 @@ export default function CategoryManager({
                 category={category}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onClick={onCategoryClick}
               />
             ))}
           </div>
@@ -171,6 +174,7 @@ export default function CategoryManager({
                 category={category}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onClick={onCategoryClick}
               />
             ))}
           </div>

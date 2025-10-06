@@ -374,6 +374,7 @@ export default function FinanzasPage() {
   // Estado para modal de detalles de categoría
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categoryDetailsModal, setCategoryDetailsModal] = useState(false);
+  const [selectedCategoryData, setSelectedCategoryData] = useState<any>(null);
 
   // Función para expandir una sección desde navegación externa
   const expandSection = (section: keyof typeof expandedSections) => {
@@ -645,7 +646,21 @@ export default function FinanzasPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setCategories(data.data.categories);
+        // Calcular estadísticas de transacciones por categoría
+        const categoriesWithStats = data.data.categories.map((category: any) => {
+          // Filtrar transacciones por categoría
+          const categoryTransactions = allTransactions.filter(
+            t => t.category === category.name && t.type === category.type
+          );
+
+          return {
+            ...category,
+            transactionCount: categoryTransactions.length,
+            totalAmount: categoryTransactions.reduce((sum: number, t: any) => sum + t.amount, 0)
+          };
+        });
+
+        setCategories(categoriesWithStats);
       } else if (response.status === 401) {
         console.warn('No autorizado para cargar categorías, redirigiendo al login...');
         window.location.href = '/login';
@@ -846,6 +861,199 @@ export default function FinanzasPage() {
   const handleCategoryClick = (category: string) => {
     setSelectedCategory(category);
     setCategoryDetailsModal(true);
+  };
+
+  // Función para manejar click en cards de categoría
+  const handleCategoryCardClick = (category: any) => {
+    setSelectedCategoryData(category);
+    setCategoryDetailsModal(true);
+  };
+
+  // Modal para detalles de categoría desde cards
+  const CategoryCardDetailsModal = ({ categoryData, transactions, onClose }: { categoryData: any, transactions: any[], onClose: () => void }) => {
+    const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+    // Filtrar transacciones por categoría y tipo
+    const categoryTransactions = transactions.filter(
+      t => t.category === categoryData.name && t.type === categoryData.type
+    );
+
+    // Ordenar transacciones
+    const sortedTransactions = [...categoryTransactions].sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === 'date') {
+        comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+      } else if (sortBy === 'amount') {
+        comparison = a.amount - b.amount;
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    // Calcular estadísticas
+    const totalAmount = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const averageAmount = categoryTransactions.length > 0 ? totalAmount / categoryTransactions.length : 0;
+    const maxAmount = Math.max(...categoryTransactions.map(t => t.amount), 0);
+    const minAmount = Math.min(...categoryTransactions.map(t => t.amount), 0);
+
+    const handleSort = (field: 'date' | 'amount') => {
+      if (sortBy === field) {
+        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      } else {
+        setSortBy(field);
+        setSortOrder('desc');
+      }
+    };
+
+    const getSortIcon = (field: 'date' | 'amount') => {
+      if (sortBy !== field) return 'fas fa-sort';
+      return sortOrder === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Header con información de la categoría */}
+        <div className="flex items-center space-x-3 pb-4 border-b border-gray-200">
+          <div
+            className="w-6 h-6 rounded-full"
+            style={{ backgroundColor: categoryData.color }}
+          />
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">{categoryData.name}</h3>
+            <p className="text-sm text-gray-600 capitalize">
+              {categoryData.type === 'income' ? 'Categoría de Ingresos' : 'Categoría de Gastos'}
+            </p>
+            {categoryData.description && (
+              <p className="text-sm text-gray-500 mt-1">{categoryData.description}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Estadísticas de la categoría */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">{categoryTransactions.length}</div>
+            <div className="text-sm text-blue-700">Total {categoryData.type === 'income' ? 'Ingresos' : 'Gastos'}</div>
+          </div>
+          <div className={`border rounded-lg p-4 text-center ${
+            categoryData.type === 'income'
+              ? 'bg-green-50 border-green-200'
+              : 'bg-red-50 border-red-200'
+          }`}>
+            <div className={`text-2xl font-bold ${
+              categoryData.type === 'income' ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {categoryData.type === 'income' ? '+' : '-'}{formatCurrency(totalAmount)}
+            </div>
+            <div className={`text-sm ${
+              categoryData.type === 'income' ? 'text-green-700' : 'text-red-700'
+            }`}>
+              Monto Total
+            </div>
+          </div>
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-purple-600">
+              {formatCurrency(averageAmount)}
+            </div>
+            <div className="text-sm text-purple-700">Promedio</div>
+          </div>
+          <div className={`border rounded-lg p-4 text-center ${
+            categoryData.type === 'income'
+              ? 'bg-emerald-50 border-emerald-200'
+              : 'bg-orange-50 border-orange-200'
+          }`}>
+            <div className={`text-2xl font-bold ${
+              categoryData.type === 'income' ? 'text-emerald-600' : 'text-orange-600'
+            }`}>
+              {formatCurrency(categoryData.type === 'income' ? maxAmount : maxAmount)}
+            </div>
+            <div className={`text-sm ${
+              categoryData.type === 'income' ? 'text-emerald-700' : 'text-orange-700'
+            }`}>
+              {categoryData.type === 'income' ? 'Mayor Ingreso' : 'Mayor Gasto'}
+            </div>
+          </div>
+        </div>
+
+        {/* Tabla de transacciones */}
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          {sortedTransactions.length === 0 ? (
+            <div className="text-center py-8">
+              <i className="fas fa-inbox text-4xl text-gray-300"></i>
+              <p className="mt-2 text-gray-500">
+                No hay {categoryData.type === 'income' ? 'ingresos' : 'gastos'} en esta categoría
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Descripción
+                    </th>
+                    <th
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('amount')}
+                    >
+                      Monto
+                      <i className={`${getSortIcon('amount')} ml-1`}></i>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Moneda
+                    </th>
+                    <th
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('date')}
+                    >
+                      Fecha
+                      <i className={`${getSortIcon('date')} ml-1`}></i>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {sortedTransactions.map((transaction) => (
+                    <tr key={transaction._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {transaction.description}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                        categoryData.type === 'income' ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {categoryData.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.currency)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          transaction.currency === 'UYU'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {transaction.currency}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(transaction.date)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Botón de cerrar */}
+        <div className="flex justify-end pt-4">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+          >
+            <i className="fas fa-times mr-2"></i>
+            Cerrar
+          </button>
+        </div>
+      </div>
+    );
   };
 
   // Componente helper para secciones colapsables
@@ -1239,6 +1447,7 @@ export default function FinanzasPage() {
               onCreate={handleCreateCategory}
               onUpdate={handleUpdateCategory}
               onDelete={handleDeleteCategory}
+              onCategoryClick={handleCategoryCardClick}
               loading={loading}
             />
           </CollapsibleSection>
@@ -1312,14 +1521,25 @@ export default function FinanzasPage() {
                   </button>
                 </div>
 
-                <CategoryDetailsModal
-                  category={selectedCategory}
-                  transactions={allTransactions}
-                  onClose={() => {
-                    setCategoryDetailsModal(false);
-                    setSelectedCategory(null);
-                  }}
-                />
+                {selectedCategoryData ? (
+                  <CategoryCardDetailsModal
+                    categoryData={selectedCategoryData}
+                    transactions={allTransactions}
+                    onClose={() => {
+                      setCategoryDetailsModal(false);
+                      setSelectedCategoryData(null);
+                    }}
+                  />
+                ) : (
+                  <CategoryDetailsModal
+                    category={selectedCategory}
+                    transactions={allTransactions}
+                    onClose={() => {
+                      setCategoryDetailsModal(false);
+                      setSelectedCategory(null);
+                    }}
+                  />
+                )}
               </div>
             </div>
           </div>
