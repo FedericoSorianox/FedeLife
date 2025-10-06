@@ -352,6 +352,7 @@ export default function FinanzasPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [goals, setGoals] = useState<any[]>([]);
   const [allTransactions, setAllTransactions] = useState<import('@/types').Transaction[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<import('@/types').Transaction[]>([]);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [transferModalType, setTransferModalType] = useState<'UYU_TO_USD' | 'USD_TO_UYU'>('UYU_TO_USD');
 
@@ -387,7 +388,6 @@ export default function FinanzasPage() {
   useEffect(() => {
     checkAuthStatus();
     loadData();
-    loadCategories();
     loadExchangeRate();
   }, []);
 
@@ -486,6 +486,9 @@ export default function FinanzasPage() {
 
       // Cargar transacciones paginadas para mostrar
       await loadTransactionsPage(currentPage, itemsPerPage);
+
+      // Cargar categorías con estadísticas actualizadas
+      await loadCategories();
 
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -646,10 +649,13 @@ export default function FinanzasPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        // Usar transacciones filtradas por período si existen, sino usar todas
+        const transactionsToUse = filteredTransactions.length > 0 ? filteredTransactions : allTransactions;
+
         // Calcular estadísticas de transacciones por categoría
         const categoriesWithStats = data.data.categories.map((category: any) => {
-          // Filtrar transacciones por categoría
-          const categoryTransactions = allTransactions.filter(
+          // Filtrar transacciones por categoría usando las transacciones del período actual
+          const categoryTransactions = transactionsToUse.filter(
             t => t.category === category.name && t.type === category.type
           );
 
@@ -870,12 +876,15 @@ export default function FinanzasPage() {
   };
 
   // Modal para detalles de categoría desde cards
-  const CategoryCardDetailsModal = ({ categoryData, transactions, onClose }: { categoryData: any, transactions: any[], onClose: () => void }) => {
+  const CategoryCardDetailsModal = ({ categoryData, onClose }: { categoryData: any, onClose: () => void }) => {
     const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+    // Usar transacciones filtradas por período si existen, sino usar todas
+    const transactionsToUse = filteredTransactions.length > 0 ? filteredTransactions : allTransactions;
+
     // Filtrar transacciones por categoría y tipo
-    const categoryTransactions = transactions.filter(
+    const categoryTransactions = transactionsToUse.filter(
       t => t.category === categoryData.name && t.type === categoryData.type
     );
 
@@ -1166,6 +1175,9 @@ export default function FinanzasPage() {
     setTotalTransactions(filteredTransactions.length);
     setTotalPages(Math.ceil(filteredTransactions.length / itemsPerPage));
 
+    // Guardar las transacciones filtradas para usar en categorías
+    setFilteredTransactions(filteredTransactions);
+
     // Load first page of filtered transactions
     const paginatedFiltered = filteredTransactions.slice(0, itemsPerPage);
     setTransactions(paginatedFiltered);
@@ -1174,6 +1186,8 @@ export default function FinanzasPage() {
   // Efecto para filtrar datos cuando cambia el periodo
   useEffect(() => {
     filterDataByPeriod();
+    // También recargar categorías con las estadísticas actualizadas
+    loadCategories();
   }, [currentPeriod, allTransactions, exchangeRate]);
 
   // Escuchar eventos de navegación para expandir secciones
@@ -1524,7 +1538,6 @@ export default function FinanzasPage() {
                 {selectedCategoryData ? (
                   <CategoryCardDetailsModal
                     categoryData={selectedCategoryData}
-                    transactions={allTransactions}
                     onClose={() => {
                       setCategoryDetailsModal(false);
                       setSelectedCategoryData(null);
