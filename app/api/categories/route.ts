@@ -78,6 +78,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verificar si es una petición especial para crear categorías por defecto
+    const { createDefaultCategories } = await request.json();
+    if (createDefaultCategories) {
+      return await handleCreateDefaultCategories();
+    }
+
     const { name, type, color, description } = await request.json();
 
     // Validaciones
@@ -136,6 +142,70 @@ export async function POST(request: NextRequest) {
       {
         error: 'Error interno del servidor',
         message: 'No se pudo crear la categoría'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// Función para crear categorías por defecto del sistema
+async function handleCreateDefaultCategories() {
+  try {
+    // Conectar a la base de datos
+    await connectToDatabase();
+
+    // Categorías por defecto del sistema
+    const defaultCategories = [
+      // Categorías de Ingresos
+      { name: 'Salario', type: 'income', color: '#10B981', description: 'Ingresos por trabajo', userId: null, isDefault: true },
+      { name: 'Freelance', type: 'income', color: '#3B82F6', description: 'Trabajos independientes', userId: null, isDefault: true },
+      { name: 'Inversiones', type: 'income', color: '#8B5CF6', description: 'Ganancias de inversiones', userId: null, isDefault: true },
+      { name: 'Alquiler', type: 'income', color: '#06B6D4', description: 'Ingresos por alquiler', userId: null, isDefault: true },
+      { name: 'Otros Ingresos', type: 'income', color: '#84CC16', description: 'Otros ingresos varios', userId: null, isDefault: true },
+
+      // Categorías de Gastos
+      { name: 'Alimentación', type: 'expense', color: '#EF4444', description: 'Comida y restaurantes', userId: null, isDefault: true },
+      { name: 'Transporte', type: 'expense', color: '#F59E0B', description: 'Transporte público y combustible', userId: null, isDefault: true },
+      { name: 'Servicios', type: 'expense', color: '#F97316', description: 'Luz, agua, gas, internet', userId: null, isDefault: true },
+      { name: 'Entretenimiento', type: 'expense', color: '#8B5CF6', description: 'Cine, teatro, hobbies', userId: null, isDefault: true },
+      { name: 'Salud', type: 'expense', color: '#10B981', description: 'Médicos, medicamentos, seguros', userId: null, isDefault: true },
+      { name: 'Educación', type: 'expense', color: '#3B82F6', description: 'Cursos, libros, educación', userId: null, isDefault: true },
+      { name: 'Ropa', type: 'expense', color: '#EC4899', description: 'Ropa y accesorios', userId: null, isDefault: true },
+      { name: 'Casa', type: 'expense', color: '#6B7280', description: 'Mantenimiento del hogar', userId: null, isDefault: true },
+      { name: 'Transferencias', type: 'expense', color: '#6366F1', description: 'Transferencias entre cuentas', userId: null, isDefault: true },
+      { name: 'Otros Gastos', type: 'expense', color: '#94A3B8', description: 'Otros gastos varios', userId: null, isDefault: true }
+    ];
+
+    // Verificar qué categorías ya existen
+    const existingCategories = await CategoryModel.find({ userId: null, isDefault: true });
+    const existingNames = existingCategories.map(cat => cat.name);
+
+    // Filtrar categorías que no existen aún
+    const categoriesToCreate = defaultCategories.filter(cat => !existingNames.includes(cat.name));
+
+    if (categoriesToCreate.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'Todas las categorías por defecto ya existen',
+        data: { categories: existingCategories }
+      });
+    }
+
+    // Crear categorías faltantes
+    const createdCategories = await CategoryModel.insertMany(categoriesToCreate);
+
+    return NextResponse.json({
+      success: true,
+      message: `Se crearon ${categoriesToCreate.length} categorías por defecto`,
+      data: { categories: [...existingCategories, ...createdCategories] }
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error('❌ Error creando categorías por defecto:', error);
+    return NextResponse.json(
+      {
+        error: 'Error interno del servidor',
+        message: 'No se pudieron crear las categorías por defecto'
       },
       { status: 500 }
     );

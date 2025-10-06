@@ -65,21 +65,56 @@ export default function CategoryManager({
     }
   };
 
+  const handleCreateDefaultCategories = async () => {
+    try {
+      const response = await fetch('/api/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ createDefaultCategories: true }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert(`✅ ${data.message}`);
+        // Recargar categorías
+        window.location.reload();
+      } else {
+        alert(`❌ Error: ${data.message || 'No se pudieron crear las categorías'}`);
+      }
+    } catch (error) {
+      console.error('Error creando categorías por defecto:', error);
+      alert('❌ Error de conexión al crear categorías por defecto');
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header con botón de crear */}
+      {/* Header con botones de crear */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">
           <i className="fas fa-tags mr-2"></i>
           Gestión de Categorías
         </h3>
-        <button
-          onClick={() => setShowForm(true)}
-          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 focus:ring-2 focus:ring-primary focus:ring-offset-2"
-        >
-          <i className="fas fa-plus mr-2"></i>
-          Nueva Categoría
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={handleCreateDefaultCategories}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+            title="Crear categorías por defecto del sistema"
+          >
+            <i className="fas fa-magic mr-2"></i>
+            Crear Categorías por Defecto
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          >
+            <i className="fas fa-plus mr-2"></i>
+            Nueva Categoría
+          </button>
+        </div>
       </div>
 
       {/* Formulario */}
