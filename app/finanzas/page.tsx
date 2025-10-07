@@ -5,7 +5,6 @@ import { formatCurrency, formatDate, apiFetch } from '@/lib/utils';
 import FinancialCard from '@/components/FinancialCard';
 import PeriodSelector from '@/components/PeriodSelector';
 import ExpenseChart from '@/components/ExpenseChart';
-import ChartViewSelector from '@/components/ChartViewSelector';
 import TransactionForm from '@/components/TransactionForm';
 import TransactionList from '@/components/TransactionList';
 import CategoryManager from '@/components/CategoryManager';
@@ -31,161 +30,10 @@ interface ChartDataItem {
   color: string;
 }
 
-interface TransferFormProps {
-  transferType: 'UYU_TO_USD' | 'USD_TO_UYU';
-  exchangeRate: number;
-  onComplete: () => void;
-  onCancel: () => void;
-}
-
 interface CategoryDetailsModalProps {
   category: string;
   transactions: Transaction[];
   onClose: () => void;
-}
-
-function TransferForm({ transferType, exchangeRate, onComplete, onCancel }: TransferFormProps) {
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const convertedAmount = amount ? parseFloat(amount) * (transferType === 'UYU_TO_USD' ? 1/exchangeRate : exchangeRate) : 0;
-
-  const handleTransfer = async () => {
-    if (!amount || convertedAmount === 0) {
-      alert('Por favor ingresa un monto válido');
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const transferDescription = description.trim() ||
-        `Conversión ${transferType === 'UYU_TO_USD' ? 'UYU → USD' : 'USD → UYU'} (${formatCurrency(parseFloat(amount), transferType === 'UYU_TO_USD' ? 'UYU' : 'USD')} → ${formatCurrency(convertedAmount, transferType === 'UYU_TO_USD' ? 'USD' : 'UYU')})`;
-
-      // Crear transacción de gasto (moneda original)
-      const expenseTransaction = {
-        type: 'expense' as const,
-        description: transferDescription,
-        amount: parseFloat(amount),
-        category: 'Transferencias',
-        currency: transferType === 'UYU_TO_USD' ? 'UYU' : 'USD',
-        date: new Date().toISOString().split('T')[0],
-        source: 'currency-transfer'
-      };
-
-      // Crear transacción de ingreso (moneda convertida)
-      const incomeTransaction = {
-        type: 'income' as const,
-        description: transferDescription,
-        amount: convertedAmount,
-        category: 'Transferencias',
-        currency: transferType === 'UYU_TO_USD' ? 'USD' : 'UYU',
-        date: new Date().toISOString().split('T')[0],
-        source: 'currency-transfer'
-      };
-
-      // Agregar ambas transacciones
-      await apiFetch('/api/public/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(expenseTransaction),
-      });
-
-      await apiFetch('/api/public/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(incomeTransaction),
-      });
-
-      alert(`✅ Transferencia realizada exitosamente!\n\n${transferDescription}`);
-      onComplete();
-    } catch (error) {
-      console.error('Error en transferencia:', error);
-      alert('Error al realizar la transferencia. Intenta nuevamente.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Monto a convertir ({transferType === 'UYU_TO_USD' ? 'UYU' : 'USD'})
-        </label>
-        <input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="Ingresa el monto..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-          min="0"
-          step="0.01"
-        />
-      </div>
-
-      {amount && (
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-sm text-purple-700">Monto convertido:</span>
-              <div className="text-lg font-bold text-purple-900">
-                {formatCurrency(convertedAmount, transferType === 'UYU_TO_USD' ? 'USD' : 'UYU')}
-              </div>
-            </div>
-            <div className="text-sm text-purple-600">
-              Tasa: {exchangeRate.toFixed(2)} UYU/USD
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Descripción (opcional)
-        </label>
-        <input
-          type="text"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Ej: Compra de dólares..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-        />
-      </div>
-
-      <div className="flex space-x-3 pt-4">
-        <button
-          onClick={onCancel}
-          className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-          disabled={isProcessing}
-        >
-          Cancelar
-        </button>
-        <button
-          onClick={handleTransfer}
-          disabled={!amount || convertedAmount === 0 || isProcessing}
-          className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
-            amount && convertedAmount > 0 && !isProcessing
-              ? 'bg-purple-600 text-white hover:bg-purple-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
-        >
-          {isProcessing ? (
-            <div className="flex items-center justify-center space-x-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              <span>Procesando...</span>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center space-x-2">
-              <i className="fas fa-exchange-alt"></i>
-              <span>Transferir</span>
-            </div>
-          )}
-        </button>
-      </div>
-    </div>
-  );
 }
 
 function CategoryDetailsModal({ category, transactions, onClose }: CategoryDetailsModalProps) {
@@ -346,15 +194,15 @@ export default function FinanzasPage() {
     year: new Date().getFullYear(),
     type: 'monthly' as 'monthly' | 'yearly'
   });
-  const [chartView, setChartView] = useState<'expenses' | 'income' | 'comparative'>('expenses');
   const [chartData, setChartData] = useState<ChartDataItem[]>([]);
   const [chartDataUSD, setChartDataUSD] = useState<ChartDataItem[]>([]);
+  const [chartDataIncome, setChartDataIncome] = useState<ChartDataItem[]>([]);
+  const [chartDataIncomeUSD, setChartDataIncomeUSD] = useState<ChartDataItem[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [goals, setGoals] = useState<any[]>([]);
   const [allTransactions, setAllTransactions] = useState<import('@/types').Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<import('@/types').Transaction[]>([]);
   const [showTransferModal, setShowTransferModal] = useState(false);
-  const [transferModalType, setTransferModalType] = useState<'UYU_TO_USD' | 'USD_TO_UYU'>('UYU_TO_USD');
 
   // Estado para paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -499,20 +347,14 @@ export default function FinanzasPage() {
 
   const loadTransactionsPage = async (page: number, limit: number) => {
     try {
-      const transactionsResponse = await apiFetch(`/api/public/transactions?page=${page}&limit=${limit}`);
-      const transactionsData = await transactionsResponse.json();
+      // Usar las transacciones ya filtradas por período en lugar de cargar desde API
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedTransactions = filteredTransactions.slice(startIndex, endIndex);
 
-      if (transactionsData.success) {
-        const transactions = transactionsData.data.transactions.map((t: Transaction) => ({
-          ...t,
-          date: typeof t.date === 'string' ? t.date : t.date.toISOString().split('T')[0]
-        }));
-        setTransactions(transactions);
-        setCurrentPage(page);
-        setItemsPerPage(limit);
-        setTotalPages(transactionsData.data.pagination.pages);
-        setTotalTransactions(transactionsData.data.pagination.total);
-      }
+      setTransactions(paginatedTransactions);
+      setCurrentPage(page);
+      setItemsPerPage(limit);
     } catch (error) {
       console.error('Error cargando página de transacciones:', error);
     }
@@ -523,8 +365,8 @@ export default function FinanzasPage() {
     const transactionsUYU = transactions.filter(t => t.currency === 'UYU');
     const transactionsUSD = transactions.filter(t => t.currency === 'USD');
 
-    // Función helper para calcular totales por categoría
-    const calculateCategoryTotals = (txns: import('@/types').Transaction[]) => {
+    // Función helper para calcular totales por categoría para gastos
+    const calculateExpenseCategoryTotals = (txns: import('@/types').Transaction[]) => {
       return txns.reduce((acc, transaction) => {
         if (transaction.type === 'expense') {
           acc[transaction.category] = (acc[transaction.category] || 0) + transaction.amount;
@@ -533,9 +375,23 @@ export default function FinanzasPage() {
       }, {} as Record<string, number>);
     };
 
-    // Calcular totales por categoría para cada moneda
-    const categoryTotalsUYU = calculateCategoryTotals(transactionsUYU);
-    const categoryTotalsUSD = calculateCategoryTotals(transactionsUSD);
+    // Función helper para calcular totales por categoría para ingresos
+    const calculateIncomeCategoryTotals = (txns: import('@/types').Transaction[]) => {
+      return txns.reduce((acc, transaction) => {
+        if (transaction.type === 'income') {
+          acc[transaction.category] = (acc[transaction.category] || 0) + transaction.amount;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+    };
+
+    // Calcular totales por categoría para gastos
+    const expenseCategoryTotalsUYU = calculateExpenseCategoryTotals(transactionsUYU);
+    const expenseCategoryTotalsUSD = calculateExpenseCategoryTotals(transactionsUSD);
+
+    // Calcular totales por categoría para ingresos
+    const incomeCategoryTotalsUYU = calculateIncomeCategoryTotals(transactionsUYU);
+    const incomeCategoryTotalsUSD = calculateIncomeCategoryTotals(transactionsUSD);
 
     // Colores predefinidos para categorías
     const categoryColors: Record<string, string> = {
@@ -547,16 +403,33 @@ export default function FinanzasPage() {
       'Educación': '#3498db',
       'Ropa': '#e91e63',
       'Otros Gastos': '#95a5a6',
+      'Salario': '#2ecc71',
+      'Freelance': '#3498db',
+      'Inversiones': '#9b59b6',
+      'Otros Ingresos': '#95a5a6',
     };
 
-    // Preparar datos para gráficos separados por moneda
-    const chartDataUYU = Object.entries(categoryTotalsUYU).map(([category, amount]) => ({
+    // Preparar datos para gráficos de gastos
+    const chartDataUYU = Object.entries(expenseCategoryTotalsUYU).map(([category, amount]) => ({
       category,
       amount,
       color: categoryColors[category] || '#' + Math.floor(Math.random()*16777215).toString(16)
     }));
 
-    const chartDataUSD = Object.entries(categoryTotalsUSD).map(([category, amount]) => ({
+    const chartDataUSD = Object.entries(expenseCategoryTotalsUSD).map(([category, amount]) => ({
+      category,
+      amount,
+      color: categoryColors[category] || '#' + Math.floor(Math.random()*16777215).toString(16)
+    }));
+
+    // Preparar datos para gráficos de ingresos
+    const chartDataIncomeUYU = Object.entries(incomeCategoryTotalsUYU).map(([category, amount]) => ({
+      category,
+      amount,
+      color: categoryColors[category] || '#' + Math.floor(Math.random()*16777215).toString(16)
+    }));
+
+    const chartDataIncomeUSD = Object.entries(incomeCategoryTotalsUSD).map(([category, amount]) => ({
       category,
       amount,
       color: categoryColors[category] || '#' + Math.floor(Math.random()*16777215).toString(16)
@@ -564,6 +437,8 @@ export default function FinanzasPage() {
 
     setChartData(chartDataUYU);
     setChartDataUSD(chartDataUSD);
+    setChartDataIncome(chartDataIncomeUYU);
+    setChartDataIncomeUSD(chartDataIncomeUSD);
   };
 
   const handleCreateTransaction = async (data: TransactionFormData) => {
@@ -852,7 +727,8 @@ export default function FinanzasPage() {
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1);
     await loadTransactionsPage(1, newItemsPerPage);
-    setTotalPages(Math.ceil(totalTransactions / newItemsPerPage));
+    // Recalcular totalPages basado en las transacciones filtradas
+    setTotalPages(Math.ceil(filteredTransactions.length / newItemsPerPage));
   };
 
   // Función para alternar secciones colapsables
@@ -1309,10 +1185,7 @@ export default function FinanzasPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                 </svg>}
                 color="transfer"
-                onClick={() => {
-                  setTransferModalType('UYU_TO_USD');
-                  setShowTransferModal(true);
-                }}
+                onClick={() => setShowTransferModal(true)}
               />
             </div>
           </div>
@@ -1359,10 +1232,7 @@ export default function FinanzasPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                 </svg>}
                 color="transfer"
-                onClick={() => {
-                  setTransferModalType('USD_TO_UYU');
-                  setShowTransferModal(true);
-                }}
+                onClick={() => setShowTransferModal(true)}
               />
             </div>
           </div>
@@ -1376,12 +1246,8 @@ export default function FinanzasPage() {
           isExpanded={expandedSections.graficos || false}
           onToggle={() => toggleSection('graficos')}
         >
-          <ChartViewSelector
-            currentView={chartView}
-            onViewChange={setChartView}
-          />
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            {/* Gastos */}
             <ExpenseChart
               data={chartData}
               title="Gastos por Categoría (UYU)"
@@ -1391,6 +1257,19 @@ export default function FinanzasPage() {
             <ExpenseChart
               data={chartDataUSD}
               title="Gastos por Categoría (USD)"
+              onCategoryClick={handleCategoryClick}
+            />
+
+            {/* Ingresos */}
+            <ExpenseChart
+              data={chartDataIncome}
+              title="Ingresos por Categoría (UYU)"
+              onCategoryClick={handleCategoryClick}
+            />
+
+            <ExpenseChart
+              data={chartDataIncomeUSD}
+              title="Ingresos por Categoría (USD)"
               onCategoryClick={handleCategoryClick}
             />
           </div>
@@ -1490,7 +1369,8 @@ export default function FinanzasPage() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-gray-900">
-                    Transferir {transferModalType === 'UYU_TO_USD' ? 'UYU → USD' : 'USD → UYU'}
+                    <i className="fas fa-exchange-alt mr-2 text-purple-600"></i>
+                    Transferir entre Monedas
                   </h3>
                   <button
                     onClick={() => setShowTransferModal(false)}
@@ -1500,14 +1380,12 @@ export default function FinanzasPage() {
                   </button>
                 </div>
 
-                <TransferForm
-                  transferType={transferModalType}
+                <CurrencyTransfer
                   exchangeRate={exchangeRate}
-                  onComplete={() => {
+                  onTransferComplete={() => {
                     setShowTransferModal(false);
                     loadData();
                   }}
-                  onCancel={() => setShowTransferModal(false)}
                 />
               </div>
             </div>
