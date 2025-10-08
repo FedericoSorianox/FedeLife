@@ -306,7 +306,7 @@ export default function FinanzasPage() {
       // Aplicar filtro por período y calcular stats
       filterDataByPeriod();
 
-      // Cargar categorías con estadísticas actualizadas
+      // Cargar categorías con estadísticas actualizadas después de filtrar
       await loadCategories();
 
     } catch (error) {
@@ -495,8 +495,16 @@ export default function FinanzasPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Usar transacciones filtradas por período si existen, sino usar todas
-        const transactionsToUse = filteredTransactions.length > 0 ? filteredTransactions : allTransactions;
+        // Siempre usar transacciones filtradas por período para estadísticas consistentes
+        let transactionsToUse = allTransactions;
+
+        // Si tenemos transacciones filtradas por período, usar esas
+        if (filteredTransactions.length > 0) {
+          transactionsToUse = filteredTransactions;
+          console.log(`📊 Usando ${filteredTransactions.length} transacciones filtradas para categorías`);
+        } else {
+          console.log(`📊 Usando ${allTransactions.length} transacciones totales para categorías (no hay filtro aplicado aún)`);
+        }
 
         // Calcular estadísticas de transacciones por categoría
         const categoriesWithStats = data.data.categories.map((category: any) => {
@@ -504,6 +512,8 @@ export default function FinanzasPage() {
           const categoryTransactions = transactionsToUse.filter(
             t => t.category === category.name && t.type === category.type
           );
+
+          console.log(`${category.name}: ${categoryTransactions.length} transacciones, total: ${categoryTransactions.reduce((sum: number, t: any) => sum + t.amount, 0)}`);
 
           return {
             ...category,
@@ -1038,9 +1048,14 @@ export default function FinanzasPage() {
   useEffect(() => {
     // Solo filtrar si ya tenemos transacciones cargadas
     if (allTransactions.length > 0) {
+      console.log(`🔄 Cambiando período a: ${currentPeriod.month}/${currentPeriod.year} (${currentPeriod.type})`);
       filterDataByPeriod();
-      // También recargar categorías con las estadísticas actualizadas
-      loadCategories();
+
+      // Recargar categorías después de filtrar (con un pequeño delay para asegurar que filteredTransactions esté actualizado)
+      setTimeout(() => {
+        console.log(`🔄 Recargando categorías después del cambio de período`);
+        loadCategories();
+      }, 100);
     }
   }, [currentPeriod, allTransactions, exchangeRate]);
 
