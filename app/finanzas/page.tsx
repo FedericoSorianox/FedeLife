@@ -56,11 +56,17 @@ function CategoryDetailsModal({ category, transactions, onClose }: CategoryDetai
     return sortOrder === 'asc' ? comparison : -comparison;
   });
 
-  // Calcular estadísticas
-  const totalAmount = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const averageAmount = categoryTransactions.length > 0 ? totalAmount / categoryTransactions.length : 0;
-  const maxAmount = Math.max(...categoryTransactions.map(t => t.amount), 0);
-  const minAmount = Math.min(...categoryTransactions.map(t => t.amount), 0);
+  // Separar transacciones por moneda
+  const transactionsUYU = categoryTransactions.filter(t => t.currency === 'UYU');
+  const transactionsUSD = categoryTransactions.filter(t => t.currency === 'USD');
+
+  // Calcular estadísticas por moneda
+  const totalUYU = transactionsUYU.reduce((sum, t) => sum + t.amount, 0);
+  const totalUSD = transactionsUSD.reduce((sum, t) => sum + t.amount, 0);
+  const maxUYU = Math.max(...transactionsUYU.map(t => t.amount), 0);
+  const maxUSD = Math.max(...transactionsUSD.map(t => t.amount), 0);
+  const countUYU = transactionsUYU.length;
+  const countUSD = transactionsUSD.length;
 
   const handleSort = (field: 'date' | 'amount') => {
     if (sortBy === field) {
@@ -81,20 +87,20 @@ function CategoryDetailsModal({ category, transactions, onClose }: CategoryDetai
       {/* Estadísticas de la categoría */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-blue-600">{categoryTransactions.length}</div>
-          <div className="text-sm text-blue-700">Total Gastos</div>
+          <div className="text-2xl font-bold text-blue-600">{countUYU}</div>
+          <div className="text-sm text-blue-700">Gastos en UYU</div>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-green-600">{formatCurrency(totalAmount)}</div>
-          <div className="text-sm text-green-700">Monto Total</div>
+          <div className="text-2xl font-bold text-green-600">{formatCurrency(totalUYU, 'UYU')}</div>
+          <div className="text-sm text-green-700">Total UYU</div>
         </div>
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-purple-600">{formatCurrency(averageAmount)}</div>
-          <div className="text-sm text-purple-700">Promedio</div>
+          <div className="text-2xl font-bold text-purple-600">{countUSD}</div>
+          <div className="text-sm text-purple-700">Gastos en USD</div>
         </div>
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-orange-600">{formatCurrency(maxAmount)}</div>
-          <div className="text-sm text-orange-700">Mayor Gasto</div>
+          <div className="text-2xl font-bold text-orange-600">{formatCurrency(totalUSD, 'USD')}</div>
+          <div className="text-sm text-orange-700">Total USD</div>
         </div>
       </div>
 
@@ -740,11 +746,17 @@ export default function FinanzasPage() {
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
-    // Calcular estadísticas
-    const totalAmount = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const averageAmount = categoryTransactions.length > 0 ? totalAmount / categoryTransactions.length : 0;
-    const maxAmount = Math.max(...categoryTransactions.map(t => t.amount), 0);
-    const minAmount = Math.min(...categoryTransactions.map(t => t.amount), 0);
+    // Separar transacciones por moneda
+    const transactionsUYU = categoryTransactions.filter(t => t.currency === 'UYU');
+    const transactionsUSD = categoryTransactions.filter(t => t.currency === 'USD');
+
+    // Calcular estadísticas por moneda
+    const totalUYU = transactionsUYU.reduce((sum, t) => sum + t.amount, 0);
+    const totalUSD = transactionsUSD.reduce((sum, t) => sum + t.amount, 0);
+    const countUYU = transactionsUYU.length;
+    const countUSD = transactionsUSD.length;
+    const maxUYU = Math.max(...transactionsUYU.map(t => t.amount), 0);
+    const maxUSD = Math.max(...transactionsUSD.map(t => t.amount), 0);
 
     const handleSort = (field: 'date' | 'amount') => {
       if (sortBy === field) {
@@ -782,8 +794,8 @@ export default function FinanzasPage() {
         {/* Estadísticas de la categoría */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">{categoryTransactions.length}</div>
-            <div className="text-sm text-blue-700">Total {categoryData.type === 'income' ? 'Ingresos' : 'Gastos'}</div>
+            <div className="text-2xl font-bold text-blue-600">{countUYU}</div>
+            <div className="text-sm text-blue-700">{categoryData.type === 'income' ? 'Ingresos' : 'Gastos'} en UYU</div>
           </div>
           <div className={`border rounded-lg p-4 text-center ${
             categoryData.type === 'income'
@@ -793,19 +805,17 @@ export default function FinanzasPage() {
             <div className={`text-2xl font-bold ${
               categoryData.type === 'income' ? 'text-green-600' : 'text-red-600'
             }`}>
-              {categoryData.type === 'income' ? '+' : '-'}{formatCurrency(totalAmount)}
+              {categoryData.type === 'income' ? '+' : '-'}{formatCurrency(totalUYU, 'UYU')}
             </div>
             <div className={`text-sm ${
               categoryData.type === 'income' ? 'text-green-700' : 'text-red-700'
             }`}>
-              Monto Total
+              Total UYU
             </div>
           </div>
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              {formatCurrency(averageAmount)}
-            </div>
-            <div className="text-sm text-purple-700">Promedio</div>
+            <div className="text-2xl font-bold text-purple-600">{countUSD}</div>
+            <div className="text-sm text-purple-700">{categoryData.type === 'income' ? 'Ingresos' : 'Gastos'} en USD</div>
           </div>
           <div className={`border rounded-lg p-4 text-center ${
             categoryData.type === 'income'
@@ -815,12 +825,12 @@ export default function FinanzasPage() {
             <div className={`text-2xl font-bold ${
               categoryData.type === 'income' ? 'text-emerald-600' : 'text-orange-600'
             }`}>
-              {formatCurrency(categoryData.type === 'income' ? maxAmount : maxAmount)}
+              {formatCurrency(totalUSD, 'USD')}
             </div>
             <div className={`text-sm ${
               categoryData.type === 'income' ? 'text-emerald-700' : 'text-orange-700'
             }`}>
-              {categoryData.type === 'income' ? 'Mayor Ingreso' : 'Mayor Gasto'}
+              Total USD
             </div>
           </div>
         </div>
@@ -1369,6 +1379,9 @@ export default function FinanzasPage() {
                   <h3 className="text-xl font-bold text-gray-900">
                     <i className="fas fa-chart-pie mr-2 text-blue-600"></i>
                     Detalles de {selectedCategoryData ? (selectedCategoryData.type === 'income' ? 'Ingresos' : 'Gastos') : 'Gastos'} - {selectedCategory || selectedCategoryData?.name}
+                    <span className="block text-sm font-normal text-gray-600 mt-1">
+                      Estadísticas separadas por moneda
+                    </span>
                   </h3>
                   <button
                     onClick={() => {
