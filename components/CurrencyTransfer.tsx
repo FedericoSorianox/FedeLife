@@ -121,10 +121,16 @@ export default function CurrencyTransfer({ exchangeRate, onTransferComplete }: C
 
   const handleCancel = () => {
     setShowTransferForm(false);
+    setShowExchangeRateModal(false);
     setAmount('');
     setDescription('');
     setConvertedAmount(0);
     setCustomExchangeRate(exchangeRate); // Reset to default
+    
+    // Notificar al componente padre que se canceló
+    if (onTransferComplete) {
+      onTransferComplete();
+    }
   };
 
   const getTransferIcon = () => {
@@ -182,7 +188,7 @@ export default function CurrencyTransfer({ exchangeRate, onTransferComplete }: C
             Tipo de Cambio
           </h3>
           <button
-            onClick={() => setShowExchangeRateModal(false)}
+            onClick={handleCancel}
             className="text-gray-400 hover:text-gray-600"
           >
             <i className="fas fa-times text-xl"></i>
@@ -215,7 +221,7 @@ export default function CurrencyTransfer({ exchangeRate, onTransferComplete }: C
 
           <div className="flex space-x-3 pt-4">
             <button
-              onClick={() => setShowExchangeRateModal(false)}
+              onClick={handleCancel}
               className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
             >
               Cancelar

@@ -1363,9 +1363,9 @@ export default function FinanzasPage() {
         {/* Modal de Detalles de Categoría */}
         {categoryDetailsModal && (selectedCategory || selectedCategoryData) && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white p-6 border-b border-gray-200 z-10">
+                <div className="flex items-center justify-between">
                   <h3 className="text-xl font-bold text-gray-900">
                     <i className="fas fa-chart-pie mr-2 text-blue-600"></i>
                     Detalles de {selectedCategoryData ? (selectedCategoryData.type === 'income' ? 'Ingresos' : 'Gastos') : 'Gastos'} - {selectedCategory || selectedCategoryData?.name}
@@ -1376,11 +1376,13 @@ export default function FinanzasPage() {
                       setSelectedCategory(null);
                       setSelectedCategoryData(null);
                     }}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 hover:text-gray-600 flex-shrink-0"
                   >
                     <i className="fas fa-times text-xl"></i>
                   </button>
                 </div>
+              </div>
+              <div className="p-6">
 
                 {selectedCategoryData ? (
                   <CategoryCardDetailsModal
@@ -1393,7 +1395,7 @@ export default function FinanzasPage() {
                 ) : selectedCategory ? (
                   <CategoryDetailsModal
                     category={selectedCategory}
-                    transactions={allTransactions}
+                    transactions={filteredTransactions}
                     onClose={() => {
                       setCategoryDetailsModal(false);
                       setSelectedCategory(null);
