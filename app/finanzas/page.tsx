@@ -289,51 +289,16 @@ export default function FinanzasPage() {
         }));
         setAllTransactions(allTxns);
 
-        // Calcular estadísticas separadas por moneda (cuentas independientes)
-        const transactionsUYU = allTxns.filter((t: Transaction) => t.currency === 'UYU');
-        const transactionsUSD = allTxns.filter((t: Transaction) => t.currency === 'USD');
-
-        // Estadísticas para cuenta UYU
-        const incomeUYU = transactionsUYU
-          .filter((t: Transaction) => t.type === 'income')
-          .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
-
-        const expensesUYU = transactionsUYU
-          .filter((t: Transaction) => t.type === 'expense')
-          .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
-
-        const balanceUYU = incomeUYU - expensesUYU;
-
-        // Estadísticas para cuenta USD
-        const incomeUSD = transactionsUSD
-          .filter((t: Transaction) => t.type === 'income')
-          .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
-
-        const expensesUSD = transactionsUSD
-          .filter((t: Transaction) => t.type === 'expense')
-          .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
-
-        const balanceUSD = incomeUSD - expensesUSD;
-
-        setStats({
-          totalIncome: incomeUYU,           // Ingresos cuenta UYU
-          totalIncomeUSD: incomeUSD,        // Ingresos cuenta USD
-          totalExpenses: expensesUYU,       // Gastos cuenta UYU
-          totalExpensesUSD: expensesUSD,    // Gastos cuenta USD
-          totalBalance: balanceUYU,         // Balance cuenta UYU
-          totalBalanceUSD: balanceUSD,      // Balance cuenta USD
-          transactionCount: allTxns.length
-        });
-
+        // No calcular stats aquí - filterDataByPeriod lo hará basado en el período actual
         setTotalTransactions(allTxns.length);
         setTotalPages(Math.ceil(allTxns.length / itemsPerPage));
 
-        // Preparar datos para el gráfico
+        // Preparar datos para el gráfico (con todas las transacciones inicialmente)
         updateChartData(allTxns);
       }
 
-      // Cargar transacciones paginadas para mostrar
-      await loadTransactionsPage(currentPage, itemsPerPage);
+      // Aplicar filtro por período y calcular stats
+      filterDataByPeriod();
 
       // Cargar categorías con estadísticas actualizadas
       await loadCategories();
@@ -1061,9 +1026,12 @@ export default function FinanzasPage() {
 
   // Efecto para filtrar datos cuando cambia el periodo
   useEffect(() => {
-    filterDataByPeriod();
-    // También recargar categorías con las estadísticas actualizadas
-    loadCategories();
+    // Solo filtrar si ya tenemos transacciones cargadas
+    if (allTransactions.length > 0) {
+      filterDataByPeriod();
+      // También recargar categorías con las estadísticas actualizadas
+      loadCategories();
+    }
   }, [currentPeriod, allTransactions, exchangeRate]);
 
   // Escuchar eventos de navegación para expandir secciones

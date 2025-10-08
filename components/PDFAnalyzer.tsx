@@ -40,9 +40,10 @@ export default function PDFAnalyzer() {
   const [selectedExpenses, setSelectedExpenses] = useState<Set<number>>(new Set());
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
   const [editingExpenses, setEditingExpenses] = useState<Expense[]>([]);
+  const [exchangeRate, setExchangeRate] = useState<number>(40); // Tasa de cambio por defecto
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cargar categorías disponibles al montar el componente
+  // Cargar categorías disponibles y exchange rate al montar el componente
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -58,7 +59,21 @@ export default function PDFAnalyzer() {
       }
     };
 
+    const loadExchangeRate = async () => {
+      try {
+        const response = await apiFetch('/api/exchange-rates');
+        const data = await response.json();
+        if (data.success && data.data.rate) {
+          setExchangeRate(data.data.rate);
+        }
+      } catch (error) {
+        console.error('Error cargando tipo de cambio:', error);
+        // Mantener el valor por defecto
+      }
+    };
+
     loadCategories();
+    loadExchangeRate();
   }, []);
 
   // Inicializar gastos editables cuando se obtiene el resultado del análisis
@@ -148,11 +163,13 @@ export default function PDFAnalyzer() {
   // Funciones para editar gastos
   const updateExpenseCategory = (index: number, category: string) => {
     const updatedExpenses = [...editingExpenses];
+    const originalExpense = analysisResult?.expenses[index];
+
     updatedExpenses[index] = {
       ...updatedExpenses[index],
       category,
-      // Si es "Otros Gastos", usar la descripción como nota
-      notes: category === 'Otros Gastos' ? updatedExpenses[index].description : undefined
+      // Si es "Otros Gastos", usar la descripción como nota por defecto
+      notes: category === 'Otros Gastos' ? (originalExpense?.description || updatedExpenses[index].description) : undefined
     };
     setEditingExpenses(updatedExpenses);
   };
@@ -163,6 +180,21 @@ export default function PDFAnalyzer() {
       ...updatedExpenses[index],
       notes
     };
+    setEditingExpenses(updatedExpenses);
+  };
+
+  // Función para cambiar la moneda de un gasto individual
+  const toggleExpenseCurrency = (index: number) => {
+    const updatedExpenses = [...editingExpenses];
+    const currentExpense = updatedExpenses[index];
+
+    // Cambiar entre UYU y USD
+    const newCurrency = currentExpense.currency === 'UYU' ? 'USD' : 'UYU';
+    updatedExpenses[index] = {
+      ...currentExpense,
+      currency: newCurrency
+    };
+
     setEditingExpenses(updatedExpenses);
   };
 
@@ -179,16 +211,23 @@ export default function PDFAnalyzer() {
     }
 
     try {
-      const transactions = expensesToAdd.map(expense => ({
-        type: 'expense' as const,
-        description: expense.description,
-        amount: expense.amount,
-        category: expense.category,
-        date: expense.date,
-        currency: expense.currency,
-        notes: expense.notes,
-        source: 'pdf-analyzer'
-      }));
+      const currentDate = new Date().toISOString().split('T')[0];
+
+      const transactions = expensesToAdd.map(expense => {
+        // Usar la versión editada si existe, sino la original
+        const expenseIndex = analysisResult?.expenses.indexOf(expense) ?? -1;
+        const editedExpense = expenseIndex >= 0 ? editingExpenses[expenseIndex] : null;
+        return {
+          type: 'expense' as const,
+          description: editedExpense?.description || expense.description,
+          amount: editedExpense?.amount || expense.amount,
+          category: editedExpense?.category || expense.category,
+          date: currentDate, // Usar fecha actual en lugar de la fecha del PDF
+          currency: editedExpense?.currency || expense.currency, // Usar moneda editada si se cambió
+          notes: editedExpense?.notes || expense.notes,
+          source: 'pdf-analyzer'
+        };
+      });
 
       // Agregar transacciones a través de la API pública
       for (const transaction of transactions) {
@@ -405,11 +444,22 @@ export default function PDFAnalyzer() {
                             <h4 className="font-medium text-gray-900 text-lg">{expense.description}</h4>
                             <p className="text-sm text-gray-500">{expense.date}</p>
                           </div>
-                          <div className="text-right ml-4">
-                            <p className="font-bold text-red-600 text-xl">
-                              {formatCurrency(expense.amount, expense.currency)}
-                            </p>
-                            <p className="text-xs text-gray-500">{expense.currency}</p>
+                          <div className="text-right ml-4 flex items-center space-x-2">
+                            <button
+                              onClick={() => toggleExpenseCurrency(index)}
+                              className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors"
+                              title={`Cambiar a ${editingExpenses[index]?.currency === 'UYU' ? 'USD' : 'UYU'}`}
+                            >
+                              <i className="fas fa-exchange-alt"></i>
+                            </button>
+                            <div>
+                              <p className="font-bold text-red-600 text-xl">
+                                {formatCurrency(editingExpenses[index]?.amount || expense.amount, editingExpenses[index]?.currency || expense.currency)}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {editingExpenses[index]?.currency || expense.currency}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -456,6 +506,7 @@ export default function PDFAnalyzer() {
                         onClick={async () => {
                           try {
                             const editedExpense = editingExpenses[index];
+                            const currentDate = new Date().toISOString().split('T')[0];
                             await apiFetch('/api/public/transactions', {
                               method: 'POST',
                               headers: {
@@ -466,8 +517,8 @@ export default function PDFAnalyzer() {
                                 description: editedExpense.description,
                                 amount: editedExpense.amount,
                                 category: editedExpense.category,
-                                date: editedExpense.date,
-                                currency: editedExpense.currency,
+                                date: currentDate, // Usar fecha actual en lugar de la fecha del PDF
+                                currency: editedExpense.currency, // Usar moneda editada
                                 notes: editedExpense.notes,
                                 source: 'pdf-analyzer'
                               }),
