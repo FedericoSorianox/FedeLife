@@ -36,7 +36,8 @@
     "test:auth": "curl http://localhost:3000/api/health",
     "test:login": "curl -X POST http://localhost:3000/api/auth/login -H \"Content-Type: application/json\" -d '{\"identifier\":\"admin@fedelife.com\",\"password\":\"admin123456\"}'",
     "test:connection": "node test-database-connection.js",
-    "test:render": "node test-render-connection.js"
+    "test:render": "node test-render-connection.js",
+    "diagnose:network": "node scripts/diagnose-network.js"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
