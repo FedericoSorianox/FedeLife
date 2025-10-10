@@ -7,6 +7,18 @@
 
 import Category from '@/lib/models/Category';
 
+/**
+ * Interface para objetos de gasto identificados por IA
+ */
+interface ExpenseItem {
+  description: string;
+  amount: number;
+  currency: string;
+  category: string;
+  date: string;
+  confidence?: number;
+}
+
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
@@ -98,12 +110,13 @@ export async function analyzeTextWithEnvKey(text: string, userId: string) {
     // Preparar prompt para OpenAI
     const systemPrompt = `Eres un analista financiero experto especializado en el análisis de estados de cuenta bancarios uruguayos.
 
-Tu tarea es analizar el texto de un estado de cuenta y extraer todos los gastos identificados.
+Tu tarea es analizar el texto de un estado de cuenta y extraer TODOS los gastos identificados SIN LÍMITE DE CANTIDAD.
 
 INSTRUCCIONES IMPORTANTES:
 1. Identifica ÚNICAMENTE transacciones que son GASTOS (no ingresos, depósitos, transferencias entrantes)
-2. Extrae el monto, descripción y fecha de cada gasto
-3. Categoriza cada gasto según EXACTAMENTE estas categorías de la base de datos (USA LOS NOMBRES EXACTOS):
+2. PROCESA TODOS los gastos que encuentres, incluso si hay muchos (más de 20, 50, o incluso 100+)
+3. Extrae el monto, descripción y fecha de CADA gasto encontrado
+4. Categoriza cada gasto según EXACTAMENTE estas categorías de la base de datos (USA LOS NOMBRES EXACTOS):
 ${categoryList}
 
 REGLA CRÍTICA DE CATEGORIZACIÓN:
@@ -138,19 +151,22 @@ IMPORTANTE:
 - La fecha debe estar en formato YYYY-MM-DD
 - El monto debe ser un número (sin símbolos de moneda)
 - Usa exactamente los nombres de categorías proporcionados
+- DEVUELVE TODOS los gastos que encuentres, incluso si son muchos
 - Si no hay gastos identificados, devuelve un array vacío
 - El confidence debe ser un número entre 0 y 1`;
 
-    const userPrompt = `Analiza el siguiente texto de estado de cuenta bancario y extrae todos los gastos identificados:
+    const userPrompt = `Analiza el siguiente texto de estado de cuenta bancario y extrae TODOS los gastos identificados SIN LÍMITE:
 
 ${text}
 
 INSTRUCCIONES ESPECÍFICAS:
+- PROCESA TODOS los gastos que encuentres, incluso si hay docenas o cientos
 - Busca patrones como "COMPRA", "PAGO", "GASTO", "EXTRACCIÓN", etc.
 - Ignora completamente depósitos, ingresos, transferencias entrantes
 - Si encuentras montos con comas o puntos, conviértelos correctamente
 - Si hay fechas en formatos uruguayos (DD/MM/YYYY), conviértelas a YYYY-MM-DD
-- Sé muy específico en las descripciones, incluyendo nombres de comercios cuando estén disponibles`;
+- Sé muy específico en las descripciones, incluyendo nombres de comercios cuando estén disponibles
+- NO TRUNQUES la lista, incluye CADA gasto encontrado`;
 
     console.log('🚀 Enviando solicitud a OpenAI...');
 
@@ -166,7 +182,7 @@ INSTRUCCIONES ESPECÍFICAS:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_tokens: 4000,
+        max_tokens: 8000,
         temperature: 0.1
       })
     });
@@ -244,7 +260,7 @@ export async function analyzeLargeTextInChunks(text: string, userId: string) {
   try {
     console.log('📄 Procesando texto largo en chunks...');
 
-    const MAX_CHUNK_SIZE = 40000; // Un poco más pequeño para dejar margen
+    const MAX_CHUNK_SIZE = 80000; // Tamaño aumentado para aprovechar mejor los tokens disponibles
 
     // Dividir el texto en chunks
     const chunks = [];
@@ -270,7 +286,7 @@ export async function analyzeLargeTextInChunks(text: string, userId: string) {
     // Si hay múltiples análisis, combinarlos
     console.log('🔄 Combinando resultados de múltiples chunks...');
 
-    const combinedExpenses = [];
+    const combinedExpenses: ExpenseItem[] = [];
     let totalConfidence = 0;
 
     analyses.forEach(analysis => {
@@ -284,7 +300,7 @@ export async function analyzeLargeTextInChunks(text: string, userId: string) {
     const averageConfidence = totalConfidence / analyses.length;
 
     // Eliminar duplicados basados en descripción y monto (con tolerancia)
-    const uniqueExpenses = [];
+    const uniqueExpenses: ExpenseItem[] = [];
     const seen = new Set();
 
     combinedExpenses.forEach(expense => {
@@ -318,7 +334,7 @@ async function performBasicExpenseAnalysis(text: string) {
   try {
     console.log('🔍 Realizando análisis básico de respaldo...');
 
-    const expenses = [];
+    const expenses: ExpenseItem[] = [];
     const lines = text.split('\n');
 
     // Patrones simples para detectar gastos
@@ -356,7 +372,7 @@ async function performBasicExpenseAnalysis(text: string) {
 
   } catch (error) {
     console.error('❌ Error en análisis básico:', error);
-    return { expenses: [] };
+    return { expenses: [] as ExpenseItem[] };
   }
 }
 

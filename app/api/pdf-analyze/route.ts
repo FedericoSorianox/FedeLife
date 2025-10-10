@@ -11,6 +11,16 @@ import pdfParse from 'pdf-parse-fixed';
 import { analyzeTextWithEnvKey, analyzeLargeTextInChunks } from '@/lib/services/aiService';
 import connectToDatabase from '@/lib/mongodb';
 
+// Interface para definir la estructura de un gasto
+interface Expense {
+  description: string;
+  amount: number;
+  currency: string;
+  category: string;
+  date: string;
+  confidence?: number;
+}
+
 // Función para obtener userId del token (soporta cookies y headers Authorization)
 function getUserIdFromToken(request: NextRequest): string | null {
   try {
@@ -137,7 +147,7 @@ export async function POST(request: NextRequest) {
     let analysisResult;
 
     // Si el texto es muy largo, dividirlo en chunks
-    const MAX_CHUNK_SIZE = 50000;
+    const MAX_CHUNK_SIZE = 100000; // Aumentado para procesar más texto por análisis
     if (optimizedText.length > MAX_CHUNK_SIZE) {
       console.log(`📄 Texto muy largo (${optimizedText.length} chars), procesando en chunks...`);
       analysisResult = await analyzeLargeTextInChunks(optimizedText, userId);
@@ -161,7 +171,7 @@ export async function POST(request: NextRequest) {
       analysis: {
         expenses: analysisResult.expenses || [],
         summary: {
-          totalExpenses: analysisResult.expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0,
+          totalExpenses: analysisResult.expenses?.reduce((sum: number, exp: Expense) => sum + (exp.amount || 0), 0) || 0,
           expenseCount: analysisResult.expenses?.length || 0,
           currency: 'UYU'
         },
