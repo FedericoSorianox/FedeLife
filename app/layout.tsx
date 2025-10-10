@@ -96,7 +96,7 @@ export default function RootLayout({
     <html lang="es">
       <head>
         {/* Preload critical resources */}
-        <link rel="preload" href="/sw.js" as="script" />
+        <link rel="preload" href="/sw.js" as="service-worker" />
         <link rel="dns-prefetch" href="//api.openai.com" />
 
         {/* PWA meta tags adicionales */}

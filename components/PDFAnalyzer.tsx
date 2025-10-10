@@ -122,6 +122,7 @@ export default function PDFAnalyzer() {
       const response = await apiFetch('/api/pdf-analyze', {
         method: 'POST',
         body: formData,
+        timeout: 60000, // 60 seconds for PDF analysis
       });
 
       const data = await response.json();

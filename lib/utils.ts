@@ -1,5 +1,5 @@
 // Función helper para llamadas a la API del backend con manejo de errores mejorado
-export const apiFetch = async (endpoint: string, options?: RequestInit) => {
+export const apiFetch = async (endpoint: string, options?: RequestInit & { timeout?: number }) => {
   const baseUrl = process.env.NODE_ENV === 'production'
     ? '' // En producción usar rutas relativas
     : 'http://localhost:3003'; // Puerto del servidor backend
@@ -43,8 +43,8 @@ export const apiFetch = async (endpoint: string, options?: RequestInit) => {
       headers
     }),
     {
-      timeout: 15000, // 15 segundos para API calls
-      maxRetries: 2, // Menos reintentos para API internas
+      timeout: (options as RequestInit & { timeout?: number })?.timeout || 15000, // 15 segundos para API calls, customizable
+      maxRetries: (options as RequestInit & { timeout?: number })?.timeout ? ((options as RequestInit & { timeout?: number })?.timeout ?? 0) > 30000 ? 1 : 2 : 2, // Más reintentos para llamadas largas
       context: `API call to ${endpoint}`
     }
   );
