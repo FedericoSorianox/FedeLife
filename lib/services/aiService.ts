@@ -110,27 +110,36 @@ export async function analyzeTextWithEnvKey(text: string, userId: string) {
     // Preparar prompt para OpenAI
     const systemPrompt = `Eres un analista financiero experto especializado en el análisis de estados de cuenta bancarios uruguayos.
 
-Tu tarea es analizar el texto de un estado de cuenta y extraer TODOS los gastos identificados SIN LÍMITE DE CANTIDAD.
+Tu tarea es analizar el texto de un estado de cuenta bancario y extraer ÚNICAMENTE los GASTOS (débitos/salidas de dinero) - IGNORAR COMPLETAMENTE ingresos, créditos y transferencias entrantes.
 
-INSTRUCCIONES IMPORTANTES:
-1. Identifica ÚNICAMENTE transacciones que son GASTOS (no ingresos, depósitos, transferencias entrantes)
-2. PROCESA TODOS los gastos que encuentres, incluso si hay muchos (más de 20, 50, o incluso 100+)
-3. Extrae el monto, descripción y fecha de CADA gasto encontrado
-4. Categoriza cada gasto según EXACTAMENTE estas categorías de la base de datos (USA LOS NOMBRES EXACTOS):
+INSTRUCCIONES ESPECÍFICAS PARA TABLAS BANCARIAS URUGUAYAS:
+1. IDENTIFICACIÓN DE GASTOS:
+   - SOLO considera transacciones que aparecen en columnas "Débito" o similares
+   - IGNORA completamente cualquier monto en columnas "Crédito"
+   - Busca patrones como: monto en columna débito + descripción del gasto
+   - Ejemplos de gastos: compras, pagos, extracciones, débitos automáticos
+
+2. PROCESA TODOS los gastos que encuentres en columnas débito, incluso si hay muchos
+
+3. EXTRACCIÓN DE DATOS:
+   - Busca el formato típico: Fecha | Concepto/Descripción | Débito | Crédito | Saldo
+   - Toma el monto de la columna "Débito" (nunca de "Crédito")
+   - La descripción suele estar en la columna "Concepto"
+
+4. REGLAS DE MONEDA PARA URUGUAY:
+   - En Uruguay, los montos pueden estar en UYU (pesos) o USD (dólares)
+   - Los montos en UYU suelen ser de 3-6 dígitos (ej: 1.250, 45.000)
+   - Los montos en USD suelen ser menores (ej: 25.50, 150.00)
+   - Regla general: montos > 500 probablemente UYU, montos < 500 probablemente USD
+   - Si el texto menciona explícitamente "USD", "dólares", o símbolos como "U$S", es USD
+   - Si menciona "pesos", "UYU", o símbolos como "$UY", es UYU
+   - Para montos entre 100-1000, analiza el contexto (comercios internacionales suelen ser USD)
+
+5. CATEGORIZACIÓN:
+   - Usa EXACTAMENTE estas categorías de la base de datos:
 ${categoryList}
-
-REGLA CRÍTICA DE CATEGORIZACIÓN:
-- NUNCA uses "Otros" como categoría, usa "Otros Gastos"
-- NUNCA inventes categorías nuevas, usa SOLO las categorías listadas arriba
-- Si un gasto puede estar en dos categorías, elige la más específica
-- EVITA poner gastos en "Otros Gastos" a menos que realmente no encajen en ninguna otra
-4. Si no puedes determinar la categoría, usa "Otros Gastos"
-5. DETECCIÓN AUTOMÁTICA DE MONEDA:
-   - Si el monto es MENOR a $150, automáticamente es USD (dólares)
-   - Si el monto es MAYOR a $150, automáticamente es UYU (pesos uruguayos)
-   - Si el texto menciona "dólares", "USD", "$" o "U$S", es USD
-   - Si menciona "pesos", "UYU" o "$UY", es UYU
-   - Si no hay indicadores claros, asume UYU para montos altos y USD para montos bajos
+   - Nunca uses "Otros" como categoría, usa "Otros Gastos"
+   - Nunca inventes categorías nuevas
 
 FORMATO DE SALIDA REQUERIDO:
 Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta:
@@ -148,25 +157,27 @@ Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta:
 }
 
 IMPORTANTE:
-- La fecha debe estar en formato YYYY-MM-DD
-- El monto debe ser un número (sin símbolos de moneda)
-- Usa exactamente los nombres de categorías proporcionados
-- DEVUELVE TODOS los gastos que encuentres, incluso si son muchos
-- Si no hay gastos identificados, devuelve un array vacío
-- El confidence debe ser un número entre 0 y 1`;
+- Fecha en formato YYYY-MM-DD
+- Monto como número (sin símbolos)
+- Usa nombres de categorías exactos
+- Devuelve TODOS los gastos encontrados
+- Si no hay gastos, devuelve array vacío
+- Confidence entre 0 y 1`;
 
-    const userPrompt = `Analiza el siguiente texto de estado de cuenta bancario y extrae TODOS los gastos identificados SIN LÍMITE:
+    const userPrompt = `Analiza el siguiente texto de estado de cuenta bancario uruguayo y extrae ÚNICAMENTE los gastos (débitos) - IGNORA créditos e ingresos:
 
 ${text}
 
-INSTRUCCIONES ESPECÍFICAS:
-- PROCESA TODOS los gastos que encuentres, incluso si hay docenas o cientos
-- Busca patrones como "COMPRA", "PAGO", "GASTO", "EXTRACCIÓN", etc.
-- Ignora completamente depósitos, ingresos, transferencias entrantes
-- Si encuentras montos con comas o puntos, conviértelos correctamente
-- Si hay fechas en formatos uruguayos (DD/MM/YYYY), conviértelas a YYYY-MM-DD
-- Sé muy específico en las descripciones, incluyendo nombres de comercios cuando estén disponibles
-- NO TRUNQUES la lista, incluye CADA gasto encontrado`;
+INSTRUCCIONES ESPECÍFICAS PARA TABLAS BANCARIAS:
+- Busca el formato: Fecha | Concepto | Débito | Crédito | Saldo
+- SOLO toma montos de la columna "Débito" - ignora completamente "Crédito"
+- Cada línea con monto en débito es un gasto potencial
+- Busca descripciones como: COMPRA, PAGO, EXTRACCIÓN, DÉBITO AUTOMÁTICO
+- Ignora líneas como: DEPÓSITO, TRANSFERENCIA, CRÉDITO, INGRESO
+- Procesa TODOS los gastos encontrados, incluso si hay muchos
+- Convierte fechas de formato DD/MM/YYYY a YYYY-MM-DD
+- Sé específico con nombres de comercios: "SUPERMERCADO", "RESTORAN", etc.
+- NO trunques la lista, incluye CADA gasto encontrado`;
 
     console.log('🚀 Enviando solicitud a OpenAI...');
 
@@ -337,13 +348,15 @@ async function performBasicExpenseAnalysis(text: string) {
     const expenses: ExpenseItem[] = [];
     const lines = text.split('\n');
 
-    // Patrones simples para detectar gastos
+    // Patrones mejorados para detectar gastos en tablas bancarias
     const expensePatterns = [
-      /COMPRA\s+(.+?)\s+(\$?[\d,]+\.?\d*)/gi,
-      /PAGO\s+(.+?)\s+(\$?[\d,]+\.?\d*)/gi,
-      /GASTO\s+(.+?)\s+(\$?[\d,]+\.?\d*)/gi,
-      /EXTRACCI[OÓ]N\s+(.+?)\s+(\$?[\d,]+\.?\d*)/gi,
-      /(\$?[\d,]+\.?\d*)\s+(.+?)(?:COMPRA|PAGO|GASTO)/gi
+      // Patrón específico para tablas: monto seguido de descripción
+      /(\d+[\.,]\d+)\s+([A-Z\s]+?)\s*$/gi,
+      // Patrones específicos de operaciones bancarias uruguayas
+      /(COMPRA|PAGO|EXTRACCI[OÓ]N|D[EÉ]BITO)\s+(.+?)\s+(\d+[\.,]\d*)/gi,
+      /([A-Z\s]{3,})\s+(\d+[\.,]\d*)\s*$/gi,
+      // Patrón para montos en columnas débito
+      /(\d+[\.,]\d*)\s+[A-Z\s]{3,}/gi
     ];
 
     lines.forEach(line => {
@@ -355,10 +368,16 @@ async function performBasicExpenseAnalysis(text: string) {
           const amount = parseFloat(amountStr);
 
           if (amount > 0) {
+            // Mejorar detección de moneda para Uruguay
+            let currency = 'UYU'; // Por defecto pesos uruguayos
+            if (amount < 190) {
+              currency = 'USD'; // Montos pequeños probablemente dólares
+            }
+
             expenses.push({
               description,
               amount,
-              currency: amount < 150 ? 'USD' : 'UYU',
+              currency,
               category: 'Otros Gastos',
               date: new Date().toISOString().split('T')[0]
             });
