@@ -489,36 +489,55 @@ export default function FinanzasPage() {
     }
   };
 
+  // Función helper para filtrar transacciones por período actual
+  const filterTransactionsByCurrentPeriod = (transactions: Transaction[]) => {
+    if (transactions.length === 0) return [];
+
+    if (currentPeriod.type === 'monthly') {
+      // Filtrar por mes y año específicos
+      return transactions.filter(transaction => {
+        const transactionDate = new Date(transaction.date);
+        const transactionMonth = transactionDate.getMonth() + 1; // getMonth() returns 0-11
+        const transactionYear = transactionDate.getFullYear();
+
+        return transactionMonth === currentPeriod.month && transactionYear === currentPeriod.year;
+      });
+    } else {
+      // Filtrar por año específico
+      return transactions.filter(transaction => {
+        const transactionDate = new Date(transaction.date);
+        const transactionYear = transactionDate.getFullYear();
+
+        return transactionYear === currentPeriod.year;
+      });
+    }
+  };
+
   const loadCategories = async () => {
     try {
       const response = await apiFetch('/api/categories');
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Siempre usar transacciones filtradas por período para estadísticas consistentes
-        let transactionsToUse = allTransactions;
+        // ✅ FIX: Siempre filtrar transacciones por período actual para estadísticas consistentes
+        const transactionsForCurrentPeriod = filterTransactionsByCurrentPeriod(allTransactions);
+        
+        console.log(`📊 Cargando categorías con ${transactionsForCurrentPeriod.length} transacciones del período ${currentPeriod.month}/${currentPeriod.year} (${currentPeriod.type})`);
 
-        // Si tenemos transacciones filtradas por período, usar esas
-        if (filteredTransactions.length > 0) {
-          transactionsToUse = filteredTransactions;
-          console.log(`📊 Usando ${filteredTransactions.length} transacciones filtradas para categorías`);
-        } else {
-          console.log(`📊 Usando ${allTransactions.length} transacciones totales para categorías (no hay filtro aplicado aún)`);
-        }
-
-        // Calcular estadísticas de transacciones por categoría
+        // Calcular estadísticas de transacciones por categoría usando SOLO las transacciones del período actual
         const categoriesWithStats = data.data.categories.map((category: any) => {
           // Filtrar transacciones por categoría usando las transacciones del período actual
-          const categoryTransactions = transactionsToUse.filter(
+          const categoryTransactions = transactionsForCurrentPeriod.filter(
             t => t.category === category.name && t.type === category.type
           );
 
-          console.log(`${category.name}: ${categoryTransactions.length} transacciones, total: ${categoryTransactions.reduce((sum: number, t: any) => sum + t.amount, 0)}`);
+          const totalAmount = categoryTransactions.reduce((sum: number, t: any) => sum + t.amount, 0);
+          console.log(`${category.name}: ${categoryTransactions.length} transacciones del período actual, total: ${totalAmount}`);
 
           return {
             ...category,
             transactionCount: categoryTransactions.length,
-            totalAmount: categoryTransactions.reduce((sum: number, t: any) => sum + t.amount, 0)
+            totalAmount: totalAmount
           };
         });
 
@@ -737,8 +756,8 @@ export default function FinanzasPage() {
     const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-    // Usar transacciones filtradas por período si existen, sino usar todas
-    const transactionsToUse = filteredTransactions.length > 0 ? filteredTransactions : allTransactions;
+    // ✅ FIX: Siempre usar transacciones filtradas por período actual
+    const transactionsToUse = filterTransactionsByCurrentPeriod(allTransactions);
 
     // Filtrar transacciones por categoría y tipo
     const categoryTransactions = transactionsToUse.filter(
@@ -971,26 +990,8 @@ export default function FinanzasPage() {
   const filterDataByPeriod = () => {
     if (allTransactions.length === 0) return;
 
-    let filteredTransactions = allTransactions;
-
-    if (currentPeriod.type === 'monthly') {
-      // Filtrar por mes y año específicos
-      filteredTransactions = allTransactions.filter(transaction => {
-        const transactionDate = new Date(transaction.date);
-        const transactionMonth = transactionDate.getMonth() + 1; // getMonth() returns 0-11
-        const transactionYear = transactionDate.getFullYear();
-
-        return transactionMonth === currentPeriod.month && transactionYear === currentPeriod.year;
-      });
-    } else {
-      // Filtrar por año específico
-      filteredTransactions = allTransactions.filter(transaction => {
-        const transactionDate = new Date(transaction.date);
-        const transactionYear = transactionDate.getFullYear();
-
-        return transactionYear === currentPeriod.year;
-      });
-    }
+    // ✅ FIX: Usar la función helper para evitar duplicación de código
+    const filteredTransactions = filterTransactionsByCurrentPeriod(allTransactions);
 
     // Calcular estadísticas con las transacciones filtradas
     const transactionsUYU = filteredTransactions.filter((t: Transaction) => t.currency === 'UYU');
@@ -1423,7 +1424,7 @@ export default function FinanzasPage() {
                 ) : selectedCategory ? (
                   <CategoryDetailsModal
                     category={selectedCategory}
-                    transactions={filteredTransactions}
+                    transactions={filterTransactionsByCurrentPeriod(allTransactions)}
                     onClose={() => {
                       setCategoryDetailsModal(false);
                       setSelectedCategory(null);
