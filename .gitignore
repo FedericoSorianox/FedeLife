@@ -49,3 +49,10 @@ Thumbs.db
 # Archivos de backup
 *.backup
 *.bak
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
