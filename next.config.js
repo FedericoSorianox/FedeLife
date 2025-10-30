@@ -3,19 +3,19 @@ const nextConfig = {
   // Configuración del workspace root para resolver advertencias de múltiples lockfiles
   outputFileTracingRoot: __dirname,
 
-  // NOTA: Si unificas todo en Next.js, elimina estas líneas de proxy
-  // Configuración del proxy para redirigir llamadas API al servidor Express
-  // EXCEPTO las rutas públicas que van a Next.js
-  async rewrites() {
-    return [
-      // Las rutas públicas van a Next.js (no se redirigen)
-      // /api/public/* se maneja en Next.js
-      {
-        source: '/api/(?!public)/:path*',
-        destination: 'http://localhost:3003/api/:path*',
-      },
-    ];
-  },
+  // NOTA: Todas las rutas API ahora se manejan en Next.js
+  // Se eliminó el proxy al servidor Express para simplificar la arquitectura
+  // Las rutas están disponibles en /app/api/
+
+  // Si necesitas volver a habilitar el proxy, usa patrones específicos sin regex lookaheads
+  // async rewrites() {
+  //   return [
+  //     {
+  //       source: '/api/server/:path*',
+  //       destination: 'http://localhost:3003/api/:path*',
+  //     },
+  //   ];
+  // },
 
   // Configuración de imágenes optimizada para PWA
   images: {
