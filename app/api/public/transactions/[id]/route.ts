@@ -13,7 +13,7 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     console.log(`🔍 DELETE request recibido para ID: ${JSON.stringify(params)}`);
-    
+
     try {
         const { id } = params;
 

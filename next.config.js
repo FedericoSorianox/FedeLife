@@ -5,10 +5,13 @@ const nextConfig = {
 
   // NOTA: Si unificas todo en Next.js, elimina estas líneas de proxy
   // Configuración del proxy para redirigir llamadas API al servidor Express
+  // EXCEPTO las rutas públicas que van a Next.js
   async rewrites() {
     return [
+      // Las rutas públicas van a Next.js (no se redirigen)
+      // /api/public/* se maneja en Next.js
       {
-        source: '/api/:path*',
+        source: '/api/(?!public)/:path*',
         destination: 'http://localhost:3003/api/:path*',
       },
     ];
