@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import TransactionModel from '@/lib/models/Transaction';
 import connectToDatabase from '@/lib/mongodb';
+import mongoose from 'mongoose';
 
 export async function DELETE(
     request: NextRequest,
@@ -12,6 +13,17 @@ export async function DELETE(
         if (!id) {
             return NextResponse.json(
                 { error: 'ID de transacción requerido' },
+                { status: 400 }
+            );
+        }
+
+        // Validar que el ID sea un ObjectId válido de MongoDB
+        if (!mongoose.isValidObjectId(id)) {
+            return NextResponse.json(
+                {
+                    error: 'ID inválido',
+                    message: 'El ID de la transacción no es válido'
+                },
                 { status: 400 }
             );
         }
@@ -59,7 +71,8 @@ export async function DELETE(
         return NextResponse.json(
             {
                 error: 'Error interno del servidor',
-                message: 'No se pudo eliminar la transacción'
+                message: 'No se pudo eliminar la transacción',
+                details: error instanceof Error ? error.message : 'Error desconocido'
             },
             { status: 500 }
         );
@@ -76,6 +89,17 @@ export async function GET(
         if (!id) {
             return NextResponse.json(
                 { error: 'ID de transacción requerido' },
+                { status: 400 }
+            );
+        }
+
+        // Validar que el ID sea un ObjectId válido de MongoDB
+        if (!mongoose.isValidObjectId(id)) {
+            return NextResponse.json(
+                {
+                    error: 'ID inválido',
+                    message: 'El ID de la transacción no es válido'
+                },
                 { status: 400 }
             );
         }
@@ -121,7 +145,8 @@ export async function GET(
         return NextResponse.json(
             {
                 error: 'Error interno del servidor',
-                message: 'No se pudo obtener la transacción'
+                message: 'No se pudo obtener la transacción',
+                details: error instanceof Error ? error.message : 'Error desconocido'
             },
             { status: 500 }
         );
