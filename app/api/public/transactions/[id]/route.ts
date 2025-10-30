@@ -3,22 +3,33 @@ import TransactionModel from '@/lib/models/Transaction';
 import connectToDatabase from '@/lib/mongodb';
 import mongoose from 'mongoose';
 
+// Verificar que el modelo esté disponible
+console.log('🔍 TransactionModel disponible:', !!TransactionModel);
+console.log('🔍 connectToDatabase disponible:', !!connectToDatabase);
+console.log('🔍 mongoose disponible:', !!mongoose);
+
 export async function DELETE(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
+    console.log(`🔍 DELETE request recibido para ID: ${JSON.stringify(params)}`);
+    
     try {
         const { id } = params;
 
         if (!id) {
+            console.log('❌ ID no proporcionado');
             return NextResponse.json(
                 { error: 'ID de transacción requerido' },
                 { status: 400 }
             );
         }
 
+        console.log(`🔍 Validando ID: ${id}`);
+
         // Validar que el ID sea un ObjectId válido de MongoDB
         if (!mongoose.isValidObjectId(id)) {
+            console.log('❌ ID no es válido ObjectId');
             return NextResponse.json(
                 {
                     error: 'ID inválido',
@@ -28,16 +39,22 @@ export async function DELETE(
             );
         }
 
+        console.log('🔗 Conectando a base de datos...');
         // Conectar a la base de datos
         await connectToDatabase();
+        console.log('✅ Conectado a base de datos');
 
+        console.log(`🔍 Buscando transacción con ID: ${id} y userId: null`);
         // Buscar y eliminar la transacción (solo transacciones públicas con userId: null)
         const transaction = await TransactionModel.findOneAndDelete({
             _id: id,
             userId: null // Solo permite eliminar transacciones públicas/demo
         });
 
+        console.log(`🔍 Resultado de búsqueda:`, transaction ? 'Encontrada' : 'No encontrada');
+
         if (!transaction) {
+            console.log('❌ Transacción no encontrada o no es pública');
             return NextResponse.json(
                 {
                     error: 'Transacción no encontrada',
@@ -56,9 +73,11 @@ export async function DELETE(
 
     } catch (error) {
         console.error('❌ Error eliminando transacción pública:', error);
+        console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack available');
 
         // Manejar errores de MongoDB ObjectId inválido
         if (error instanceof Error && error.name === 'CastError') {
+            console.log('❌ Error de CastError detectado');
             return NextResponse.json(
                 {
                     error: 'ID inválido',
@@ -72,7 +91,9 @@ export async function DELETE(
             {
                 error: 'Error interno del servidor',
                 message: 'No se pudo eliminar la transacción',
-                details: error instanceof Error ? error.message : 'Error desconocido'
+                details: error instanceof Error ? error.message : 'Error desconocido',
+                errorName: error instanceof Error ? error.name : 'Unknown',
+                timestamp: new Date().toISOString()
             },
             { status: 500 }
         );
